@@ -7,51 +7,56 @@ const flash = require('connect-flash');
 const methodOverride = require('method-override');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
-require('dotenv').config();
+const dotenv = require('dotenv').config()
 const connectDB = require("./config/db");
 
 // const User = require('./models/User');
-// const adminRoutes = require('./routes/admin');
-// const usersRoutes = require('./routes/users');
-// const path = require('path');
+const adminRoutes = require('./routes/adminRoutes');
+const usersRoutes = require('./routes/usersRoutes');
+const path = require('path');
 const app = express();
 
 // Database connection
 connectDB();
 
-// // Middleware
-// app.set('view engine', 'ejs');
-// app.set('views', path.join(__dirname, 'views')); // Ensure it's correctly set
-// app.use(express.urlencoded({ extended: false }));
-// app.use(express.json());
-// app.use(cookieParser());
-// app.use(methodOverride('_method'));
-// app.use(express.static('public'));
+// Middleware
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views/user'),path.join(__dirname, 'views/admin')); // Ensure it's correctly set
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+app.use(cookieParser());
+app.use(methodOverride('_method'));
+app.use(express.static('public'));
 
 
 
 
 
-// // Session
-// app.use(
-//     session({
-//         secret: 'supersecretkey',
-//         resave: false,
-//         saveUninitialized: false,
-//         cookie: { secure: false, httpOnly: true }
-//     })
-// );
-// // Prevent caching
-// app.use((req, res, next) => {
-//     res.set('Cache-Control', 'no-store');
-//     next();
-//   });
-// app.use(flash());
+// Session
+app.use(
+    session({
+        secret: process.env.SESSION_SECRET,
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            secure: false,
+            httpOnly: true,
+            maxAge: 72 * 60 * 60 * 1000 
+        }
+    })
+);
 
-// app.use((req, res, next) => {
-//     res.locals.messages = req.flash();
-//     next();
-// });
+// Prevent caching
+app.use((req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+  });
+app.use(flash());
+
+app.use((req, res, next) => {
+    res.locals.messages = req.flash();
+    next();
+});
 // // Passport Authentication
 // passport.use(
 //     new LocalStrategy(async (username, password, done) => {
@@ -89,7 +94,7 @@ connectDB();
 
 // // Routes
 // app.use('/admin', adminRoutes);
-// app.use('/', usersRoutes);
+app.use('/', usersRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

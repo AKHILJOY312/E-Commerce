@@ -363,7 +363,7 @@ ol {
 }
 
 .header__top__hover span {
-	color: #ffffff;
+	color: #0c0c0c;
 	font-size: 13px;
 	text-transform: uppercase;
 	letter-spacing: 2px;
@@ -379,7 +379,7 @@ ol {
 }
 
 .header__top__hover ul {
-	background: #ffffff;
+	background: #675c5c;
 	display: inline-block;
 	padding: 2px 0;
 	position: absolute;

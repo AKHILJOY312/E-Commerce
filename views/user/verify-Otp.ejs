@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OTP Verification</title>
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css"
+    />
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap");
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Poppins", sans-serif;
+      }
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #212529;
+        color: #e9ecef;
+      }
+      .container {
+        background: #343a40;
+        padding: 30px 65px;
+        border-radius: 12px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      .container header {
+        height: 65px;
+        width: 65px;
+        background: #0d6efd;
+        color: #e9ecef;
+        font-size: 2.5rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .container h4 {
+        font-size: 1.25rem;
+        color: #e9ecef;
+        font-weight: 500;
+      }
+      .input-field {
+        display: flex;
+        gap: 10px;
+      }
+      .input-field input {
+        height: 50px;
+        width: 50px;
+        border-radius: 6px;
+        outline: none;
+        font-size: 1.25rem;
+        text-align: center;
+        border: 2px solid #0d6efd;
+        background: #212529;
+        color: #e9ecef;
+        font-weight: bold;
+      }
+      .input-field input:focus {
+        border-color: #198754;
+      }
+      form button {
+        margin-top: 20px;
+        width: 100%;
+        color: #fff;
+        font-size: 1rem;
+        border: none;
+        padding: 10px;
+        cursor: pointer;
+        border-radius: 6px;
+        background: #0d6efd;
+        pointer-events: none;
+        transition: 0.2s ease;
+      }
+      form button.active {
+        background: #198754;
+        pointer-events: auto;
+      }
+      #timer {
+        font-size: 0.9rem;
+        color: #ffc107;
+        margin-top: 10px;
+      }
+      #resendBtn {
+        margin-top: 10px;
+        padding: 8px 16px;
+        background: #6c757d;
+        color: white;
+        border: none;
+        cursor: not-allowed;
+        border-radius: 6px;
+        transition: background 0.3s ease;
+      }
+      #resendBtn.enabled {
+        background: #0dcaf0;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header><i class="bx bxs-check-shield"></i></header>
+      <h4>Enter OTP Code</h4>
+      <form
+        id="otpForm"
+        method="post"
+        action="/verify-otp"
+        onsubmit="return validateOtpForm()"
+      >
+        <div class="input-field">
+          <input
+            type="text"
+            inputmode="numeric"
+            maxlength="1"
+            id="otp1"
+            autofocus
+          />
+          <input
+            type="text"
+            inputmode="numeric"
+            maxlength="1"
+            id="otp2"
+            disabled
+          />
+          <input
+            type="text"
+            inputmode="numeric"
+            maxlength="1"
+            id="otp3"
+            disabled
+          />
+          <input
+            type="text"
+            inputmode="numeric"
+            maxlength="1"
+            id="otp4"
+            disabled
+          />
+          <input
+            type="text"
+            inputmode="numeric"
+            maxlength="1"
+            id="otp5"
+            disabled
+          />
+          <input
+            type="text"
+            inputmode="numeric"
+            maxlength="1"
+            id="otp6"
+            disabled
+          />
+        </div>
+        <button type="submit" id="verifyBtn" disabled>Verify OTP</button>
+      </form>
+      <p id="timer"></p>
+      <button id="resendBtn" onclick="return resendOtp()" disabled>
+        Resend OTP
+      </button>
+    </div>
+
+    <script>
+      const inputs = document.querySelectorAll(".input-field input");
+      const verifyButton = document.getElementById("verifyBtn");
+      const resendBtn = document.getElementById("resendBtn");
+      const timerDisplay = document.getElementById("timer");
+      let countdown;
+
+      function startResendTimer() {
+        let timeLeft = 10; // Timer in seconds
+        resendBtn.disabled = true;
+        resendBtn.classList.remove("enabled");
+        resendBtn.textContent = " Wait... ";
+        timerDisplay.textContent = `Please wait ${timeLeft} seconds`;
+
+        countdown = setInterval(() => {
+          timeLeft--;
+          timerDisplay.textContent = `Please wait ${timeLeft} seconds`;
+          if (timeLeft <= 0) {
+            clearInterval(countdown);
+            timerDisplay.textContent = "";
+            resendBtn.disabled = false;
+            resendBtn.classList.add("enabled");
+            resendBtn.textContent = "Resend OTP";
+          }
+        }, 1000);
+      }
+
+      inputs.forEach((input, index) => {
+        input.addEventListener("input", (e) => {
+          if (e.target.value.length > 1)
+            e.target.value = e.target.value.charAt(0);
+          if (e.target.value && index < inputs.length - 1) {
+            inputs[index + 1].removeAttribute("disabled");
+            inputs[index + 1].focus();
+          }
+          checkAllInputs();
+        });
+
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Backspace" && index > 0) {
+            inputs[index - 1].focus();
+            inputs[index - 1].value = "";
+            inputs[index].setAttribute("disabled", true);
+          }
+        });
+      });
+
+      function checkAllInputs() {
+        let allFilled = [...inputs].every((input) => input.value !== "");
+        verifyButton.disabled = !allFilled;
+        verifyButton.classList.toggle("active", allFilled);
+      }
+
+      function validateOtpForm() {
+        let otp = [...inputs].map((input) => input.value).join("");
+        if (otp.length !== 6) {
+          Swal.fire("Please enter a full 6-digit OTP.");
+          return false;
+        }
+
+        $.ajax({
+          type: "POST",
+          url: "/verify-otp",
+          data: { otp: otp },
+          success: function (response) {
+            if (response.success) {
+              Swal.fire("OTP Verified Successfully!").then(() => {
+                window.location.href = response.redirectUrl;
+              });
+            } else {
+              Swal.fire("Invalid OTP. Please try again.");
+            }
+          },
+          error: function () {
+            Swal.fire("Error verifying OTP. Try again.");
+          },
+        });
+
+        return false;
+      }
+
+      window.addEventListener("load", () => inputs[0].focus());
+      startResendTimer();
+
+      function resendOtp() {
+        startResendTimer();
+        $.ajax({
+          type: "POST",
+          url: "/resend-otp",
+          success: function (response) {
+            if (response.success) {
+              Swal.fire({
+                icon: "success",
+                title: "OTP Resent",
+                text: "Check your email for a new OTP.",
+              });
+            } else {
+              Swal.fire({
+                icon: "error",
+                title: "Resend Failed",
+                text: "Couldn't resend OTP. Please try again.",
+              });
+            }
+          },
+          error: function () {
+            Swal.fire({
+              icon: "error",
+              title: "Error",
+              text: "An error occurred. Please try again.",
+            });
+          },
+        });
+      }
+    </script>
+  </body>
+</html>

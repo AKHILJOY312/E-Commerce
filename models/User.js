@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema({
     password:{ type: String, required:true},
     phone:{ type:String},
     isAdmin: { type : Boolean, default:false},
-    isActive:{ type:Boolean, default: Date.now },
+    isActive:{ type:Boolean, default: true },
     created_at :{ type:Date, default:Date.now},
     updated_at :{ type: Date, default: Date.now}
 
