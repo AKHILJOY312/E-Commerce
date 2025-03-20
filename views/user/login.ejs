@@ -11,40 +11,49 @@
     <div class="modal-dialog" role="document">
       <div class="modal-content rounded-4 shadow">
         <div class="modal-header p-5 pb-4 border-bottom-0">
-          <h1 class="fw-bold mb-0 fs-2">Sign up for free</h1>
+          <h1 class="fw-bold mb-0 fs-2">Login...</h1>
           <a href="/" class="btn-close btn-close-white" role="button"></a>
 
         </div>
         <div class="modal-body p-5 pt-0">
-          <form>
-            <div class="form-floating mb-3">
-              <input type="email" class="form-control rounded-3" id="floatingInput" placeholder="name@example.com">
-              <label for="floatingInput">Email address</label>
+          <% if (messages.error) { %>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <%= messages.error %> <!-- Display the first error message -->
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
-            <div class="form-floating mb-3">
-              <input type="password" class="form-control rounded-3" id="floatingPassword" placeholder="Password">
-              <label for="floatingPassword">Password</label>
-            </div>
-
+        <% } %>
+        <form id="loginForm" method="post" action="/login">
+          <div class="form-floating mb-3">
+            <input type="email" name="email" class="form-control rounded-3" id="floatingInput" placeholder="name@example.com">
+            <label for="floatingInput">Email address</label>
+          </div>
           
-            <button class="w-100 mb-2 btn btn-lg rounded-3 btn-primary" type="submit">Sign up</button>
-           
-            <small class="text-body-secondary">click here to <a href="/signup">Register New User.</a></small>
-            <hr class="my-4">
-            <h2 class="fs-5 fw-bold mb-3">Or use a third-party</h2>
+          <div class="form-floating mb-3">
+            <input type="password" name="password" class="form-control rounded-3" id="floatingPassword" placeholder="Password">
+            <label for="floatingPassword">Password</label>
+          </div>
+        
+          <!-- Forgot Password Link Positioned to the Right -->
+          <div class="d-flex justify-content-between">
+            <small class="text-body-secondary">Click here to <a href="/signup">Register New User</a></small>
+            <small class="text-body-secondary"><a href="/forgot-password" class="text-end">Forgot password?</a></small>
+          </div>
+        
+          <button class="w-100 mb-2 btn btn-lg rounded-3 btn-primary mt-3" type="submit">Login</button>
+        
+          <hr class="my-4">
+          <h2 class="fs-5 fw-bold mb-3">Or use a third-party</h2>
+        
+          <a href="/auth/google">
             <button class="w-100 py-2 mb-2 btn btn-outline-secondary rounded-3" type="button">
-              <svg class="bi me-1" width="16" height="16"><use xlink:href="#twitter"></use></svg>
-              Sign up with Twitter
+              <svg class="bi me-1" width="16" height="16">
+                <use xlink:href="#google-icon"></use>
+              </svg>
+              Sign up with Google
             </button>
-            <button class="w-100 py-2 mb-2 btn btn-outline-primary rounded-3" type="button">
-              <svg class="bi me-1" width="16" height="16"><use xlink:href="#facebook"></use></svg>
-              Sign up with Facebook
-            </button>
-            <button class="w-100 py-2 mb-2 btn btn-outline-secondary rounded-3" type="button">
-              <svg class="bi me-1" width="16" height="16"><use xlink:href="#github"></use></svg>
-              Sign up with GitHub
-            </button>
-          </form>
+          </a>
+        </form>
+        
         </div>
       </div>
     </div>

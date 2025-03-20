@@ -185,7 +185,7 @@
       let countdown;
 
       function startResendTimer() {
-        let timeLeft = 10; // Timer in seconds
+        let timeLeft = 30; // Timer in seconds
         resendBtn.disabled = true;
         resendBtn.classList.remove("enabled");
         resendBtn.textContent = " Wait... ";
@@ -205,24 +205,31 @@
       }
 
       inputs.forEach((input, index) => {
-        input.addEventListener("input", (e) => {
-          if (e.target.value.length > 1)
-            e.target.value = e.target.value.charAt(0);
-          if (e.target.value && index < inputs.length - 1) {
-            inputs[index + 1].removeAttribute("disabled");
-            inputs[index + 1].focus();
-          }
-          checkAllInputs();
-        });
+  input.addEventListener("input", (e) => {
+    if (e.target.value.length > 1)
+      e.target.value = e.target.value.charAt(0);
 
-        input.addEventListener("keydown", (e) => {
-          if (e.key === "Backspace" && index > 0) {
-            inputs[index - 1].focus();
-            inputs[index - 1].value = "";
-            inputs[index].setAttribute("disabled", true);
-          }
-        });
-      });
+    if (e.target.value && index < inputs.length - 1) {
+      inputs[index + 1].removeAttribute("disabled");
+      inputs[index + 1].focus();
+    } else if (index === inputs.length - 1) {
+      e.target.blur(); // Prevents unnecessary focus
+    }
+    checkAllInputs();
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Backspace") {
+      if (index > 0 && !inputs[index].value) {
+        inputs[index - 1].focus();
+        inputs[index - 1].value = "";
+        inputs[index].setAttribute("disabled", true);
+      } else {
+        inputs[index].value = "";
+      }
+    }
+  });
+});
 
       function checkAllInputs() {
         let allFilled = [...inputs].every((input) => input.value !== "");
