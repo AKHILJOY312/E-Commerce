@@ -133,7 +133,7 @@ const securePassword = async (password) => {
 exports.signupUser = async (req, res) => {
   try {
     console.log(`signupUser is working`);
-    const { name, email, password, confirm } = req.body;
+    const { name, email,phone, password, confirm } = req.body;
 
     if (password !== confirm) {
       console.log(`Password check failed`);
@@ -155,7 +155,7 @@ exports.signupUser = async (req, res) => {
     }
 
     req.session.userOtp = otp;
-    req.session.userData = { name, email, password };
+    req.session.userData = { name, email,phone, password };
 
     res.render("verify-Otp");
     console.log("OTP sent:", otp);
@@ -232,9 +232,14 @@ exports.resendOtp = async (req, res) => {
       });
   }
 };
-exports.logout = async (req, res) => {
-  req.logout(() => {
-    req.session.destroy();
-    res.redirect("/");
+
+exports.logout = (req, res, next) => {
+  req.logout(function (err) {
+    if (err) {
+      return next(err);
+    }
+    req.session.destroy(() => {
+      res.redirect("/");
+    });
   });
 };
