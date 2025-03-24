@@ -1,0 +1,337 @@
+<%- include("../../views/partials/admin/header.ejs") %>
+
+<!-- Begin Page Content -->
+<div class="container-fluid">
+  <!-- Page Heading and Search -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Category List</h1>
+    
+    <!-- Topbar Search -->
+    <form
+      class="form-inline navbar-search"
+      action="/admin/category"
+      method="GET"
+    >
+      <div class="input-group" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1)">
+        <input
+          type="text"
+          name="search"
+          class="form-control bg-light border-0 small"
+          placeholder="Search for..."
+          value="<%= searchQuery || '' %>"
+          aria-label="Search"
+          aria-describedby="basic-addon2"
+          required
+        />
+        <div class="input-group-append">
+          <!-- Search Button -->
+          <button class="btn btn-primary" type="submit">
+            <i class="fas fa-search fa-sm"></i>
+          </button>
+
+          <!-- Reset Button -->
+          <button class="btn btn-secondary" type="button" id="resetSearch">
+            <i class="fas fa-times"></i>
+            <!-- Clear Icon -->
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Add Category Button -->
+    <button
+      class="btn btn-success"
+      data-toggle="modal"
+      data-target="#addCategoryModal"
+    >
+      <i class="fas fa-plus"></i> Add Category
+    </button>
+  </div>
+
+  <p class="mb-4">
+    Manage your categories below. You can block or unblock categories as needed.
+  </p>
+
+  <!-- DataTables Example -->
+  <div class="card shadow mb-4">
+    <div class="card-header py-3">
+      <h6 class="m-0 font-weight-bold text-primary">Category Table</h6>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <% if (cat.length === 0) { %>
+        <div class="alert alert-warning text-center" role="alert">
+          No categories found matching "<%= searchQuery %>"
+        </div>
+        <% } else { %>
+        <table
+          class="table table-bordered"
+          id="dataTable"
+          width="100%"
+          cellspacing="0"
+        >
+        
+          <thead>
+            <tr>
+              <th>Category Name</th>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% for(let i = 0; i < cat.length; i++) { %>
+              <% if (!cat[i].isDeleted) { %>
+            <tr>
+              <td><%= cat[i].title %></td>
+              <td><%= cat[i].description %></td>
+              <td>
+                <% if (cat[i].status === "listed") { %>
+                <span class="badge badge-success">Listed</span>
+                <% } else { %>
+                <span class="badge badge-danger">Unlisted</span>
+                <% } %>
+              </td>
+              <td class="d-flex justify-content-center gap-2">
+                <% if (cat[i].status === "unlisted") { %>
+                    <a href="/admin/listCategory?id=<%= cat[i]._id %>">
+                        <button type="button" class="btn btn-light" data-toggle="tooltip" data-placement="top" title="List Category">
+                            <i class="fa fa-low-vision" aria-hidden="true"></i>
+                        </button>
+                    </a>
+                <% } else { %>
+                    <a href="/admin/unlistCategory?id=<%= cat[i]._id %>">
+                        <button type="button" class="btn btn-light" data-toggle="tooltip" data-placement="top" title="Unlist Category">
+                            <i class="fa fa-list-alt" aria-hidden="true"></i>
+                        </button>
+                    </a>
+                <% } %>
+               
+                
+                  <button type="button" class="btn btn-light edit-category-btn" data-toggle="modal" data-target="#editCategoryModal"
+                  data-id="<%= cat[i]._id %>" data-title="<%= cat[i].title %>"
+                  data-description="<%= cat[i].description.replace(/"/g, '&quot;') %>">
+                  <i class="fa fa-wrench" aria-hidden="true"></i>
+                </button>
+              
+                
+                <button type="button" class="btn btn-light" 
+                data-toggle="tooltip" 
+                data-placement="top" 
+                title="Soft Delete Category" 
+                onclick="deleteCategory('<%= cat[i]._id %>')">
+          <i class="fa fa-trash" aria-hidden="true"></i>
+        </button>
+
+
+
+
+              </td>
+              
+            </tr>
+            <% } %>
+            <% } %>
+          </tbody>
+          
+        </table>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- /.container-fluid -->
+
+<!-- Pagination (Dynamic & Centered) -->
+<div class="row">
+  <div class="col-lg-12">
+    <nav aria-label="Page navigation">
+      <ul class="pagination justify-content-center">
+        <% if (currentPage > 1) { %>
+        <li class="page-item">
+          <a class="page-link" href="?page=<%= currentPage - 1 %>">Previous</a>
+        </li>
+        <% } %> <% for (let i = 1; i <= totalPages; i++) { %>
+        <li class="page-item <%= i === currentPage ? 'active' : '' %>">
+          <a class="page-link" href="?page=<%= i %>"><%= i %></a>
+        </li>
+        <% } %> <% if (currentPage < totalPages) { %>
+        <li class="page-item">
+          <a class="page-link" href="?page=<%= currentPage + 1 %>">Next</a>
+        </li>
+        <% } %>
+      </ul>
+    </nav>
+  </div>
+</div>
+
+<!-- Bootstrap Modal for Adding Category -->
+<div
+  class="modal fade"
+  id="addCategoryModal"
+  tabindex="-1"
+  role="dialog"
+  aria-labelledby="addCategoryLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addCategoryLabel">Add New Category</h5>
+        <button
+          type="button"
+          class="close"
+          data-dismiss="modal"
+          aria-label="Close"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form action="/admin/addCategory" method="POST">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="categoryTitle">Title</label>
+            <input
+              type="text"
+              class="form-control"
+              id="categoryTitle"
+              name="title"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="categoryDescription">Description</label>
+            <textarea
+              class="form-control"
+              id="categoryDescription"
+              name="description"
+              rows="3"
+              required
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">Add Category</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Search JavaScript -->
+
+<!-- Bootstrap Modal for Editing Category -->
+<div class="modal fade" id="editCategoryModal" tabindex="-1" role="dialog" aria-labelledby="editCategoryLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Category</h5>
+        <button type="button" class="close" data-dismiss="modal"><span>×</span></button>
+      </div>
+      <form action="/admin/category" method="POST">
+        <div class="modal-body">
+          <input type="hidden" id="editCategoryId" name="id">
+          <div class="form-group">
+            <label for="editCategoryTitle">Title</label>
+            <input type="text" class="form-control" id="editCategoryTitle" name="title" required />
+          </div>
+          <div class="form-group">
+            <label for="editCategoryDescription">Description</label>
+            <textarea class="form-control" id="editCategoryDescription" name="description" rows="3" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Edit Category</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript for Modals -->
+<script>
+  $(document).ready(function () {
+    $(".edit-category-btn").click(function () {
+      const categoryId = $(this).data("id"); // Use .data() for cleaner access
+      const categoryTitle = $(this).data("title");
+      const categoryDescription = $(this).data("description");
+  
+      $("#editCategoryId").val(categoryId);
+      $("#editCategoryTitle").val(categoryTitle);
+      $("#editCategoryDescription").val(categoryDescription);
+  
+    });
+  
+    
+    $('[data-toggle="tooltip"]').tooltip();
+  });
+
+  function deleteCategory(categoryId) {
+  Swal.fire({
+    title: 'Are you sure?',
+    text: 'This category will be soft deleted and can be restored later.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Yes, delete it!'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      fetch('/admin/category', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: categoryId })
+      })
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to delete category');
+        return response.json();
+      })
+      .then(result => {
+        if (result.success) {
+          Swal.fire('Deleted!', 'Category has been soft deleted.', 'success')
+            .then(() => location.reload());
+        } else {
+          Swal.fire('Error!', result.message || 'Failed to delete category', 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        Swal.fire('Error!', 'An error occurred while deleting the category', 'error');
+      });
+    }
+  });
+}
+  </script>
+
+</script>
+<script>
+  document.getElementById("resetSearch").addEventListener("click", function () {
+    window.location.href = "/admin/category"; // Reload the page without search query
+  });
+
+ 
+</script>
+
+<% if (messages.success) { %>
+    <script>
+const Toast = Swal.mixin({
+    toast: true,
+    position: "top-end",
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+      toast.onmouseenter = Swal.stopTimer;
+      toast.onmouseleave = Swal.resumeTimer;
+    }
+  });
+  Toast.fire({
+    icon: "success",
+    title: "<%= messages.success[0] %>"
+  });</script>
+  <% } %>
+
+<%- include("../../views/partials/admin/footer.ejs") %>

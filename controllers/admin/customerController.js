@@ -2,49 +2,43 @@ const User = require("../../models/User");
 
 exports.customerInfo = async (req, res) => {
     try {
-        let search = ""; // Use let instead of const
-        if (req.query.search) {
-            search = req.query.search;
-        }
+        
 
-        let page = 1;
-        if (req.query.page) {
-            page = parseInt(req.query.page); // Ensure page is an integer
-        }
+        const search = req.query.search ? req.query.search.trim() : "";
+        const page = parseInt(req.query.page) || 1; // Default to page 1
+        const limit = 5; // Items per page
 
-        const limit = 5;
-
-        const userData = await User.find({
+        // Search query filter
+        const searchFilter = {
             isAdmin: false,
             $or: [
-                { name: { $regex: ".*" + search + ".*", $options: "i" } }, // Case-insensitive search
-                { email: { $regex: ".*" + search + ".*", $options: "i" } }
-            ],
-        })
-        .limit(limit)
-        .skip((page - 1) * limit)
-        .exec();
+                { name: { $regex: search, $options: "i" } },
+                { email: { $regex: search, $options: "i" } }
+            ]
+        };
 
-        const count = await User.countDocuments({
-            isAdmin: false,
-            $or: [
-                { name: { $regex: ".*" + search + ".*", $options: "i" } },
-                { email: { $regex: ".*" + search + ".*", $options: "i" } }
-            ],
-        });
+        // Fetch users with pagination
+        const [userData, count] = await Promise.all([
+            User.find(searchFilter)
+                .sort({ created_at: -1 }) // Ensure correct field name
+                .skip((page - 1) * limit)
+                .limit(limit),
+            User.countDocuments(searchFilter)
+        ]);
 
         res.render("customers", {
             data: userData,
             totalPages: Math.ceil(count / limit),
             currentPage: page,
-            searchQuery: search,
+            searchQuery: search
         });
 
     } catch (error) {
-        console.error("Error displaying the customers:", error);
-        res.status(500).send("Server Error");
+        console.error("Error fetching customers:", error);
+        res.status(500).render("error", { message: "Internal Server Error" });
     }
 };
+
 
 
 exports.userBlocked = async (req, res) => {

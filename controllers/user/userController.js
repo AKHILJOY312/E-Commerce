@@ -7,7 +7,7 @@ require("dotenv").config();
 exports.loadHomePage = async (req, res) => {
   try {
     const user = req.session.username;
-    console.log(user);
+    // console.log(user);
     if (user) {
       const userData = await User.findOne({ _id: user._id });
       res.render("home", { username: user });
@@ -40,10 +40,14 @@ exports.getLogin = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log(req.body);
+    
 
     const user = await User.findOne({ email });
-    console.log(email);
+  if(user.isActive){
+    req.flash("error", "you have be blocked by admin.");
+      console.log("you have be blocked by admin.");
+      return res.redirect("/login"); // Redirect to allow flash messages to persist
+  }
 
     if (!user) {
       req.flash("error", "Invalid username or password");

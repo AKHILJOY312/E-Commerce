@@ -16,12 +16,12 @@ exports.login = async (req, res) => {
     const admin = await User.findOne({ email, isAdmin: true });
 
     if (!admin) {
-      return res.render("adminLogin", { message: "Invalid email or password." });
+      return res.render("adminLogin", { message: "Invalid email " });
     }
 
     const passwordMatch = await bcrypt.compare(password, admin.password);
     if (!passwordMatch) {
-      return res.render("adminLogin", { message: "Invalid email or password." });
+      return res.render("adminLogin", { message: "Invalid  password." });
     }
 
     // Store admin session with ID for better tracking
