@@ -1,0 +1,477 @@
+<%- include("../../views/partials/admin/header.ejs") %>
+<style>
+  .variant-actions {
+    
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+  
+    transition: all 0.3s ease;
+    display: flex;              /* Added flexbox */
+    flex-direction: column;     /* Stack vertically */
+    gap: 5px;                  /* Space between buttons */
+  }
+  
+  
+  
+  .variant-actions .btn {
+    padding: 2px 8px;
+    /* Removed margin-left since we're vertical now */
+  }
+  
+  tr {
+    position: relative;
+  }
+  
+  .variant-actions .btn:hover {
+    transform: scale(1.1);
+    transition: transform 0.2s ease;
+  }
+</style>
+<!-- Begin Page Content -->
+<div class="container-fluid">
+  <!-- Page Heading -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Product Details: <%= product.name %></h1>
+    <div class="d-flex align-items-center">
+      <a href="/admin/products" class="btn btn-primary mr-2">
+        <i class="fas fa-arrow-left"></i> Back to Products
+      </a>
+      <!-- Actions Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-secondary dropdown-toggle" type="button" id="actionsDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Actions
+        </button>
+        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="actionsDropdown">
+          <a class="dropdown-item" href="#" data-toggle="modal" data-target="#editModal"><i class="fas fa-edit"></i>Edit</a>
+          <a class="dropdown-item text-danger" href="#" data-toggle="modal" data-target="#deleteModal"><i class="fa fa-trash" aria-hidden="true"></i>Delete</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <% if (messages.error) { %>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      <%= messages.error %>
+      <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+  <% } %>
+  <!-- Product Details Card -->
+  <div class="card shadow mb-4">
+    <div class="card-header py-3">
+      <h6 class="m-0 font-weight-bold text-primary">Product Information</h6>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <!-- Product Basic Info -->
+        <div class="col-lg-6">
+          <dl class="row">
+            <dt class="col-sm-4">Name:</dt>
+            <dd class="col-sm-8"><%= product.name %></dd>
+
+            <dt class="col-sm-4">Brand:</dt>
+            <dd class="col-sm-8"><%= product.brand || 'N/A' %></dd>
+
+            <dt class="col-sm-4">Category:</dt>
+            <dd class="col-sm-8"><%= product.category %></dd>
+
+            <dt class="col-sm-4">Created At:</dt>
+            <dd class="col-sm-8"><%= new Date(product.created_at).toLocaleString() %></dd>
+
+            <dt class="col-sm-4">Last Updated:</dt>
+            <dd class="col-sm-8"><%= new Date(product.updated_at).toLocaleString() %></dd>
+          </dl>
+        </div>
+
+        <!-- Product Stats -->
+        <div class="col-lg-6">
+          <div class="card bg-light">
+            <div class="card-body">
+              <h5 class="card-title">Quick Stats</h5>
+              <p class="card-text">
+                <strong>Total Variants:</strong> <%= product.variants.length %><br>
+                <strong>Min Price:</strong> $<%= Math.min(...product.variants.map(v => v.price)).toFixed(2) %><br>
+                <strong>Total Stock:</strong> <%= product.variants.reduce((sum, v) => sum + v.quantity, 0) %><br>
+                <strong>In Stock:</strong> 
+                <% if (product.variants.some(v => v.quantity > 0)) { %>
+                  <span class="badge badge-success">Yes</span>
+                <% } else { %>
+                  <span class="badge badge-danger">No</span>
+                <% } %>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- Variants Section -->
+<div class="card shadow mb-4">
+  <div class="card-header py-3 d-flex justify-content-between align-items-center">
+    <h6 class="m-0 font-weight-bold text-primary">Variants</h6>
+    <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#addVariantModal">
+      <i class="fas fa-plus"></i> Add Variant
+    </button>
+  </div>
+  <div class="card-body">
+    <% if (product.variants.length === 0) { %>
+      <div class="alert alert-info text-center" role="alert">
+        No variants available for this product.
+      </div>
+    <% } else { %>
+      <div class="table-responsive">
+        <table class="table table-bordered" id="variantsTable" width="100%" cellspacing="0">
+          <thead class="thead-dark">
+            <tr>
+              <th>Color</th>
+              <th>Material</th>
+              <th>Price</th>
+              <th>Stock</th>
+              <th>SKU</th>
+              <th>Description</th>
+              <th>Images</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% product.variants.forEach(variant => { %>
+              <tr>
+                <td><%= variant.color %></td>
+                <td><%= variant.material || 'N/A' %></td>
+                <td>$<%= variant.price.toFixed(2) %></td>
+                <td>
+                  <% if (variant.quantity < 10) { %>
+                    <span class="badge badge-danger ml-1">Out of Stock</span>
+                  <% } else if(variant.quantity < 20) { %>
+                    <span class="badge badge-warning ml-1">Only Few</span>
+                  <% } else { %>
+                    <span class="badge badge-success ml-1"><%= variant.quantity %></span>
+                  <% } %>
+                </td>
+                <td><%= variant.sku %></td>
+                <td><%= variant.description || 'No description available' %></td>
+                <td>
+                  <div class="d-flex flex-wrap">
+                    <% 
+                      const imageCount = variant.images ? variant.images.length : 0;
+                      const imagesToShow = variant.images ? variant.images.slice(0, 3) : [];
+                      const placeholderImage = 'https://via.placeholder.com/100?text=No+Image';
+                      if (imageCount < 1) {
+                    %>
+                    <img         
+                      alt="No image found" 
+                      class="img-thumbnail mr-2 mb-2" 
+                      style="max-width: 100px; max-height: 100px;"
+                    >
+                    <% } else { %>
+                      <% for (let i = 0; i < 3; i++) { %>
+                        <img 
+                          src="<%= i < imageCount ? imagesToShow[i] : placeholderImage %>" 
+                          alt="Variant Image <%= i + 1 %>" 
+                          class="img-thumbnail mr-2 mb-2" 
+                          style="max-width: 100px; max-height: 100px;"
+                        >
+                      <% } %>
+                    <% } %>
+                  </div>
+                </td>
+                <td class="variant-actions">
+                  <button class="btn btn-primary btn-sm edit-variant" 
+                          data-variant-id="<%= variant._id %>"
+                          data-toggle="modal" 
+                          data-target="#editVariantModal">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-danger btn-sm delete-variant" 
+                          data-variant-id="<%= variant._id %>">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<!-- Add Variant Modal -->
+<div class="modal fade" id="addVariantModal" tabindex="-1" role="dialog" aria-labelledby="addVariantLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addVariantLabel">Add New Variant for <%= product.name %></h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <form action="/admin/products/<%= product._id %>/variants" method="POST" enctype="multipart/form-data">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="variantColor">Color:</label>
+            <input type="text" class="form-control" id="variantColor" name="color" required>
+          </div>
+          <div class="form-group">
+            <label for="variantMaterial">Material:</label>
+            <input type="text" class="form-control" id="variantMaterial" name="material">
+          </div>
+          <div class="form-group">
+            <label for="variantPrice">Price:</label>
+            <input type="number" step="0.01" class="form-control" id="variantPrice" name="price" required>
+          </div>
+          <div class="form-group">
+            <label for="variantQuantity">Stock Quantity:</label>
+            <input type="number" class="form-control" id="variantQuantity" name="quantity" required>
+          </div>
+          <div class="form-group">
+            <label for="variantSKU">SKU:</label>
+            <input type="text" class="form-control" id="variantSKU" name="sku" required>
+          </div>
+          <div class="form-group">
+            <label for="variantDescription">Description:</label>
+            <textarea class="form-control" id="variantDescription" name="description" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="variantImages">Upload Images (up to 3):</label>
+            <input type="file" class="form-control-file" id="variantImages" name="variantImages" multiple accept="image/*">
+            <small class="form-text text-muted">Select up to 3 image files.</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Variant</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<!-- Edit Variant Modal -->
+<div class="modal fade" id="editVariantModal" tabindex="-1" role="dialog" aria-labelledby="editVariantLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editVariantLabel">Edit Variant</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <form id="editVariantForm" method="POST" enctype="multipart/form-data">
+        <div class="modal-body">
+          <input type="hidden" name="variantId" id="editVariantId">
+          <div class="form-group">
+            <label for="editVariantColor">Color:</label>
+            <input type="text" class="form-control" id="editVariantColor" name="color" required>
+          </div>
+          <div class="form-group">
+            <label for="editVariantMaterial">Material:</label>
+            <input type="text" class="form-control" id="editVariantMaterial" name="material">
+          </div>
+          <div class="form-group">
+            <label for="editVariantPrice">Price:</label>
+            <input type="number" step="0.01" class="form-control" id="editVariantPrice" name="price" required>
+          </div>
+          <div class="form-group">
+            <label for="editVariantQuantity">Stock Quantity:</label>
+            <input type="number" class="form-control" id="editVariantQuantity" name="quantity" required>
+          </div>
+          <div class="form-group">
+            <label for="editVariantSKU">SKU:</label>
+            <input type="text" class="form-control" id="editVariantSKU" name="sku" required>
+          </div>
+          <div class="form-group">
+            <label for="editVariantDescription">Description:</label>
+            <textarea class="form-control" id="editVariantDescription" name="description" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="editVariantImages">Upload New Images (up to 3):</label>
+            <input type="file" class="form-control-file" id="editVariantImages" name="variantImages" multiple accept="image/*">
+            <small class="form-text text-muted">Leave blank to keep existing images.</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+  <!-- Edit Modal -->
+  <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editModalLabel">Edit Product</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <form action="/admin/products/<%= product._id %>?_method=PUT" method="POST">
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="name">Name</label>
+              <input type="text" class="form-control" id="name" name="name" value="<%= product.name %>" required>
+            </div>
+            <div class="form-group">
+              <label for="brand">Brand</label>
+              <input type="text" class="form-control" id="brand" name="brand" value="<%= product.brand || '' %>">
+            </div>
+            <!-- Add more fields as needed (e.g., category_id) -->
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Modal -->
+  <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteModalLabel">Delete Product</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          Are you sure you want to delete "<%= product.name %>"? This action cannot be undone.
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <form action="/admin/products/<%= product._id %>?_method=PATCH" method="POST" style="display: inline;">
+            <button type="submit" class="btn btn-danger">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Custom Styles -->
+<style>
+  .img-thumbnail {
+    transition: transform 0.2s ease-in-out;
+    object-fit: cover;
+  }
+  .img-thumbnail:hover {
+    transform: scale(1.1);
+  }
+  .card-body dl dt {
+    font-weight: bold;
+  }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.delete-variant').forEach(button => {
+    button.addEventListener('click', async function(e) {
+      e.preventDefault();
+      const variantId = this.getAttribute('data-variant-id');
+      console.log('Variant ID:', variantId);
+      
+      Swal.fire({
+        title: 'Are you sure?',
+        text: 'Do you want to delete this variant? It can be restored later.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'No, keep it'
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            const url = `/admin/variants/soft-delete/${variantId}`;
+            console.log('Fetching URL:', url);
+            const response = await fetch(url, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' }
+            });
+
+            console.log('Response status:', response.status);
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.message || 'Failed to soft delete variant');
+            }
+
+            this.closest('tr').remove();
+
+            Swal.fire({
+              title: 'Deleted!',
+              text: 'Variant has been soft deleted successfully.',
+              icon: 'success',
+              timer: 1500,
+              showConfirmButton: false
+            });
+
+          } catch (error) {
+            console.error('Fetch error:', error);
+            Swal.fire({
+              title: 'Error!',
+              text: error.message,
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
+          }
+        }
+      });
+    });
+  });
+
+  $('.edit-variant').on('click', function() {
+    const variantId = $(this).data('variant-id');
+    const productId = '<%= product._id %>'; // From your EJS context
+console.log("variantId:",variantId);
+console.log("productId:",productId);
+
+    // Fetch variant data
+    $.get(`/admin/products/${productId}/variants/${variantId}`, function(data) {
+      const variant = data.variant;
+      
+      $('#editVariantId').val(variant._id);
+      $('#editVariantColor').val(variant.color);
+      $('#editVariantMaterial').val(variant.material);
+      $('#editVariantPrice').val(variant.price);
+      $('#editVariantQuantity').val(variant.quantity);
+      $('#editVariantSKU').val(variant.sku);
+      $('#editVariantDescription').val(variant.description);
+      $('#editVariantForm').attr('action', `/admin/products/${productId}/variants/${variantId}?_method=PATCH`);
+    }).fail(function() {
+      Swal.fire('Error', 'Could not load variant data', 'error');
+    });
+  });
+});
+</script>
+
+
+
+<% if (messages.success) { %>
+  <script>
+const Toast = Swal.mixin({
+  toast: true,
+  position: "top-end",
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+  didOpen: (toast) => {
+    toast.onmouseenter = Swal.stopTimer;
+    toast.onmouseleave = Swal.resumeTimer;
+  }
+});
+Toast.fire({
+  icon: "success",
+  title: "<%= messages.success[0] %>"
+});</script>
+<% } %>
+<%- include("../../views/partials/admin/footer.ejs") %>

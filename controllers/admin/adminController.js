@@ -1,4 +1,6 @@
 const User = require("../../models/User");
+const Product = require('../../models/Product');
+const Category =require('../../models/Category');
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
@@ -36,13 +38,27 @@ exports.login = async (req, res) => {
 
 exports.loadDashboard = async (req, res) => {
   try {
+    
     if (!req.session.admin) {
-      return res.redirect("/admin/login");
+      return res.redirect('/admin/login');
     }
-    res.render("adminDashboard");
+
+    
+    const categoryCount = await Category.countDocuments({ status: 'listed' }); 
+    const totalUsers = await User.countDocuments({ isActive: true }); 
+    const totalProducts = await Product.countDocuments({ isDeleted: false }); 
+
+    
+    res.render('adminDashboard', {
+      categoryCount,
+      totalUsers,
+      totalProducts,
+      messages: req.flash() 
+    });
   } catch (error) {
-    console.error("Cannot get admin dashboard:", error);
-    return res.redirect("/404page");
+    console.error('Cannot get admin dashboard:', error);
+    req.flash('error', 'Error loading dashboard.');
+    return res.redirect('/404page'); 
   }
 };
 

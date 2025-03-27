@@ -9,6 +9,7 @@ const variantSchema = new mongoose.Schema({
   sku: { type: String, unique: true },
   product_image: [{ type: String }], // Array of image URLs
   quantity: { type: Number, default: 0 },
+  isDeleted: { type: Boolean, default: false },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 });

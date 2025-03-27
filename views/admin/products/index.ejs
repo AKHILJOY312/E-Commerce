@@ -1,0 +1,247 @@
+<%- include("../../views/partials/admin/header.ejs") %>
+
+<!-- Begin Page Content -->
+<div class="container-fluid">
+  <!-- Page Heading and Search -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Product Catalog</h1>
+    <div class="d-flex align-items-center">
+      <!-- Topbar Search --> 
+      <form class="form-inline navbar-search mr-2" action="/admin/products" method="GET">
+        <div class="input-group" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1)">
+          <input
+            type="text"
+            name="search"
+            class="form-control bg-light border-0 small"
+            placeholder="Search products..."
+            value="<%= searchQuery || '' %>"
+            aria-label="Search"
+            aria-describedby="basic-addon2"
+            required
+          />
+          <div class="input-group-append">
+            <button class="btn btn-primary" type="submit">
+              <i class="fas fa-search fa-sm"></i>
+            </button>
+            <button class="btn btn-secondary" type="button" id="resetSearch">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      </form>
+      <button
+        class="btn btn-success"
+        data-toggle="modal"
+        data-target="#addProductModal"
+      >
+        <i class="fas fa-plus"></i> Add Product
+      </button>
+    </div>
+  </div>
+
+  <p class="mb-4">
+    Browse our product catalog below. Hover over products to highlight and click to view details.
+  </p>
+
+  <!-- Product Table -->
+  <div class="card shadow mb-4">
+    <div class="card-header py-3">
+      <h6 class="m-0 font-weight-bold text-primary">Product Listing</h6>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <% if (!data || data.length === 0) { %>
+        <div class="alert alert-warning text-center" role="alert">
+          No products found matching "<%= searchQuery %>"
+        </div>
+        <% } else { %>
+        <table
+          class="table table-bordered product-table"
+          id="dataTable"
+          width="100%"
+          cellspacing="0"
+        >
+          <thead>
+            <tr>
+              <th>Product Name</th>
+              <th>Price</th>
+              <th>Stock</th>
+              <th>Category</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% for(let i = 0; i < data.length; i++) { %>
+            <tr class="product-row" data-product-id="<%= data[i]._id %>">
+              <td><%= data[i].name %></td>
+              <td>$<%= data[i].price.toFixed(2) %></td>
+              <td><%= data[i].stock %></td>
+              <td><%= data[i].category || 'Uncategorized' %></td>
+              <td>
+                <% if (data[i].inStock) { %>
+                <span class="badge badge-success">In Stock</span>
+                <% } else { %>
+                <span class="badge badge-danger">Out of Stock</span>
+                <% } %>
+              </td>
+            </tr>
+            <% } %>
+          </tbody>
+        </table>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <% if (totalPages && totalPages > 1) { %>
+  <div class="row">
+    <div class="col-lg-12">
+      <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+          <% if (currentPage > 1) { %>
+          <li class="page-item">
+            <a class="page-link" href="?page=<%= currentPage - 1 %>">Previous</a>
+          </li>
+          <% } %>
+          <% for (let i = 1; i <= totalPages; i++) { %>
+          <li class="page-item <%= i === currentPage ? 'active' : '' %>">
+            <a class="page-link" href="?page=<%= i %>"><%= i %></a>
+          </li>
+          <% } %>
+          <% if (currentPage < totalPages) { %>
+          <li class="page-item">
+            <a class="page-link" href="?page=<%= currentPage + 1 %>">Next</a>
+          </li>
+          <% } %>
+        </ul>
+      </nav>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Bootstrap Modal for Adding Products -->
+  <div
+    class="modal fade"
+    id="addProductModal"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="addProductLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addProductLabel">Add New Product</h5>
+          <button
+            type="button"
+            class="close"
+            data-dismiss="modal"
+            aria-label="Close"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+        <form action="/admin/products" method="POST">
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="productName">Name:</label>
+              <input
+                type="text"
+                class="form-control"
+                id="productName"
+                name="name"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="productCategory">Category:</label>
+              <select class="form-control" id="productCategory" name="category_id" required>
+                <option value="">Select a Category</option>
+                <% categories.forEach(category => { %>
+                  <option value="<%= category._id %>"><%= category.title %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="productBrand">Brand:</label>
+              <input
+                type="text"
+                class="form-control"
+                id="productBrand"
+                name="brand"
+              />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary">Add Product</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Custom Styles and Scripts -->
+<style>
+  .product-row {
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .product-row:hover {
+    background-color: #f8f9fa;
+    transform: scale(1.02);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .product-table th {
+    background-color: #4e73df;
+    color: white;
+  }
+</style>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Reset Search
+    let resetButton = document.getElementById("resetSearch");
+    if (resetButton) {
+      resetButton.addEventListener("click", function () {
+        window.location.href = "/admin/products";
+      });
+    }
+
+    // Product Row Click Handler
+    const productRows = document.querySelectorAll('.product-row');
+    productRows.forEach(row => {
+      row.addEventListener('click', function() {
+        const productId = this.getAttribute('data-product-id');
+        window.location.href = `/admin/products/${productId}`;
+      });
+    });
+  });
+</script>
+
+
+<% if (messages.success) { %>
+  <script>
+const Toast = Swal.mixin({
+  toast: true,
+  position: "top-end",
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+  didOpen: (toast) => {
+    toast.onmouseenter = Swal.stopTimer;
+    toast.onmouseleave = Swal.resumeTimer;
+  }
+});
+Toast.fire({
+  icon: "success",
+  title: "<%= messages.success[0] %>"
+});</script>
+<% } %>
+<%- include("../../views/partials/admin/footer.ejs") %>
