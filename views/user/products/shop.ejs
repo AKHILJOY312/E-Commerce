@@ -1,0 +1,313 @@
+<%- include("../../views/partials/user/header.ejs") %>
+
+<!-- Breadcrumb Section Begin -->
+<section class="breadcrumb-option">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-12">
+        <div class="breadcrumb__text">
+          <h4>Shop</h4>
+          <div class="breadcrumb__links">
+            <a href="/">Home</a>
+            <span>Shop</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- Breadcrumb Section End -->
+
+<!-- Shop Section Begin -->
+<section class="shop spad">
+  <div class="container">
+    <div class="row">
+      <!-- Sidebar -->
+      <div class="col-lg-3">
+        <div class="shop__sidebar">
+          <!-- Search Bar -->
+          <div class="shop__sidebar__search">
+            <form 
+            class="form-inline navbar-search mr-2"
+            action="/shop"
+            method="GET"
+          >
+            <div class="input-group" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0); border: 2px solid #ccc; border-radius: 5px; overflow: hidden;">
+              <input
+                type="text"
+                name="search"
+                class="form-control bg-light border-0 small"
+                placeholder="Search for..."
+                value="<%= searchQuery || '' %>"
+                aria-label="Search"
+                aria-describedby="basic-addon2"
+                required
+              />
+              <div class="input-group-append">
+                <!-- Search Button -->
+                <button class="btn btn-primary" type="submit">
+                  <i class="fas fa-search fa-sm"></i>
+                </button>
+          
+                <!-- Reset Button -->
+                <button class="btn btn-secondary" type="button" id="refreshButton">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            </div>
+          </form>
+          
+            
+           
+          </div>
+          <!-- Filters Accordion -->
+          <div class="shop__sidebar__accordion">
+            <div class="accordion" id="accordionExample">
+              <!-- Categories -->
+              <div class="card">
+                <div class="card-heading">
+                  <a data-toggle="collapse" data-target="#collapseOne">Categories</a>
+                </div>
+                <div id="collapseOne" class="collapse show" data-parent="#accordionExample">
+                  <div class="card-body">
+                    <div class="shop__sidebar__categories">
+                      <ul class="nice-scroll">
+                        <% categories.forEach(category => { %>
+                          <li>
+                            <a href="/shop?category=<%= category._id %>&search=<%= searchQuery %>"
+                              class="<%= selectedCategory === category._id.toString() ? 'active' : '' %>">
+                              <%= category.title %> (<%= category.productCount || 0 %>)
+                            </a>
+                          </li>
+                        <% }) %>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Brands -->
+              <div class="card">
+                <div class="card-heading">
+                  <a data-toggle="collapse" data-target="#collapseTwo">Branding</a>
+                </div>
+                <div id="collapseTwo" class="collapse show" data-parent="#accordionExample">
+                  <div class="card-body">
+                    <div class="shop__sidebar__brand">
+                      <ul>
+                        <% ['Louis Vuitton', 'Chanel', 'Hermes', 'Allen Solly'].forEach(brandOption => { %>
+                          <li>
+                            <a href="/shop?brand=<%= brandOption %>&search=<%= searchQuery %>"
+                              class="<%= selectedBrand === brandOption ? 'active' : '' %>">
+                              <%= brandOption %>
+                            </a>
+                          </li>
+                        <% }) %>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Price Filter -->
+              <div class="card">
+                <div class="card-heading">
+                  <a data-toggle="collapse" data-target="#collapseThree">Filter Price</a>
+                </div>
+                <div id="collapseThree" class="collapse show" data-parent="#accordionExample">
+                  <div class="card-body">
+                    <div class="shop__sidebar__price">
+                      <ul>
+                        <% const priceRanges = [
+                          { min: 0, max: 50 },
+                          { min: 50, max: 100 },
+                          { min: 100, max: 150 },
+                          { min: 150, max: 200 },
+                          { min: 200, max: 250 },
+                          { min: 250, max: Infinity }
+                        ]; %>
+                        <% priceRanges.forEach(range => { %>
+                          <li>
+                            <a href="/shop?minPrice=<%= range.min %>&maxPrice=<%= range.max === Infinity ? '' : range.max %>&search=<%= searchQuery %>"
+                              class="<%= minPrice === range.min && (maxPrice === range.max || (range.max === Infinity && !maxPrice)) ? 'active' : '' %>">
+                              <%= range.max === Infinity ? '$250.00+' : `$${range.min.toFixed(2)} - $${range.max.toFixed(2)}` %>
+                            </a>
+                          </li>
+                        <% }) %>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Product Listing -->
+      <div class="col-lg-9">
+        <div class="shop__product__option">
+          <div class="row">
+            <div class="col-lg-6 col-md-6 col-sm-6">
+              <div class="shop__product__option__left">
+                <p>Showing <%= (currentPage - 1) * perPage + 1 %>–<%= Math.min(currentPage * perPage, totalProducts) %> of <%= totalProducts %> results</p>
+              </div>
+            </div>
+            <div class="col-lg-6 col-md-6 col-sm-6">
+              <div class="shop__product__option__right">
+                <p>Sort by Price:</p>
+                <select onchange="location = this.value;">
+                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&sort=priceLow" <%= sort === 'priceLow' ? 'selected' : '' %>>Price: Low to High</option>
+                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&sort=priceHigh" <%= sort === 'priceHigh' ? 'selected' : '' %>>Price: High to Low</option>
+                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&sort=nameAsc" <%= sort === 'nameAsc' ? 'selected' : '' %>>Name: A-Z</option>
+                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&sort=nameDesc" <%= sort === 'nameDesc' ? 'selected' : '' %>>Name: Z-A</option>
+                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&sort=newest" <%= sort === 'newest' ? 'selected' : '' %>>Newest First</option>
+                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&sort=oldest" <%= sort === 'oldest' ? 'selected' : '' %>>Oldest First</option>
+              </select>
+              
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <% if (products && products.length > 0) { %>
+            <% products.forEach(product => { %>
+              <div class="col-lg-4 col-md-6 col-sm-6">
+                <div class="product__item">
+                  <div
+                    class="product__item__pic set-bg"
+                    data-setbg="<%= product.variants && product.variants.length > 0 && product.variants[0].product_image.length > 0 ? product.variants[0].product_image[0] : 'img/product/product-1.jpg' %>"
+                    style="background-image: url('<%= product.variants && product.variants.length > 0 && product.variants[0].product_image.length > 0 ? product.variants[0].product_image[0] : 'img/product/product-1.jpg' %>');"
+                  >
+                    <ul class="product__hover">
+                      <li><a href="/wishlist/add/<%= product._id %>"><img src="img/icon/heart.png" alt="Wishlist"></a></li>
+                      <li><a href="/compare/<%= product._id %>"><img src="img/icon/compare.png" alt="Compare"> <span>Compare</span></a></li>
+                      <li><a href="/product/<%= product._id %>"><img src="img/icon/search.png" alt="View"></a></li>
+                    </ul>
+                  </div>
+                  <div class="product__item__text">
+                    <h6><%= product.name %> <% if (product.brand) { %> - <%= product.brand %> <% } %></h6>
+                    <a href="/cart/add/<%= product._id %>" class="add-cart">+ Add To Cart</a>
+                    <div class="rating">
+                      <% for (let i = 0; i < 5; i++) { %>
+                        <i class="fa fa-star-o"></i>
+                      <% } %>
+                    </div>
+                    <h5>$<%= product.variants && product.variants.length > 0 ? Math.min(...product.variants.map(v => v.price)).toFixed(2) : '0.00' %></h5>
+                    <div class="product__color__select">
+                      <% if (product.variants && product.variants.length > 0) { %>
+                        <% product.variants.forEach((variant, index) => { %>
+                          <label
+                            class="<%= index === 0 ? 'active' : '' %> <%= variant.color ? variant.color.toLowerCase() : 'grey' %>"
+                            for="pc-<%= product._id %>-<%= index %>"
+                          >
+                            <input
+                              type="radio"
+                              id="pc-<%= product._id %>-<%= index %>"
+                              name="color-<%= product._id %>"
+                              value="<%= variant._id %>"
+                              <% if (index === 0) { %> checked <% } %>
+                            >
+                          </label>
+                        <% }) %>
+                      <% } else { %>
+                        <label for="pc-<%= product._id %>-default">
+                          <input type="radio" id="pc-<%= product._id %>-default" name="color-<%= product._id %>">
+                        </label>
+                      <% } %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% }) %>
+          <% } else { %>
+            <div class="col-12">
+              <p class="text-center">No products available<% if (searchQuery) { %> for "<%= searchQuery %>"<% } %>.</p>
+            </div>
+          <% } %>
+        </div>
+        <!-- Pagination -->
+        <% if (totalPages > 1) { %>
+          <div class="row">
+            <div class="col-lg-12">
+              <div class="product__pagination">
+                <% if (currentPage > 1) { %>
+                  <a href="/shop?page=<%= currentPage - 1 %>&search=<%= searchQuery %>&category=<%= selectedCategory %>&brand=<%= selectedBrand %>&minPrice=<%= minPrice %>&maxPrice=<%= maxPrice %>"><i class="fa fa-angle-left"></i></a>
+                <% } %>
+                <% 
+                  const maxPagesToShow = 5;
+                  let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+                  let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+                  if (endPage - startPage + 1 < maxPagesToShow) {
+                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                  }
+                %>
+                <% if (startPage > 1) { %>
+                  <a href="/shop?page=1&search=<%= searchQuery %>&category=<%= selectedCategory %>&brand=<%= selectedBrand %>&minPrice=<%= minPrice %>&maxPrice=<%= maxPrice %>">1</a>
+                  <% if (startPage > 2) { %>
+                    <span>...</span>
+                  <% } %>
+                <% } %>
+                <% for (let i = startPage; i <= endPage; i++) { %>
+                  <a class="<%= i === currentPage ? 'active' : '' %>" href="/shop?page=<%= i %>&search=<%= searchQuery %>&category=<%= selectedCategory %>&brand=<%= selectedBrand %>&minPrice=<%= minPrice %>&maxPrice=<%= maxPrice %>"><%= i %></a>
+                <% } %>
+                <% if (endPage < totalPages) { %>
+                  <% if (endPage < totalPages - 1) { %>
+                    <span>...</span>
+                  <% } %>
+                  <a href="/shop?page=<%= totalPages %>&search=<%= searchQuery %>&category=<%= selectedCategory %>&brand=<%= selectedBrand %>&minPrice=<%= minPrice %>&maxPrice=<%= maxPrice %>"><%= totalPages %></a>
+                <% } %>
+                <% if (currentPage < totalPages) { %>
+                  <a href="/shop?page=<%= currentPage + 1 %>&search=<%= searchQuery %>&category=<%= selectedCategory %>&brand=<%= selectedBrand %>&minPrice=<%= minPrice %>&maxPrice=<%= maxPrice %>"><i class="fa fa-angle-right"></i></a>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- Shop Section End -->
+<style>
+  .product__item {
+      transition: all 0.3s ease;
+      position: relative;
+  }
+  .product__item:hover {
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.8); /* Subtle white glow */
+      transform: scale(1.02); /* Slight zoom effect */
+      z-index: 1; /* Ensure it stays above other items */
+  }
+  .product__item__pic {
+      transition: filter 0.3s ease;
+  }
+  .product__item:hover .product__item__pic {
+      filter: brightness(110%); /* Increase brightness on hover */
+  }
+  .product__hover {
+      opacity: 0;
+      transition: opacity 0.3s ease;
+  }
+  .product__item:hover .product__hover {
+      opacity: 1; /* Show hover icons on hover */
+  }
+ 
+  
+ 
+</style>
+<!-- Inline Scripts -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Handle background images
+    const elements = document.querySelectorAll('.set-bg');
+    elements.forEach(element => {
+      const bg = element.getAttribute('data-setbg');
+      element.style.backgroundImage = `url(${bg})`;
+    });
+
+    // Refresh button
+    document.getElementById('refreshButton').addEventListener('click', function () {
+      window.location.href = '/shop';
+    });
+  });
+</script>
+
+<%- include("../../views/partials/user/footer.ejs") %>

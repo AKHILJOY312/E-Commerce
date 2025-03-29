@@ -10,6 +10,7 @@ exports.loadHomePage = async (req, res) => {
     // console.log(user);
     if (user) {
       const userData = await User.findOne({ _id: user._id });
+
       res.render("home", { username: user });
     } else {
       res.render("home", { username: null });
@@ -29,9 +30,25 @@ exports.pageNotFound = async (req, res) => {
   }
 };
 
+exports.googleSessions = async (req, res) => {
+  try {
+    if (req.user) {
+      req.session.isAuthenticated = true;
+      req.session.username = req.user.name; // Store username in session
+    }
+    res.redirect("/");
+  } catch (error) {
+    console.error(" google Sessions failed");
+    res.status(500).send("Server error");
+  }
+};
+
 exports.getLogin = async (req, res) => {
   try {
-    return res.render("login");
+    if (req.session.username || req.user) {
+      return res.redirect("/");
+    }
+    return res.render("auth/login");
   } catch (error) {
     console.error(" pageNotFound not found");
     res.status(500).send("Server error");
@@ -40,14 +57,13 @@ exports.getLogin = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    
 
     const user = await User.findOne({ email });
-  if(user.isActive){
-    req.flash("error", "you have be blocked by admin.");
+    if (!user.isActive) {
+      req.flash("error", "you have be blocked by admin.");
       console.log("you have be blocked by admin.");
       return res.redirect("/login"); // Redirect to allow flash messages to persist
-  }
+    }
 
     if (!user) {
       req.flash("error", "Invalid username or password");
@@ -83,7 +99,10 @@ exports.login = async (req, res) => {
 
 exports.getSignup = async (req, res) => {
   try {
-    return res.render("signup");
+    if (req.session.username || req.session.email) {
+      return res.redirect("/");
+    }
+    return res.render("auth/signup");
   } catch (error) {
     console.error(" pageNotFound not found");
     res.status(500).send("Server error");
@@ -137,21 +156,24 @@ const securePassword = async (password) => {
 exports.signupUser = async (req, res) => {
   try {
     console.log(`signupUser is working`);
-    const { name, email,phone, password, confirm } = req.body;
+    const { name, email, phone, password, confirm } = req.body;
 
     if (password !== confirm) {
       console.log(`Password check failed`);
-      return res.render("signup", { message: "Passwords do not match" });
+      return res.redirect("/signup", { message: "Passwords do not match" });
     }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       console.log(`User already exists`);
-      req.flash("error", "User already exists.");
-      return res.render("signup", { error: "Invalid username or password" });
+      req.flash(
+        "error",
+        "You are already our customer. Click on below button to login"
+      );
+      return res.redirect("/signup");
     }
 
-    const otp = generateOtp(); // Ensure `generateOtp()` function exists
+    const otp = generateOtp();
     const emailSent = await sendVerificationEmail(email, otp);
 
     if (!emailSent) {
@@ -159,9 +181,9 @@ exports.signupUser = async (req, res) => {
     }
 
     req.session.userOtp = otp;
-    req.session.userData = { name, email,phone, password };
+    req.session.userData = { name, email, phone, password };
 
-    res.render("verify-Otp");
+    res.render("auth/verify-Otp");
     console.log("OTP sent:", otp);
   } catch (error) {
     console.error("Signup error", error);
@@ -201,6 +223,7 @@ exports.verifyOtp = async (req, res) => {
     res.status(400).json({ success: false, message: "An error occurred" });
   }
 };
+
 exports.resendOtp = async (req, res) => {
   try {
     const { email } = req.session.userData;
@@ -219,21 +242,17 @@ exports.resendOtp = async (req, res) => {
         .status(200)
         .json({ success: true, message: "OTP Resend successfully" });
     } else {
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Failed to send OTP, please try again.",
-        });
+      res.status(500).json({
+        success: false,
+        message: "Failed to send OTP, please try again.",
+      });
     }
   } catch (error) {
     console.error("Error resending OTP", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Internal server error,Please try again",
-      });
+    res.status(500).json({
+      success: false,
+      message: "Internal server error,Please try again",
+    });
   }
 };
 
@@ -246,4 +265,128 @@ exports.logout = (req, res, next) => {
       res.redirect("/");
     });
   });
+};
+
+exports.LoadForgetPassword = (req, res, next) => {
+  try {
+    res.render("forgetPassword/email");
+  } catch (error) {
+    console.error("Error getting forget email page", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error,Please try again",
+    });
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      req.flash("error", "No account found with this email");
+      return res.redirect("/forgetPassword");
+    }
+
+    const otp = generateOtp();
+    req.session.forgotPasswordOtp = otp;
+    req.session.forgotPasswordEmail = email;
+    console.log("your otp is:", otp);
+
+    const emailSent = await sendVerificationEmail(email, otp);
+    if (!emailSent) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send OTP email",
+      });
+    }
+
+    res.render("forgetPassword/verify-otp");
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    req.flash("error", "Something went wrong. Please try again.");
+    res.redirect("/forgetPassword");
+  }
+};
+
+exports.verifyForgotPasswordOtp = async (req, res) => {
+  try {
+    const { otp } = req.body;
+    console.log("check1:", otp);
+    if (parseInt(otp) !== parseInt(req.session.forgotPasswordOtp)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP. Please try again.",
+      });
+    }
+    console.log("check2:", otp);
+    // res.render("forgetPassword/reset-password");
+    res.json({ success: true, redirectUrl: "/reset-password" });
+  } catch (error) {
+    console.error("OTP verification error:", error);
+    res.status(500).json({
+      success: false,
+      message: "An error occurred during OTP verification",
+    });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  
+  try {
+    if ( !req.session.forgotPasswordEmail) {
+      return res.redirect("/forgetPassword");
+    }
+    const { password, confirmPassword } = req.body;
+    const email = req.session.forgotPasswordEmail;
+console.log(req.body,email);
+    if (password !== confirmPassword) {
+      return res.render("forgetPassword/reset-password", {
+        message: "Passwords do not match",
+      });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const passwordHash = await securePassword(password);
+    user.password = passwordHash;
+    await user.save();
+
+    delete req.session.forgotPasswordOtp;
+    delete req.session.forgotPasswordEmail;
+    req.flash("success", "Password reset successfully");
+    if(user.isAdmin){
+      
+      res.redirect("admin/login");
+    }else{
+        
+        res.redirect("/login");
+      }
+  } catch (error) {
+    console.error("Password reset error:", error);
+    res.status(500).json({
+      success: false,
+      message: "An error occurred during password reset",
+    });
+  }
+};
+
+exports.getResetPassword = async (req, res) => {
+  try {
+    res.render("forgetPassword/reset-password")
+    
+  } catch (error) {
+    console.error("error get password reset page :", error);
+    res.status(500).json({
+      success: false,
+      message: "An error occurred during password reset",
+    });
+  }
 };
