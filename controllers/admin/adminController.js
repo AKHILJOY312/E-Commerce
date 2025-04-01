@@ -18,7 +18,7 @@ exports.login = async (req, res) => {
     const admin = await User.findOne({ email, isAdmin: true });
 
     if (!admin) {
-      return res.render("adminLogin", { message: "Invalid email " });
+      return res.render("adminLogin", { message: "Invalid email or password" });
     }
 
     const passwordMatch = await bcrypt.compare(password, admin.password);
@@ -67,7 +67,7 @@ res.render('404page');
 };
 
 
-exports.logout = async (req, res) => {
+exports.adminLogout = async (req, res) => {
   try {
     req.session.destroy((err) => {
       if (err) {

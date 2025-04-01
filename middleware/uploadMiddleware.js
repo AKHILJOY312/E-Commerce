@@ -17,7 +17,7 @@ const upload = multer({
     const mimetype = filetypes.test(file.mimetype);
     return mimetype && extname ? cb(null, true) : cb(new Error("Only images allowed!"));
   },
-}).array("variantImages", 3); // Allow max 3 images
+}).single("variantImages"); // Allow max 3 images
 
 module.exports = (req, res, next) => {
   upload(req, res, (err) => {

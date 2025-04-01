@@ -1,32 +1,155 @@
 <%- include("../../views/partials/admin/header.ejs") %>
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css"
+/>
 <style>
   .variant-actions {
-    
     position: absolute;
     right: 10px;
     top: 50%;
     transform: translateY(-50%);
-  
+
     transition: all 0.3s ease;
-    display: flex;              /* Added flexbox */
-    flex-direction: column;     /* Stack vertically */
-    gap: 5px;                  /* Space between buttons */
+    display: flex; /* Added flexbox */
+    flex-direction: column; /* Stack vertically */
+    gap: 5px; /* Space between buttons */
   }
-  
-  
-  
+
   .variant-actions .btn {
     padding: 2px 8px;
     /* Removed margin-left since we're vertical now */
   }
-  
+
   tr {
     position: relative;
   }
-  
+
   .variant-actions .btn:hover {
     transform: scale(1.1);
     transition: transform 0.2s ease;
+  }
+
+  .image-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .hover-image {
+    max-width: 100px;
+    max-height: 100px;
+    transition: transform 0.2s;
+  }
+
+  .image-wrapper:hover .hover-image {
+    transform: scale(1.1);
+  }
+
+  .close-btn {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    background-color: rgba(255, 0, 0, 0.8);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: none;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: center;
+    line-height: 18px;
+  }
+
+  .image-wrapper:hover .close-btn {
+    display: block;
+  }
+
+  /* Style for the td to position the icon relatively */
+  .image-td {
+    position: relative;
+    padding: 10px; /* Adjust padding as needed */
+  }
+
+  /* Style for the plus icon */
+  .add-image-icon {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 24px;
+    color: #28a745; /* Green color, adjust as needed */
+    background-color: #fff;
+    border: 2px solid #28a745;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    line-height: 26px;
+    text-align: center;
+    cursor: pointer;
+    display: none; /* Hidden by default */
+  }
+
+  /* Show icon on hover */
+  .image-td:hover .add-image-icon {
+    display: block;
+  }
+
+  /* Tooltip styling (Bootstrap compatible) */
+  .add-image-icon[data-toggle="tooltip"] {
+    position: relative;
+  }
+
+  .add-image-icon[data-toggle="tooltip"]:hover:after {
+    content: attr(title);
+    position: absolute;
+    top: -30px; /* Position above the icon */
+    right: 0;
+    background-color: #333;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 10;
+  }
+
+  /* Optional: Style for image wrapper and close button */
+  .image-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .hover-image {
+    width: 100px; /* Adjust size as needed */
+    height: 150px;
+    object-fit: cover;
+  }
+
+  /* Ensure container doesn't overflow */
+  .image-container {
+    max-width: 100%;
+  }
+  .img-container {
+    max-width: 100%;
+    margin: 20px auto;
+  }
+  #previewImage {
+    max-width: 100%;
+    max-height: 300px; /* Smaller image height */
+    display: block;
+    margin: 0 auto;
+  }
+  #croppedCanvas {
+    max-width: 100%;
+    max-height: 300px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin: 15px auto;
+    display: block;
+  }
+  .cropper-container {
+    max-height: 350px;
   }
 </style>
 <!-- Begin Page Content -->
@@ -40,23 +163,69 @@
       </a>
       <!-- Actions Dropdown -->
       <div class="dropdown">
-        <button class="btn btn-secondary dropdown-toggle" type="button" id="actionsDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button
+          class="btn btn-secondary dropdown-toggle"
+          type="button"
+          id="actionsDropdown"
+          data-toggle="dropdown"
+          aria-haspopup="true"
+          aria-expanded="false"
+        >
           Actions
         </button>
-        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="actionsDropdown">
-          <a class="dropdown-item" href="#" data-toggle="modal" data-target="#editModal"><i class="fas fa-edit"></i>Edit</a>
-          <a class="dropdown-item text-danger" href="#" data-toggle="modal" data-target="#deleteModal"><i class="fa fa-trash" aria-hidden="true"></i>Delete</a>
+        <div
+          class="dropdown-menu dropdown-menu-right"
+          aria-labelledby="actionsDropdown"
+        >
+          <% if (product.status === "unlisted") { %>
+          <a
+            href="#"
+            class="dropdown-item"
+            data-toggle="modal"
+            data-target="#confirmActionModal"
+            onclick="setAction('/admin/listProduct?id=<%= product._id %>')"
+          >
+            <i class="fa fa-low-vision mr-2"></i> Unlisted
+          </a>
+          <% } else { %>
+          <a
+            href="#"
+            class="dropdown-item"
+            data-toggle="modal"
+            data-target="#confirmActionModal"
+            onclick="setAction('/admin/unlistProduct?id=<%= product._id %>')"
+          >
+            <i class="fa fa-list-alt mr-2"></i> Listed
+          </a>
+          <% } %>
+
+          <a
+            class="dropdown-item"
+            href="#"
+            data-toggle="modal"
+            data-target="#editModal"
+          >
+            <i class="fas fa-edit mr-2"></i>Edit
+          </a>
+          <a
+            class="dropdown-item text-danger"
+            href="#"
+            data-toggle="modal"
+            data-target="#deleteModal"
+          >
+            <i class="fa fa-trash mr-2"></i>Delete
+          </a>
         </div>
       </div>
     </div>
   </div>
   <% if (messages.error) { %>
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-      <%= messages.error %>
-      <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-        <span aria-hidden="true">&times;</span>
-      </button>
-    </div>
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <%= messages.error %>
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
   <% } %>
   <!-- Product Details Card -->
   <div class="card shadow mb-4">
@@ -77,11 +246,24 @@
             <dt class="col-sm-4">Category:</dt>
             <dd class="col-sm-8"><%= product.category %></dd>
 
+            <dt class="col-sm-4">Status:</dt>
+            <dd class="col-sm-8">
+              <span
+                style=" <%= product.status.toLowerCase() === 'unlisted' ? 'color: red;' : '' %>"
+              >
+                <%= product.status %>
+              </span>
+            </dd>
+
             <dt class="col-sm-4">Created At:</dt>
-            <dd class="col-sm-8"><%= new Date(product.created_at).toLocaleString() %></dd>
+            <dd class="col-sm-8">
+              <%= new Date(product.created_at).toLocaleString() %>
+            </dd>
 
             <dt class="col-sm-4">Last Updated:</dt>
-            <dd class="col-sm-8"><%= new Date(product.updated_at).toLocaleString() %></dd>
+            <dd class="col-sm-8">
+              <%= new Date(product.updated_at).toLocaleString() %>
+            </dd>
           </dl>
         </div>
 
@@ -91,14 +273,17 @@
             <div class="card-body">
               <h5 class="card-title">Quick Stats</h5>
               <p class="card-text">
-                <strong>Total Variants:</strong> <%= product.variants.length %><br>
-                <strong>Min Price:</strong> $<%= Math.min(...product.variants.map(v => v.price)).toFixed(2) %><br>
-                <strong>Total Stock:</strong> <%= product.variants.reduce((sum, v) => sum + v.quantity, 0) %><br>
-                <strong>In Stock:</strong> 
+                <strong>Total Variants:</strong> <%= product.variants.length
+                %><br />
+                <strong>Min Price:</strong> ₹<%=
+                Math.min(...product.variants.map(v => v.price)).toFixed(2) %><br />
+                <strong>Total Stock:</strong> <%= product.variants.reduce((sum,
+                v) => sum + v.quantity, 0) %><br />
+                <strong>In Stock:</strong>
                 <% if (product.variants.some(v => v.quantity > 0)) { %>
-                  <span class="badge badge-success">Yes</span>
+                <span class="badge badge-success">Yes</span>
                 <% } else { %>
-                  <span class="badge badge-danger">No</span>
+                <span class="badge badge-danger">No</span>
                 <% } %>
               </p>
             </div>
@@ -108,22 +293,33 @@
     </div>
   </div>
 
-<!-- Variants Section -->
-<div class="card shadow mb-4">
-  <div class="card-header py-3 d-flex justify-content-between align-items-center">
-    <h6 class="m-0 font-weight-bold text-primary">Variants</h6>
-    <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#addVariantModal">
-      <i class="fas fa-plus"></i> Add Variant
-    </button>
-  </div>
-  <div class="card-body">
-    <% if (product.variants.length === 0) { %>
+  <!-- Variants Section -->
+  <div class="card shadow mb-4">
+    <div
+      class="card-header py-3 d-flex justify-content-between align-items-center"
+    >
+      <h6 class="m-0 font-weight-bold text-primary">Variants</h6>
+      <button
+        class="btn btn-success btn-sm"
+        data-toggle="modal"
+        data-target="#addVariantModal"
+      >
+        <i class="fas fa-plus"></i> Add Variant
+      </button>
+    </div>
+    <div class="card-body">
+      <% if (product.variants.length === 0) { %>
       <div class="alert alert-info text-center" role="alert">
         No variants available for this product.
       </div>
-    <% } else { %>
+      <% } else { %>
       <div class="table-responsive">
-        <table class="table table-bordered" id="variantsTable" width="100%" cellspacing="0">
+        <table
+          class="table table-bordered"
+          id="variantsTable"
+          width="100%"
+          cellspacing="0"
+        >
           <thead class="thead-dark">
             <tr>
               <th>Color</th>
@@ -138,194 +334,507 @@
           </thead>
           <tbody>
             <% product.variants.forEach(variant => { %>
-              <tr>
-                <td><%= variant.color %></td>
-                <td><%= variant.material || 'N/A' %></td>
-                <td>$<%= variant.price.toFixed(2) %></td>
-                <td>
-                  <% if (variant.quantity < 10) { %>
-                    <span class="badge badge-danger ml-1">Out of Stock</span>
-                  <% } else if(variant.quantity < 20) { %>
-                    <span class="badge badge-warning ml-1">Only Few</span>
-                  <% } else { %>
-                    <span class="badge badge-success ml-1"><%= variant.quantity %></span>
-                  <% } %>
-                </td>
-                <td><%= variant.sku %></td>
-                <td><%= variant.description || 'No description available' %></td>
-                <td>
-                  <div class="d-flex flex-wrap">
-                    <% 
-                      const imageCount = variant.images ? variant.images.length : 0;
-                      const imagesToShow = variant.images ? variant.images.slice(0, 3) : [];
-                      const placeholderImage = 'https://via.placeholder.com/100?text=No+Image';
-                      if (imageCount < 1) {
-                    %>
-                    <img         
-                      alt="No image found" 
-                      class="img-thumbnail mr-2 mb-2" 
-                      style="max-width: 100px; max-height: 100px;"
-                    >
-                    <% } else { %>
-                      <% for (let i = 0; i < 3; i++) { %>
-                        <img 
-                          src="<%= i < imageCount ? imagesToShow[i] : placeholderImage %>" 
-                          alt="Variant Image <%= i + 1 %>" 
-                          class="img-thumbnail mr-2 mb-2" 
-                          style="max-width: 100px; max-height: 100px;"
-                        >
-                      <% } %>
-                    <% } %>
+            <tr>
+              <td><%= variant.color %></td>
+              <td><%= variant.material || 'N/A' %></td>
+              <td>₹<%= variant.price.toFixed(2) %></td>
+              <td>
+                <% if (variant.quantity < 10) { %>
+                <span class="badge badge-danger ml-1">Out of Stock</span>
+                <% } else if(variant.quantity < 20) { %>
+                <span class="badge badge-warning ml-1">Only Few</span>
+                <% } else { %>
+                <span class="badge badge-success ml-1"
+                  ><%= variant.quantity %></span
+                >
+                <% } %>
+              </td>
+              <td><%= variant.sku %></td>
+              <td><%= variant.description || 'No description available' %></td>
+              <td class="image-td">
+                <div class="d-flex flex-wrap image-container">
+                  <% const imageCount = variant.images ? variant.images.length :
+                  0; const imagesToShow = variant.images ?
+                  variant.images.slice(0, 10) : []; const placeholderImage =
+                  'https://placehold.co/400x600?text=Add+image'; if (imageCount
+                  < 1) { %>
+                  <div class="image-wrapper mt-2">
+                    <img
+                      alt="No image found"
+                      class="img-thumbnail mr-2 mb-2 hover-image"
+                      src="<%= placeholderImage %>"
+                    />
                   </div>
-                </td>
-                <td class="variant-actions">
-                  <button class="btn btn-primary btn-sm edit-variant" 
-                          data-variant-id="<%= variant._id %>"
-                          data-toggle="modal" 
-                          data-target="#editVariantModal">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="btn btn-danger btn-sm delete-variant" 
-                          data-variant-id="<%= variant._id %>">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </td>
-              </tr>
+                  <% } else { %> <% for (let i = 0; i < imageCount; i++) { %>
+                  <div class="image-wrapper">
+                    <img
+                      src="<%= i < imageCount ? imagesToShow[i] : placeholderImage %>"
+                      alt="Variant Image <%= i + 1 %>"
+                      class="img-thumbnail mr-2 mb-2 hover-image"
+                    />
+                    <button class="close-btn" data-variant-id="<%= variant._id %>" 
+                      data-image-url="<%= imagesToShow[i] %>">×</button>
+                  </div>
+                  <% } %> <% } %>
+                </div>
+                <!-- Plus icon with tooltip and modal trigger -->
+                <span
+                  class="add-image-icon"
+                  title="Add image here"
+                  data-variant-id="<%= variant._id %>"
+                  data-toggle="modal"
+                  data-target="#addImageModal"
+                  >+</span
+                >
+              </td>
+              <td class="variant-actions">
+                <button
+                  class="btn btn-primary btn-sm edit-variant"
+                  data-variant-id="<%= variant._id %>"
+                  data-toggle="modal"
+                  data-target="#editVariantModal"
+                >
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button
+                  class="btn btn-danger btn-sm delete-variant"
+                  data-variant-id="<%= variant._id %>"
+                >
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
+            </tr>
             <% }) %>
           </tbody>
         </table>
       </div>
-    <% } %>
-  </div>
-</div>
-
-<!-- Add Variant Modal -->
-<div class="modal fade" id="addVariantModal" tabindex="-1" role="dialog" aria-labelledby="addVariantLabel" aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="addVariantLabel">Add New Variant for <%= product.name %></h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">×</span>
-        </button>
-      </div>
-      <form action="/admin/products/<%= product._id %>/variants" method="POST" enctype="multipart/form-data">
-        <div class="modal-body">
-          <div class="form-group">
-            <label for="variantColor">Color:</label>
-            <input type="text" class="form-control" id="variantColor" name="color" required>
-          </div>
-          <div class="form-group">
-            <label for="variantMaterial">Material:</label>
-            <input type="text" class="form-control" id="variantMaterial" name="material">
-          </div>
-          <div class="form-group">
-            <label for="variantPrice">Price:</label>
-            <input type="number" step="0.01" class="form-control" id="variantPrice" name="price" required>
-          </div>
-          <div class="form-group">
-            <label for="variantQuantity">Stock Quantity:</label>
-            <input type="number" class="form-control" id="variantQuantity" name="quantity" required>
-          </div>
-          <div class="form-group">
-            <label for="variantSKU">SKU:</label>
-            <input type="text" class="form-control" id="variantSKU" name="sku" required>
-          </div>
-          <div class="form-group">
-            <label for="variantDescription">Description:</label>
-            <textarea class="form-control" id="variantDescription" name="description" rows="3"></textarea>
-          </div>
-          <div class="form-group">
-            <label for="variantImages">Upload Images (up to 3):</label>
-            <input type="file" class="form-control-file" id="variantImages" name="variantImages" multiple accept="image/*">
-            <small class="form-text text-muted">Select up to 3 image files.</small>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Add Variant</button>
-        </div>
-      </form>
+      <% } %>
     </div>
   </div>
-</div>
-<!-- Edit Variant Modal -->
-<div class="modal fade" id="editVariantModal" tabindex="-1" role="dialog" aria-labelledby="editVariantLabel" aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="editVariantLabel">Edit Variant</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">×</span>
-        </button>
+
+  <!-- Add Variant Modal -->
+  <div
+    class="modal fade"
+    id="addVariantModal"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="addVariantLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addVariantLabel">
+            Add New Variant for <%= product.name %>
+          </h5>
+          <button
+            type="button"
+            class="close"
+            data-dismiss="modal"
+            aria-label="Close"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+        <form
+          action="/admin/products/<%= product._id %>/variants"
+          method="POST"
+        >
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="variantColor">Color:</label>
+              <input
+                type="text"
+                class="form-control"
+                id="variantColor"
+                name="color"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="variantMaterial">Material:</label>
+              <input
+                type="text"
+                class="form-control"
+                id="variantMaterial"
+                name="material"
+              />
+            </div>
+            <div class="form-group">
+              <label for="variantPrice">Regular Price:</label>
+              <input
+                type="number"
+                step="0.01"
+                class="form-control"
+                id="variantPrice"
+                name="price"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="variantSalePrice">Sale Price:</label>
+              <input
+                type="number"
+                step="0.01"
+                class="form-control"
+                id="variantSalePrice"
+                name="salePrice"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="variantQuantity">Stock Quantity:</label>
+              <input
+                type="number"
+                class="form-control"
+                id="variantQuantity"
+                name="quantity"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="variantSKU">SKU:</label>
+              <input
+                type="text"
+                class="form-control"
+                id="variantSKU"
+                name="sku"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="variantDescription">Description:</label>
+              <textarea
+                class="form-control"
+                id="variantDescription"
+                name="description"
+                rows="3"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary">Add Variant</button>
+          </div>
+        </form>
       </div>
-      <form id="editVariantForm" method="POST" enctype="multipart/form-data">
-        <div class="modal-body">
-          <input type="hidden" name="variantId" id="editVariantId">
-          <div class="form-group">
-            <label for="editVariantColor">Color:</label>
-            <input type="text" class="form-control" id="editVariantColor" name="color" required>
-          </div>
-          <div class="form-group">
-            <label for="editVariantMaterial">Material:</label>
-            <input type="text" class="form-control" id="editVariantMaterial" name="material">
-          </div>
-          <div class="form-group">
-            <label for="editVariantPrice">Price:</label>
-            <input type="number" step="0.01" class="form-control" id="editVariantPrice" name="price" required>
-          </div>
-          <div class="form-group">
-            <label for="editVariantQuantity">Stock Quantity:</label>
-            <input type="number" class="form-control" id="editVariantQuantity" name="quantity" required>
-          </div>
-          <div class="form-group">
-            <label for="editVariantSKU">SKU:</label>
-            <input type="text" class="form-control" id="editVariantSKU" name="sku" required>
-          </div>
-          <div class="form-group">
-            <label for="editVariantDescription">Description:</label>
-            <textarea class="form-control" id="editVariantDescription" name="description" rows="3"></textarea>
-          </div>
-          <div class="form-group">
-            <label for="editVariantImages">Upload New Images (up to 3):</label>
-            <input type="file" class="form-control-file" id="editVariantImages" name="variantImages" multiple accept="image/*">
-            <small class="form-text text-muted">Leave blank to keep existing images.</small>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Changes</button>
-        </div>
-      </form>
     </div>
   </div>
-</div>
 
+  <!-- Add Image Modal -->
+  <div
+    class="modal fade"
+    id="addImageModal"
+    tabindex="-1"
+    aria-labelledby="addImageModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addImageModalLabel">
+            Add Image to Variant
+          </h5>
+          <button
+            type="button"
+            class="close"
+            data-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <form id="addImageForm" method="POST" enctype="multipart/form-data">
+          <div class="modal-body">
+            <input type="hidden" id="productId" value="<%= product._id %>" />
+            <input type="hidden" id="variantId" />
+            <div class="container py-4">
+              <div class="row justify-content-center">
+                <div class="col-md-8">
+                  <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                      <h4 class="mb-0">Image Cropper</h4>
+                    </div>
+                    <div class="card-body">
+                      <div class="mb-3">
+                        <label for="imageInput" class="form-label"
+                          >Select an image:</label
+                        >
+                        <input
+                          class="form-control"
+                          type="file"
+                          id="imageInput"
+                          accept="image/*"
+                        />
+                      </div>
+
+                      <div class="img-container">
+                        <img
+                          id="previewImage"
+                          class="img-fluid"
+                          style="display: none"
+                        />
+                      </div>
+
+                      <div class="text-center mt-3">
+                        <button
+                          id="cropButton"
+                          class="btn btn-success"
+                          disabled
+                        >
+                          <i class="bi bi-crop"></i> Crop Image
+                        </button>
+                      </div>
+
+                      <div class="text-center mt-3">
+                        <canvas
+                          id="croppedCanvas"
+                          style="display: none"
+                        ></canvas>
+                        <div
+                          id="downloadContainer"
+                          style="display: none"
+                          class="mt-2"
+                        >
+                          <a
+                            id="downloadLink"
+                            class="btn btn-primary"
+                            download="cropped-image.png"
+                          >
+                          </a>
+                          <button class="btn btn-info ms-2">
+                            <i class="bi bi-upload"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">
+            Close
+          </button>
+          <button type="button" class="btn btn-primary" id="saveButton">
+            Save Image
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Variant Modal -->
+  <div
+    class="modal fade"
+    id="editVariantModal"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="editVariantLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editVariantLabel">Edit Variant</h5>
+          <button
+            type="button"
+            class="close"
+            data-dismiss="modal"
+            aria-label="Close"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+        <form id="editVariantForm" method="POST">
+          <div class="modal-body">
+            <input type="hidden" name="variantId" id="editVariantId" />
+            <div class="form-group">
+              <label for="editVariantColor">Color:</label>
+              <input
+                type="text"
+                class="form-control"
+                id="editVariantColor"
+                name="color"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="editVariantMaterial">Material:</label>
+              <input
+                type="text"
+                class="form-control"
+                id="editVariantMaterial"
+                name="material"
+              />
+            </div>
+            <div class="form-group">
+              <label for="editVariantPrice">Price:</label>
+              <input
+                type="number"
+                step="10"
+                class="form-control"
+                id="editVariantPrice"
+                name="price"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="editVariantSalePrice">Sale Price:</label>
+              <input
+                type="number"
+                step="10"
+                class="form-control"
+                id="editVariantSalePrice"
+                name="salePrice"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="editVariantQuantity">Stock Quantity:</label>
+              <input
+                type="number"
+                class="form-control"
+                id="editVariantQuantity"
+                name="quantity"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="editVariantSKU">SKU:</label>
+              <input
+                type="text"
+                class="form-control"
+                id="editVariantSKU"
+                name="sku"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="editVariantDescription">Description:</label>
+              <textarea
+                class="form-control"
+                id="editVariantDescription"
+                name="description"
+                rows="3"
+              ></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div
+    class="modal fade"
+    id="confirmActionModal"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="confirmActionLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="confirmActionLabel">Confirm Action</h5>
+          <button
+            type="button"
+            class="close"
+            data-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body">
+          Are you sure you want to proceed with this action?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">
+            Cancel
+          </button>
+          <a id="confirmActionButton" href="#" class="btn btn-danger"
+            >Yes, Confirm</a
+          >
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Edit Modal -->
-  <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+  <div
+    class="modal fade"
+    id="editModal"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="editModalLabel"
+    aria-hidden="true"
+  >
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="editModalLabel">Edit Product</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <button
+            type="button"
+            class="close"
+            data-dismiss="modal"
+            aria-label="Close"
+          >
             <span aria-hidden="true">&times;</span>
           </button>
         </div>
-        <form action="/admin/products/<%= product._id %>?_method=PUT" method="POST">
+        <form
+          action="/admin/products/<%= product._id %>?_method=PUT"
+          method="POST"
+        >
           <div class="modal-body">
             <div class="form-group">
               <label for="name">Name</label>
-              <input type="text" class="form-control" id="name" name="name" value="<%= product.name %>" required>
+              <input
+                type="text"
+                class="form-control"
+                id="name"
+                name="name"
+                value="<%= product.name %>"
+                required
+              />
             </div>
             <div class="form-group">
               <label for="brand">Brand</label>
-              <input type="text" class="form-control" id="brand" name="brand" value="<%= product.brand || '' %>">
+              <input
+                type="text"
+                class="form-control"
+                id="brand"
+                name="brand"
+                value="<%= product.brand || '' %>"
+              />
             </div>
             <!-- Add more fields as needed (e.g., category_id) -->
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-dismiss="modal"
+            >
+              Close
+            </button>
             <button type="submit" class="btn btn-primary">Save changes</button>
           </div>
         </form>
@@ -334,21 +843,40 @@
   </div>
 
   <!-- Delete Modal -->
-  <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div
+    class="modal fade"
+    id="deleteModal"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="deleteModalLabel"
+    aria-hidden="true"
+  >
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="deleteModalLabel">Delete Product</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <button
+            type="button"
+            class="close"
+            data-dismiss="modal"
+            aria-label="Close"
+          >
             <span aria-hidden="true">&times;</span>
           </button>
         </div>
         <div class="modal-body">
-          Are you sure you want to delete "<%= product.name %>"? This action cannot be undone.
+          Are you sure you want to delete "<%= product.name %>"? This action
+          cannot be undone.
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-          <form action="/admin/products/<%= product._id %>?_method=PATCH" method="POST" style="display: inline;">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">
+            Cancel
+          </button>
+          <form
+            action="/admin/products/<%= product._id %>?_method=PATCH"
+            method="POST"
+            style="display: inline"
+          >
             <button type="submit" class="btn btn-danger">Delete</button>
           </form>
         </div>
@@ -370,108 +898,331 @@
     font-weight: bold;
   }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('.delete-variant').forEach(button => {
-    button.addEventListener('click', async function(e) {
-      e.preventDefault();
-      const variantId = this.getAttribute('data-variant-id');
-      console.log('Variant ID:', variantId);
-      
-      Swal.fire({
-        title: 'Are you sure?',
-        text: 'Do you want to delete this variant? It can be restored later.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, delete it!',
-        cancelButtonText: 'No, keep it'
-      }).then(async (result) => {
-        if (result.isConfirmed) {
-          try {
-            const url = `/admin/variants/soft-delete/${variantId}`;
-            console.log('Fetching URL:', url);
-            const response = await fetch(url, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' }
-            });
+  document.querySelectorAll(".add-image-icon").forEach((icon) => {
+    icon.addEventListener("click", function () {
+      const variantId = this.getAttribute("data-variant-id");
+      document.getElementById("variantId").value = variantId;
+      // Also set product ID if not already set
+      document.getElementById("productId").value = "<%= product._id %>";
+    });
+  });
+  document.addEventListener("DOMContentLoaded", function () {
+    const imageInput = document.getElementById("imageInput");
+    const previewImage = document.getElementById("previewImage");
+    const croppedCanvas = document.getElementById("croppedCanvas");
+    const cropButton = document.getElementById("cropButton");
+    const downloadLink = document.getElementById("downloadLink");
+    const saveButton = document.getElementById("saveButton");
+    //const downloadContainer = document.getElementById('downloadContainer');
+    let cropper = null;
 
-            console.log('Response status:', response.status);
+    imageInput.addEventListener("change", function (event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
 
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(errorData.message || 'Failed to soft delete variant');
+        reader.onload = function (e) {
+          previewImage.src = e.target.result;
+          previewImage.style.display = "block";
+          cropButton.disabled = false;
+          croppedCanvas.style.display = "none";
+          //downloadContainer.style.display = 'none';
+
+          // Wait for the image to load before initializing Cropper
+          previewImage.onload = function () {
+            if (cropper) {
+              cropper.destroy(); // Destroy existing cropper instance
             }
+            cropper = new Cropper(previewImage, {
+              aspectRatio: 1, // Square crop
+              viewMode: 1,
+              responsive: true,
+              zoomable: true,
+              guides: true,
+            });
+          };
+        };
+        reader.readAsDataURL(file);
+      }
+    });
 
-            this.closest('tr').remove();
+    // Crop Image, Show Result, and Enable Download
+    cropButton.addEventListener("click", function () {
+      if (cropper) {
+        const canvas = cropper.getCroppedCanvas({
+          maxWidth: 800,
+          maxHeight: 800,
+        });
 
+        if (canvas) {
+          croppedCanvas.style.display = "block";
+          croppedCanvas.width = canvas.width;
+          croppedCanvas.height = canvas.height;
+          croppedCanvas.getContext("2d").drawImage(canvas, 0, 0);
+
+          // Update download link with new image data
+          downloadLink.href = canvas.toDataURL("image/png");
+          //downloadContainer.style.display = 'block';
+
+          // Hide the original image and cropper
+          previewImage.style.display = "none";
+          cropper.destroy();
+          cropper = null;
+          cropButton.disabled = true;
+        }
+      }
+    });
+
+    // Save Cropped Image to Server
+    saveButton.addEventListener("click", async function () {
+      const canvas = document.getElementById("croppedCanvas");
+      if (!canvas || !canvas.toDataURL) {
+        alert("No cropped image available.");
+        return;
+      }
+      const variantId = document.getElementById("variantId").value;
+      const productId = document.getElementById("productId").value;
+
+      // Convert canvas to Blob
+      canvas.toBlob(async function (blob) {
+        const formData = new FormData();
+        formData.append("variantImages", blob, "cropped-image.png");
+        formData.append("variantId", variantId);
+        formData.append("productId", productId);
+
+        try {
+          const response = await fetch(
+            `/admin/products/${productId}/variants/${variantId}/upload`,
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
+          
+          const result = await response.json();
+          
+          if (response.ok) {
+            
+            window.location.href = result.redirectUrl;
+          } else {
+            alert("Failed to save image.");
+          }
+        } catch (error) {
+          console.error("Error saving image:", error);
+          alert("An error occurred while saving the image.");
+        }
+      }, "image/png");
+    });
+  });
+</script>
+<script>
+  function setAction(url) {
+    document.getElementById("confirmActionButton").href = url;
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+  
+
+    // Handle close button clicks to remove images
+    document.querySelectorAll('.close-btn').forEach(button => {
+  button.addEventListener('click', async function () {
+    const variantId = this.getAttribute('data-variant-id');
+    const imageUrl = this.getAttribute('data-image-url');
+    const productId = '<%= product._id %>'; // From your EJS context
+
+    // SweetAlert2 Confirmation Dialog
+    Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, remove it!'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const response = await fetch(`/admin/products/${productId}/variants/${variantId}/remove-image`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageUrl })
+          });
+          const result = await response.json();
+
+          if (response.ok) {
+            // SweetAlert2 Toast Success Message
             Swal.fire({
-              title: 'Deleted!',
-              text: 'Variant has been soft deleted successfully.',
+              toast: true,
+              position: 'top-end',
               icon: 'success',
-              timer: 1500,
-              showConfirmButton: false
+              title: 'Image removed successfully!',
+              showConfirmButton: false,
+              timer: 2000,
+              timerProgressBar: true
             });
 
-          } catch (error) {
-            console.error('Fetch error:', error);
+            this.closest('.image-wrapper').remove(); // Remove the image from the UI
+          } else {
+            // SweetAlert2 Error Message
             Swal.fire({
               title: 'Error!',
-              text: error.message,
-              icon: 'error',
-              confirmButtonText: 'OK'
+              text: result.error || 'Failed to remove image.',
+              icon: 'error'
             });
           }
+        } catch (error) {
+          console.error('Error removing image:', error);
+          Swal.fire({
+            title: 'Error!',
+            text: 'An error occurred while removing the image.',
+            icon: 'error'
+          });
         }
+      }
+    });
+  });
+});
+
+  });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(
+      document.querySelectorAll('[data-toggle="tooltip"]')
+    );
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+  });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".delete-variant").forEach((button) => {
+      button.addEventListener("click", async function (e) {
+        e.preventDefault();
+        const variantId = this.getAttribute("data-variant-id");
+        console.log("Variant ID:", variantId);
+
+        Swal.fire({
+          title: "Are you sure?",
+          text: "Do you want to delete this variant? It can be restored later.",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#3085d6",
+          cancelButtonColor: "#d33",
+          confirmButtonText: "Yes, delete it!",
+          cancelButtonText: "No, keep it",
+        }).then(async (result) => {
+          if (result.isConfirmed) {
+            try {
+              const url = `/admin/variants/soft-delete/${variantId}`;
+              console.log("Fetching URL:", url);
+              const response = await fetch(url, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+              });
+
+              console.log("Response status:", response.status);
+
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(
+                  errorData.message || "Failed to soft delete variant"
+                );
+              }
+
+              this.closest("tr").remove();
+
+              Swal.fire({
+                title: "Deleted!",
+                text: "Variant has been soft deleted successfully.",
+                icon: "success",
+                timer: 1500,
+                showConfirmButton: false,
+              });
+            } catch (error) {
+              console.error("Fetch error:", error);
+              Swal.fire({
+                title: "Error!",
+                text: error.message,
+                icon: "error",
+                confirmButtonText: "OK",
+              });
+            }
+          }
+        });
+      });
+    });
+
+    $(".edit-variant").on("click", function () {
+      const variantId = $(this).data("variant-id");
+      const productId = "<%= product._id %>"; // From your EJS context
+
+      // Fetch variant data
+      $.get(
+        `/admin/products/${productId}/variants/${variantId}`,
+        function (data) {
+          const variant = data.variant;
+
+          $("#editVariantId").val(variant._id);
+          $("#editVariantColor").val(variant.color);
+          $("#editVariantMaterial").val(variant.material);
+          $("#editVariantPrice").val(variant.price);
+          $("#editVariantSalePrice").val(variant.sale_price);
+          $("#editVariantQuantity").val(variant.quantity);
+          $("#editVariantSKU").val(variant.sku);
+          $("#editVariantDescription").val(variant.description);
+          $("#editVariantForm").attr(
+            "action",
+            `/admin/products/${productId}/variants/${variantId}?_method=PATCH`
+          );
+        }
+      ).fail(function () {
+        Swal.fire("Error", "Could not load variant data", "error");
       });
     });
   });
 
-  $('.edit-variant').on('click', function() {
-    const variantId = $(this).data('variant-id');
-    const productId = '<%= product._id %>'; // From your EJS context
-console.log("variantId:",variantId);
-console.log("productId:",productId);
-
-    // Fetch variant data
-    $.get(`/admin/products/${productId}/variants/${variantId}`, function(data) {
-      const variant = data.variant;
-      
-      $('#editVariantId').val(variant._id);
-      $('#editVariantColor').val(variant.color);
-      $('#editVariantMaterial').val(variant.material);
-      $('#editVariantPrice').val(variant.price);
-      $('#editVariantQuantity').val(variant.quantity);
-      $('#editVariantSKU').val(variant.sku);
-      $('#editVariantDescription').val(variant.description);
-      $('#editVariantForm').attr('action', `/admin/products/${productId}/variants/${variantId}?_method=PATCH`);
-    }).fail(function() {
-      Swal.fire('Error', 'Could not load variant data', 'error');
+  document.addEventListener("DOMContentLoaded", function () {
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(
+      document.querySelectorAll('[data-toggle="tooltip"]')
+    );
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
     });
+    // Store variantId in a higher scope
+    let variantId;
+    // Handle plus icon click to set variant ID in modal
+    document.querySelectorAll(".add-image-icon").forEach((icon) => {
+      icon.addEventListener("click", function () {
+        variantId = this.getAttribute("data-variant-id");
+        document.getElementById("variantId").value = variantId;
+      });
+    });
+
+
   });
-});
 </script>
 
-
-
 <% if (messages.success) { %>
-  <script>
-const Toast = Swal.mixin({
-  toast: true,
-  position: "top-end",
-  showConfirmButton: false,
-  timer: 3000,
-  timerProgressBar: true,
-  didOpen: (toast) => {
-    toast.onmouseenter = Swal.stopTimer;
-    toast.onmouseleave = Swal.resumeTimer;
-  }
-});
-Toast.fire({
-  icon: "success",
-  title: "<%= messages.success[0] %>"
-});</script>
-<% } %>
-<%- include("../../views/partials/admin/footer.ejs") %>
+<script>
+  const Toast = Swal.mixin({
+    toast: true,
+    position: "top-end",
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+      toast.onmouseenter = Swal.stopTimer;
+      toast.onmouseleave = Swal.resumeTimer;
+    },
+  });
+  Toast.fire({
+    icon: "success",
+    title: "<%= messages.success[0] %>",
+  });
+</script>
+<% } %> <%- include("../../views/partials/admin/footer.ejs") %>

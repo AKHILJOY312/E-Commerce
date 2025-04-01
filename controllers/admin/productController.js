@@ -47,6 +47,7 @@ const productController = {
       const productData = products.map(product => ({
         _id: product._id,
         name: product.name,
+        status:product.status ,
         category: product.category_id?.title || 'Uncategorized',
         price: product.variants.length > 0 
           ? Math.min(...product.variants.map(v => v.price))
@@ -74,7 +75,7 @@ const productController = {
   
   async getProductDetails(req, res) {
     try {
-      const productId = req.params.id;
+      const productId = req.params. productId;
 
       const product = await Product.findById(productId)
       .populate('category_id', 'title')
@@ -95,6 +96,7 @@ const productController = {
         _id: product._id,
         name: product.name,
         brand: product.brand,
+        status: product.status,
         category: product.category_id?.title || 'Uncategorized',
         variants: product.variants.map(variant => ({
           _id: variant._id,
@@ -146,10 +148,34 @@ const productController = {
     }
   },
 
+
+  async listProduct(req,res){
+try {
+      await Product.findByIdAndUpdate(req.query.id, { status: 'listed' });
+      req.flash("success", "Product added to the list.");
+      res.redirect(`/admin/products/${req.query.id}`);
+  } catch (error) {
+      console.error('Error listing Product:', error);
+      req.flash("error", "Error listing Product.");
+      res.status(500).send('Server Error');
+  }
+  },
+  async unlistProduct(req,res){
+    try {
+      await Product.findByIdAndUpdate(req.query.id, { status: 'unlisted' });
+      req.flash("success", "Product added to the unlist.");
+      res.redirect(`/admin/products/${req.query.id}`);
+  } catch (error) {
+      console.error('Error unlisting Product:', error);
+      req.flash("error", "Error listing Product.");
+      res.status(500).send('Server Error');
+  }
+  }
+  ,
   // PUT /products/:id - Update existing product (Update)
   async updateProduct(req, res) {
     try {
-      const productId = req.params.id;
+      const productId = req.params.productId;
       const updateData = req.body;
       
 
@@ -178,7 +204,8 @@ const productController = {
   async createVariant(req, res)  {
     try {
       const productId = req.params.productId;
-      const { color, material, price, quantity, sku, description } = req.body;
+      const { color, material, price,salePrice, quantity, sku, description } = req.body;
+
   
      
       const imagePaths = req.files ? req.files.map(file => `/uploads/variants/${file.filename}`) : [];
@@ -189,6 +216,7 @@ const productController = {
         color,
         material,
         price: parseFloat(price),
+        sale_price: parseFloat(salePrice),
         quantity: parseInt(quantity),
         sku,
         description,
@@ -216,6 +244,7 @@ const productController = {
   async getVariant(req, res) {
     try {
       const { variantId } = req.params;
+      console.log('variantId:',variantId);
       const variant = await Variant.findById(variantId).lean();
       if (!variant) {
         return res.status(404).json({ message: 'Variant not found' });
@@ -228,16 +257,17 @@ const productController = {
   async updateVariant(req, res) {
     try {
       const { productId, variantId } = req.params;
-      const { color, material, price, quantity, sku, description } = req.body;
+      const { color, material, price, salePrice, quantity, sku, description } = req.body;
 
       // Check if new files were uploaded
       const imagePaths = req.files ? req.files.map(file => `/uploads/variants/${file.filename}`) : undefined;
-
+console.log(imagePaths);
       
       const updateData = {
         color,
         material,
         price: parseFloat(price),
+        salePrice: parseFloat(salePrice),
         quantity: parseInt(quantity),
         sku,
         description,
@@ -317,7 +347,7 @@ const productController = {
   // DELETE /products/:id - Delete product (Destroy)
   async deleteProduct(req, res) {
     try {
-      const productId = req.params.id;
+      const productId = req.params.productId;
 
       const product = await Product.findById(productId);
       if (!product) {
@@ -351,7 +381,66 @@ console.log(productUpdate)
         message: 'Error deleting product' 
       });
     }
-  }
+  },
+  async addImage(req, res) {
+      try {
+        const { variantId, productId } = req.params;
+        const file = req.file;
+        
+    
+        if (!file) {
+          return res.status(400).json({ error: 'No image uploaded' });
+        }
+    
+        const imagePath = `/uploads/variants/${file.filename}`;
+    
+        // Find the variant and push the new image to the product_image array
+        const variant = await Variant.findOne({ _id: variantId, product_id: productId });
+        if (!variant) {
+          return res.status(404).json({ error: 'Variant not found' });
+        }
+    
+        variant.product_image.push(imagePath); // Add new image to array
+        variant.updated_at = Date.now(); // Update timestamp
+        await variant.save();
+        req.flash('success', 'Image added Successfully .');
+        res.status(200).json({ 
+          message: 'File uploaded successfully', 
+          redirectUrl: `/admin/products/${productId}` 
+        });
+      } catch (error) {
+        console.error('Error adding image:', error);
+        res.status(500).json({ error: error.message });
+      }
+    },
+    async removeImage(req, res) {
+      try {
+       
+        const { productId, variantId } = req.params;
+        const { imageUrl } = req.body;
+    
+        const variant = await Variant.findOne({ _id: variantId, product_id: productId });
+        if (!variant) {
+          return res.status(404).json({ error: 'Variant not found' });
+        }
+    
+        variant.product_image = variant.product_image.filter(img => img !== imageUrl);
+        variant.updated_at = Date.now();
+        await variant.save();
+    
+        // // Optionally delete the file from the server
+        // const filePath = path.join(__dirname, '..', imageUrl);
+        // fs.unlink(filePath, (err) => {
+        //   if (err) console.error('Error deleting file:', err);
+        // });
+    
+        res.status(200).json({ success: true });
+      } catch (error) {
+        console.error('Error Deleting image:', error);
+        res.status(500).json({ error: error.message });
+      }
+    }
+
 };
 
 module.exports = productController;

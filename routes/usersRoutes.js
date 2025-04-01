@@ -17,8 +17,13 @@ router.post("/signup", userController.signupUser);
 router.post("/verify-otp", userController.verifyOtp);
 router.post("/resend-otp", userController.resendOtp);
 
-router.get("/auth/google",passport.authenticate("google", { scope: ["profile", "email"] }));
-router.get( "/auth/google/callback",passport.authenticate("google", { failureRedirect: "/signup" }),userController.googleSessions);
+// router.get("/auth/google",passport.authenticate("google", { scope: ["profile", "email"] }));
+// router.get( "/auth/google/callback",passport.authenticate("google", { failureRedirect: "/signup" }),userController.googleSessions);
+
+router.get("/auth/google",userController.googleAuth);
+router.get( "/auth/google/callback",userController.googleAuthCallback);
+
+
 //forgot password section
 router.get("/logout",userController.logout);
 router.get("/forgetPassword",userController.LoadForgetPassword);

@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const User = require("../../models/User");
 const nodemailer = require("nodemailer");
 const { assign } = require("nodemailer/lib/shared");
+const passport  = require("passport")
 require("dotenv").config();
 
 exports.loadHomePage = async (req, res) => {
@@ -30,25 +31,33 @@ exports.pageNotFound = async (req, res) => {
   }
 };
 
-exports.googleSessions = async (req, res) => {
-  try {
-    if (req.user) {
-      req.session.isAuthenticated = true;
-      req.session.username = req.user.name; // Store username in session
-    }
-    res.redirect("/");
-  } catch (error) {
-    console.error(" google Sessions failed");
-    res.status(500).send("Server error");
-  }
-};
+exports.googleAuth = passport.authenticate('google', { scope: ['profile', 'email'] });
 
+exports.googleAuthCallback = async (req, res, next) => {
+  passport.authenticate("google", async (err, user, info) => {
+    if (err) return next(err);
+    if (!user) return res.redirect("/login?error=authFailed");
+
+    if (!user.isActive) {
+      req.logout(() => {
+        return res.redirect("/login?error=blocked");
+      });
+    } else {
+      req.login(user, (err) => {
+        if (err) return next(err);
+        req.session.isAuthenticated = true;
+        req.session.username = user.name; // Store username in session
+        res.redirect("/");
+      });
+    }
+  })(req, res, next);
+};
 exports.getLogin = async (req, res) => {
   try {
     if (req.session.username || req.user) {
       return res.redirect("/");
     }
-    return res.render("auth/login");
+    return res.render("auth/login",{ query: req.query });
   } catch (error) {
     console.error(" pageNotFound not found");
     res.status(500).send("Server error");
@@ -57,20 +66,21 @@ exports.getLogin = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-
+console.log('req.body:',req.body)
     const user = await User.findOne({ email });
-    if (!user.isActive) {
-      req.flash("error", "you have be blocked by admin.");
-      console.log("you have be blocked by admin.");
-      return res.redirect("/login"); // Redirect to allow flash messages to persist
-    }
+    console.log('user:',user)
+    
 
     if (!user) {
       req.flash("error", "Invalid username or password");
       console.log("Invalid username or password");
       return res.redirect("/login"); // Redirect to allow flash messages to persist
     }
-
+    if (!user.isActive) {
+      req.flash("error", "you have be blocked by admin.");
+      console.log("you have be blocked by admin.");
+      return res.redirect("/login"); // Redirect to allow flash messages to persist
+    }
     if (!user.password) {
       console.log("Google login required for this account");
       req.flash("error", "Please log in using Google");

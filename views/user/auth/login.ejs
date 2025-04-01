@@ -36,6 +36,9 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
           <% } %>
+          <% if (query.error === 'blocked') { %>
+            <p style="color: red;">Your account has been blocked by the admin. Please contact support.</p>
+        <% } %>
           <form id="loginForm" method="post" action="/login">
             <div class="form-floating mb-3">
               <input type="email" name="email" class="form-control rounded-3" id="floatingInput" placeholder="name@example.com">

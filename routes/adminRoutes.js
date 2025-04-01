@@ -13,7 +13,7 @@ router.get('/404page',adminController.pageNotFound);
 router.get("/login",adminController.loadLogin);
 router.post("/login",adminController.login);
 router.get('/',adminAuth,adminController.loadDashboard);
-router.get("/logout",adminController.logout);
+router.get("/logout",adminController.adminLogout);
 
 //Costumer Management
 router.get("/users",adminAuth,customerController.customerInfo);
@@ -30,18 +30,23 @@ router.post('/addCategory',adminAuth,categoryController.addCategory);
 
 
 //products management
-router.get('/products',adminAuth,productController.getProducts);
-router.post('/products',adminAuth,productController.createProduct);
-router.get('/products/:id',adminAuth, productController.getProductDetails);
-router.put('/products/:id',adminAuth, productController.updateProduct);
-router.patch('/products/:id',adminAuth, productController.deleteProduct);
+router.get('/products',productController.getProducts);
+router.post('/products',productController.createProduct);
+router.get('/products/:productId', productController.getProductDetails);
+router.get('/listProduct', productController.listProduct);
+router.get('/unlistProduct', productController.unlistProduct);
+router.put('/products/:productId', productController.updateProduct);
+router.patch('/products/:productId', productController.deleteProduct);
 
-router.post('/products/:productId/variants',adminAuth, upload, productController.createVariant);
-router.get('/products/:productId/variants/:variantId',adminAuth, productController.getVariant);
-router.patch('/products/:productId/variants/:variantId',adminAuth,upload, productController.updateVariant);
+router.post('/products/:productId/variants', productController.createVariant);
+router.get('/products/:productId/variants/:variantId', productController.getVariant);
+router.patch('/products/:productId/variants/:variantId', productController.updateVariant);
 
 
-router.patch('/variants/soft-delete/:variantId',adminAuth, productController.softDeleteVariant);
 
+router.patch('/variants/soft-delete/:variantId', productController.softDeleteVariant);
+
+router.post('/products/:productId/variants/:variantId/upload', upload, productController.addImage);
+router.delete('/products/:productId/variants/:variantId/remove-image', productController.removeImage);
 
 module.exports =router;

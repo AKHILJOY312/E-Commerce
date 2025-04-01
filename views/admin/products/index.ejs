@@ -74,15 +74,18 @@
             <% for(let i = 0; i < data.length; i++) { %>
             <tr class="product-row" data-product-id="<%= data[i]._id %>">
               <td><%= data[i].name %></td>
-              <td>$<%= data[i].price.toFixed(2) %></td>
+              <td>₹<%= data[i].price.toFixed(2) %></td>
               <td><%= data[i].stock %></td>
               <td><%= data[i].category || 'Uncategorized' %></td>
               <td>
+                <% if (data[i].status=== "unlisted") { %>
+                  <span class="badge badge-info">Not listed</span>
+                  <% }else{ %>
                 <% if (data[i].inStock) { %>
                 <span class="badge badge-success">In Stock</span>
                 <% } else { %>
                 <span class="badge badge-danger">Out of Stock</span>
-                <% } %>
+                <% } %><% } %>
               </td>
             </tr>
             <% } %>
