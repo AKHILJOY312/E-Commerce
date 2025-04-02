@@ -117,18 +117,18 @@
                     <div class="shop__sidebar__price">
                       <ul>
                         <% const priceRanges = [
-                          { min: 0, max: 50 },
-                          { min: 50, max: 100 },
-                          { min: 100, max: 150 },
-                          { min: 150, max: 200 },
-                          { min: 200, max: 250 },
-                          { min: 250, max: Infinity }
+                          { min: 0, max: 500 },
+                          { min: 500, max: 1000 },
+                          { min: 1000, max: 1500 },
+                          { min: 1500, max: 2000 },
+                          { min: 2000, max: 2500 },
+                          { min: 2500, max: Infinity }
                         ]; %>
                         <% priceRanges.forEach(range => { %>
                           <li>
-                            <a href="/shop?minPrice=<%= range.min %>&maxPrice=<%= range.max === Infinity ? '' : range.max %>&search=<%= searchQuery %>"
+                            <a href="/shop?minPrice=<%= range.min %>&maxPrice=<%= range.max === Infinity ? '' : range.max %>&search=<%= searchQuery %>&category=<%= selectedCategory %>&brand=<%= selectedBrand %>"
                               class="<%= minPrice === range.min && (maxPrice === range.max || (range.max === Infinity && !maxPrice)) ? 'active' : '' %>">
-                              <%= range.max === Infinity ? '$250.00+' : `$${range.min.toFixed(2)} - $${range.max.toFixed(2)}` %>
+                              <%= range.max === Infinity ? '₹250.00+' : `₹${range.min.toFixed(2)} - ₹${range.max.toFixed(2)}` %>
                             </a>
                           </li>
                         <% }) %>
@@ -154,13 +154,13 @@
               <div class="shop__product__option__right">
                 <p>Sort by Price:</p>
                 <select onchange="location = this.value;">
-                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&sort=priceLow" <%= sort === 'priceLow' ? 'selected' : '' %>>Price: Low to High</option>
-                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&sort=priceHigh" <%= sort === 'priceHigh' ? 'selected' : '' %>>Price: High to Low</option>
-                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&sort=nameAsc" <%= sort === 'nameAsc' ? 'selected' : '' %>>Name: A-Z</option>
-                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&sort=nameDesc" <%= sort === 'nameDesc' ? 'selected' : '' %>>Name: Z-A</option>
-                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&sort=newest" <%= sort === 'newest' ? 'selected' : '' %>>Newest First</option>
-                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&sort=oldest" <%= sort === 'oldest' ? 'selected' : '' %>>Oldest First</option>
-              </select>
+                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&category=<%= selectedCategory %>&brand=<%= selectedBrand %>&minPrice=<%= minPrice %>&maxPrice=<%= maxPrice %>&sort=priceLow" <%= sort === 'priceLow' ? 'selected' : '' %>>Price: Low to High</option>
+                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&category=<%= selectedCategory %>&brand=<%= selectedBrand %>&minPrice=<%= minPrice %>&maxPrice=<%= maxPrice %>&sort=priceHigh" <%= sort === 'priceHigh' ? 'selected' : '' %>>Price: High to Low</option>
+                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&category=<%= selectedCategory %>&brand=<%= selectedBrand %>&minPrice=<%= minPrice %>&maxPrice=<%= maxPrice %>&sort=nameAsc" <%= sort === 'nameAsc' ? 'selected' : '' %>>Name: A-Z</option>
+                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&category=<%= selectedCategory %>&brand=<%= selectedBrand %>&minPrice=<%= minPrice %>&maxPrice=<%= maxPrice %>&sort=nameDesc" <%= sort === 'nameDesc' ? 'selected' : '' %>>Name: Z-A</option>
+                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&category=<%= selectedCategory %>&brand=<%= selectedBrand %>&minPrice=<%= minPrice %>&maxPrice=<%= maxPrice %>&sort=newest" <%= sort === 'newest' ? 'selected' : '' %>>Newest First</option>
+                  <option value="/shop?page=<%= currentPage %>&search=<%= searchQuery %>&category=<%= selectedCategory %>&brand=<%= selectedBrand %>&minPrice=<%= minPrice %>&maxPrice=<%= maxPrice %>&sort=oldest" <%= sort === 'oldest' ? 'selected' : '' %>>Oldest First</option>
+                </select>
               
               </div>
             </div>
@@ -179,7 +179,7 @@
                     <ul class="product__hover">
                       <li><a href="/wishlist/add/<%= product._id %>"><img src="img/icon/heart.png" alt="Wishlist"></a></li>
                       <li><a href="/compare/<%= product._id %>"><img src="img/icon/compare.png" alt="Compare"> <span>Compare</span></a></li>
-                      <li><a href="/product/<%= product._id %>"><img src="img/icon/search.png" alt="View"></a></li>
+                      <li><a href="/product/<%= product._id %>/"><img src="img/icon/search.png" alt="View"></a></li>
                     </ul>
                   </div>
                   <div class="product__item__text">
@@ -190,7 +190,7 @@
                         <i class="fa fa-star-o"></i>
                       <% } %>
                     </div>
-                    <h5>$<%= product.variants && product.variants.length > 0 ? Math.min(...product.variants.map(v => v.price)).toFixed(2) : '0.00' %></h5>
+                    <h5>₹<%= product.variants && product.variants.length > 0 ? Math.min(...product.variants.map(v => v.sale_price)).toFixed(2) : '0.00' %></h5>
                     <div class="product__color__select">
                       <% if (product.variants && product.variants.length > 0) { %>
                         <% product.variants.forEach((variant, index) => { %>

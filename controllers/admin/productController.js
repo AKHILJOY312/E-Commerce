@@ -33,7 +33,7 @@ const productController = {
         .populate('category_id', 'title')
         .populate({
           path: 'variants',
-          select: 'price quantity color material',
+          select: 'price sale_price quantity color material',
           match: { isDeleted: { $ne: true } } 
         })
         .skip((page - 1) * perPage)
@@ -49,8 +49,8 @@ const productController = {
         name: product.name,
         status:product.status ,
         category: product.category_id?.title || 'Uncategorized',
-        price: product.variants.length > 0 
-          ? Math.min(...product.variants.map(v => v.price))
+        salePrice: product.variants.length > 0 
+          ? Math.min(...product.variants.map(v => v.sale_price))
           : 0,
         stock: product.variants.reduce((sum, v) => sum + v.quantity, 0),
         inStock: product.variants.some(v => v.quantity > 0),
@@ -104,6 +104,8 @@ const productController = {
           color: variant.color,
           description: variant.description,
           price: variant.price,
+          salePrice: variant.sale_price,
+          size:variant.size,
           sku: variant.sku,
           images: variant.product_image,
           quantity: variant.quantity,
@@ -204,9 +206,9 @@ try {
   async createVariant(req, res)  {
     try {
       const productId = req.params.productId;
-      const { color, material, price,salePrice, quantity, sku, description } = req.body;
+      const { color, material, price,salePrice, quantity, sku, description,size } = req.body;
 
-  
+  console.log("req.body:",req.body);
      
       const imagePaths = req.files ? req.files.map(file => `/uploads/variants/${file.filename}`) : [];
   
@@ -220,6 +222,7 @@ try {
         quantity: parseInt(quantity),
         sku,
         description,
+        size,
         product_image: imagePaths
       });
   
@@ -261,13 +264,13 @@ try {
 
       // Check if new files were uploaded
       const imagePaths = req.files ? req.files.map(file => `/uploads/variants/${file.filename}`) : undefined;
-console.log(imagePaths);
-      
+
+      console.log("req.body:",req.body);
       const updateData = {
         color,
         material,
         price: parseFloat(price),
-        salePrice: parseFloat(salePrice),
+        sale_price: parseFloat(salePrice),
         quantity: parseInt(quantity),
         sku,
         description,

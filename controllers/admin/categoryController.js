@@ -16,9 +16,9 @@ exports.categoryInfo = async (req, res) => {
       .limit(limit);
 
     const totalCategories = await Category.countDocuments({
-      title: { $regex: ".*" + search + ".*", $options: "i" },
+      title: { $regex: ".*" + search + ".*", $options: "i" },isDeleted: { $ne: true }
     });
-
+console.log('totalCategories',totalCategories);
     const totalPages = Math.ceil(totalCategories / limit);
     
    
