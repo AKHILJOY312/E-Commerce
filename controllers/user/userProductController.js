@@ -197,7 +197,8 @@ exports.loadShop = async(req, res, next) => {
             selectedBrand: brand,
             minPrice,
             maxPrice,
-            sort: sortOption
+            sort: sortOption,
+            currentActivePage:'shop'
         });
     } catch (error) {
         console.error('Error fetching products:', error);
@@ -205,55 +206,67 @@ exports.loadShop = async(req, res, next) => {
     }
 };
 
-   exports.productDetail = async(req, res, next) => {
-
-
+exports.productDetail = async (req, res, next) => {
     try {
-        const productId = req.params.productId;
-        const variantId = req.query.variant || null; // Get variant ID from query parameter
-        if (!mongoose.isValidObjectId(productId)) {
-        
-          return res.redirect('/pageNotFound');
-        }
-        
-        const product = await Product.findOne({ _id: productId, isDeleted: false, status: 'listed' })
-          .populate({
-            path: 'variants',
-            match: { isDeleted: false, status: 'unlisted' },
-          })
-          .populate('category_id');
-    
-        if (!product || !product.variants.length) {
-           
-          return res.redirect('/pageNotFound');
-        }
-    
-        // Select the active variant: use query param if valid, otherwise default to first variant
-        let activeVariant = product.variants[0];
-        if (variantId && mongoose.isValidObjectId(variantId)) {
-          const foundVariant = product.variants.find(v => v._id.toString() === variantId);
-          activeVariant = foundVariant || product.variants[0]; // Fallback to first if not found
-        }
-    
-        const reviews = await Review.find({ product_id: productId })
-          .populate('user_id', 'name')
-          .sort({ created_at: -1 });
-    
-        const avgRating = reviews.length > 0 
-          ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1) 
-          : 0;
-    
-        res.render('products/details', {
-          product,
-          variants: product.variants,
-          activeVariant, // Pass the selected variant
-          reviews,
-          avgRating,
-          category: product.category_id ? product.category_id.title : 'Unknown Category',
-        });
-      } catch (error) {
-        console.error('Error fetching product details:', error);
-        res.redirect('/error');
-      }
+      const productId = req.params.productId;
+      const variantId = req.query.variant || null; 
 
-}
+      console.log('productId:',productId);
+      console.log("variantId/:",variantId)
+      if (!mongoose.isValidObjectId(productId)) {
+       
+        return res.redirect('/pageNotFound');
+      }
+  
+      const product = await Product.findOne({ _id: productId, isDeleted: false, status: 'listed' })
+        .populate({
+          path: 'variants',
+          match: { isDeleted: false, status: 'unlisted' },
+        })
+        .populate('category_id');
+  console.log('poriduct:',product);
+      if (!product || !product.variants.length) {
+        console.log("Problem is here:")
+        return res.redirect('/pageNotFound');
+      }
+  
+      // Select the active variant: use query param if valid, otherwise default to first variant
+      let activeVariant = product.variants[0];
+      if (variantId && mongoose.isValidObjectId(variantId)) {
+        const foundVariant = product.variants.find(v => v._id.toString() === variantId);
+        activeVariant = foundVariant || product.variants[0]; // Fallback to first if not found
+      }
+  
+      const reviews = await Review.find({ product_id: productId })
+        .populate('user_id', 'name')
+        .sort({ created_at: -1 });
+  
+      const avgRating = reviews.length > 0
+        ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
+        : 0;
+  
+      // Fetch related products (e.g., same category, excluding the current product)
+      const relatedProducts = await Product.find({
+        _id: { $ne: productId }, // Exclude the current product
+        category_id: product.category_id, // Match by category
+        isDeleted: false,
+        status: 'listed',
+      })
+        .populate('variants')
+        .limit(4); // Limit to 4 related products
+
+      res.render('products/details', {
+        product,
+        variants: product.variants,
+        activeVariant,
+        reviews,
+        avgRating,
+        category: product.category_id ? product.category_id.title : 'Unknown Category',
+        relatedProducts, 
+        currentActivePage:'shop'
+      });
+    } catch (error) {
+      console.error('Error fetching product details:', error);
+      res.redirect('/error');
+    }
+  };

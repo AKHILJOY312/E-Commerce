@@ -4,18 +4,30 @@ const nodemailer = require("nodemailer");
 const { assign } = require("nodemailer/lib/shared");
 const passport  = require("passport")
 require("dotenv").config();
+const Product = require("../../models/Product");
 
 exports.loadHomePage = async (req, res) => {
   try {
+    
+    let username = null;
     const user = req.session.username;
-    // console.log(user);
     if (user) {
       const userData = await User.findOne({ _id: user._id });
-
-      res.render("home", { username: user });
-    } else {
-      res.render("home", { username: null });
+      username = user;
     }
+
+    const newArrivals = await Product.find({
+            isDeleted: false,
+            status: 'listed',
+          })
+          .sort({created_at:-1})
+            .populate('variants')
+            .limit(4); 
+    res.render("home", {
+       username,
+      newArrivals,
+      currentActivePage:'home'
+      });
   } catch (error) {
     console.error("Home page not found");
     res.status(500).send("Server error");
@@ -24,7 +36,7 @@ exports.loadHomePage = async (req, res) => {
 
 exports.pageNotFound = async (req, res) => {
   try {
-    return res.render("pageNotFound");
+    return res.render("pageNotFound",{currentActivePage:' '});
   } catch (error) {
     console.error(" pageNotFound not found");
     res.status(500).send("Server error");
@@ -54,7 +66,7 @@ exports.googleAuthCallback = async (req, res, next) => {
 };
 exports.getLogin = async (req, res) => {
   try {
-    if (req.session.username || req.user) {
+    if (req.session.username) {
       return res.redirect("/");
     }
     return res.render("auth/login",{ query: req.query });
@@ -267,14 +279,16 @@ exports.resendOtp = async (req, res) => {
 };
 
 exports.logout = (req, res, next) => {
-  req.logout(function (err) {
-    if (err) {
-      return next(err);
+  try {
+    if (req.session.username) {
+      delete req.session.username; // Remove only the user session
+      delete req.session.isAuthenticated; // Remove authentication flag
     }
-    req.session.destroy(() => {
-      res.redirect("/");
-    });
-  });
+    res.redirect("/");
+  } catch (err) {
+    console.error("Logout error:", err);
+    res.redirect("/404page");
+  }
 };
 
 exports.LoadForgetPassword = (req, res, next) => {

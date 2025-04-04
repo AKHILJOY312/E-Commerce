@@ -94,7 +94,7 @@
                   <div class="card-body">
                     <div class="shop__sidebar__brand">
                       <ul>
-                        <% ['Louis Vuitton', 'Chanel', 'Hermes', 'Allen Solly'].forEach(brandOption => { %>
+                        <% ['ADIDAS', 'Vincent Chase', 'louis philippe', 'Allen Solly'].forEach(brandOption => { %>
                           <li>
                             <a href="/shop?brand=<%= brandOption %>&search=<%= searchQuery %>"
                               class="<%= selectedBrand === brandOption ? 'active' : '' %>">
@@ -117,18 +117,18 @@
                     <div class="shop__sidebar__price">
                       <ul>
                         <% const priceRanges = [
-                          { min: 0, max: 500 },
-                          { min: 500, max: 1000 },
-                          { min: 1000, max: 1500 },
-                          { min: 1500, max: 2000 },
-                          { min: 2000, max: 2500 },
+                          { min: 0, max: 499 },
+                          { min: 500, max: 999 },
+                          { min: 1000, max: 1499 },
+                          { min: 1500, max: 1999 },
+                          { min: 2000, max: 2499 },
                           { min: 2500, max: Infinity }
                         ]; %>
                         <% priceRanges.forEach(range => { %>
                           <li>
                             <a href="/shop?minPrice=<%= range.min %>&maxPrice=<%= range.max === Infinity ? '' : range.max %>&search=<%= searchQuery %>&category=<%= selectedCategory %>&brand=<%= selectedBrand %>"
                               class="<%= minPrice === range.min && (maxPrice === range.max || (range.max === Infinity && !maxPrice)) ? 'active' : '' %>">
-                              <%= range.max === Infinity ? '₹250.00+' : `₹${range.min.toFixed(2)} - ₹${range.max.toFixed(2)}` %>
+                              <%= range.max === Infinity ? '₹2500.00+' : `₹${range.min.toFixed(2)} - ₹${range.max.toFixed(2)}` %>
                             </a>
                           </li>
                         <% }) %>

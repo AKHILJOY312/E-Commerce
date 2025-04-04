@@ -51,9 +51,9 @@
             <div class="col-lg-6 col-md-6">
                 <nav class="header__menu mobile-menu">
                     <ul>
-                        <li class="active"><a href="/">Home</a></li>
-                        <li><a href="/shop">Shop</a></li>
-                        <li><a href="#">Pages</a>
+                        <li class="<%= currentActivePage === 'home' ? 'active' : '' %>"><a href="/">Home</a></li>
+                        <li class="<%= currentActivePage === 'shop' ? 'active' : '' %>"><a href="/shop">Shop</a></li>
+                        <li class="<%= currentActivePage === 'pages' ? 'active' : '' %>"><a href="#">Pages</a>
                             <ul class="dropdown">
                                 <li><a href="./about.html">About Us</a></li>
                                 <li><a href="./shop-details.html">Shop Details</a></li>
@@ -62,8 +62,8 @@
                                 <li><a href="./blog-details.html">Blog Details</a></li>
                             </ul>
                         </li>
-                        <li><a href="./blog.html">Blog</a></li>
-                        <li><a href="./contact.html">Contacts</a></li>
+                        <li class="<%= currentActivePage === 'blog' ? 'active' : '' %>"><a href="./blog.html">Blog</a></li>
+                        <li class="<%= currentActivePage === 'contacts' ? 'active' : '' %>"><a href="./contact.html">Contacts</a></li>
                     </ul>
                 </nav>
             </div>

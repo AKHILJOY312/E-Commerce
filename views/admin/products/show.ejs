@@ -480,6 +480,9 @@
               name="salePrice"
               required
             />
+            <small id="salePriceError" class="form-text text-danger" style="display: none;">
+              Sale price cannot be greater than regular price
+            </small>
           </div>
           <div class="form-group">
             <label for="variantQuantity">Stock Quantity:</label>
@@ -538,7 +541,6 @@
     </div>
   </div>
 </div>
-
 
   <!-- Add Image Modal -->
   <div
@@ -645,114 +647,117 @@
 
   <!-- Edit Variant Modal -->
   <div
-    class="modal fade"
-    id="editVariantModal"
-    tabindex="-1"
-    role="dialog"
-    aria-labelledby="editVariantLabel"
-    aria-hidden="true"
-  >
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="editVariantLabel">Edit Variant</h5>
+  class="modal fade"
+  id="editVariantModal"
+  tabindex="-1"
+  role="dialog"
+  aria-labelledby="editVariantLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editVariantLabel">Edit Variant</h5>
+        <button
+          type="button"
+          class="close"
+          data-dismiss="modal"
+          aria-label="Close"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <form id="editVariantForm" method="POST">
+        <div class="modal-body">
+          <input type="hidden" name="variantId" id="editVariantId" />
+          <div class="form-group">
+            <label for="editVariantColor">Color:</label>
+            <input
+              type="text"
+              class="form-control"
+              id="editVariantColor"
+              name="color"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="editVariantMaterial">Material:</label>
+            <input
+              type="text"
+              class="form-control"
+              id="editVariantMaterial"
+              name="material"
+            />
+          </div>
+          <div class="form-group">
+            <label for="editVariantPrice">Price:</label>
+            <input
+              type="number"
+              step="1"
+              class="form-control"
+              id="editVariantPrice"
+              name="price"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="editVariantSalePrice">Sale Price:</label>
+            <input
+              type="number"
+              step="1"
+              class="form-control"
+              id="editVariantSalePrice"
+              name="salePrice"
+              required
+            />
+            <small id="editSalePriceError" class="form-text text-danger" style="display: none;">
+              Sale price cannot be greater than regular price
+            </small>
+          </div>
+          <div class="form-group">
+            <label for="editVariantQuantity">Stock Quantity:</label>
+            <input
+              type="number"
+              class="form-control"
+              id="editVariantQuantity"
+              name="quantity"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="editVariantSKU">SKU:</label>
+            <input
+              type="text"
+              class="form-control"
+              id="editVariantSKU"
+              name="sku"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="editVariantDescription">Description:</label>
+            <textarea
+              class="form-control"
+              id="editVariantDescription"
+              name="description"
+              rows="3"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
           <button
             type="button"
-            class="close"
+            class="btn btn-secondary"
             data-dismiss="modal"
-            aria-label="Close"
           >
-            <span aria-hidden="true">×</span>
+            Cancel
           </button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
         </div>
-        <form id="editVariantForm" method="POST">
-          <div class="modal-body">
-            <input type="hidden" name="variantId" id="editVariantId" />
-            <div class="form-group">
-              <label for="editVariantColor">Color:</label>
-              <input
-                type="text"
-                class="form-control"
-                id="editVariantColor"
-                name="color"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="editVariantMaterial">Material:</label>
-              <input
-                type="text"
-                class="form-control"
-                id="editVariantMaterial"
-                name="material"
-              />
-            </div>
-            <div class="form-group">
-              <label for="editVariantPrice">Price:</label>
-              <input
-                type="number"
-                step="1"
-                class="form-control"
-                id="editVariantPrice"
-                name="price"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="editVariantSalePrice">Sale Price:</label>
-              <input
-                type="number"
-                step="1"
-                class="form-control"
-                id="editVariantSalePrice"
-                name="salePrice"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="editVariantQuantity">Stock Quantity:</label>
-              <input
-                type="number"
-                class="form-control"
-                id="editVariantQuantity"
-                name="quantity"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="editVariantSKU">SKU:</label>
-              <input
-                type="text"
-                class="form-control"
-                id="editVariantSKU"
-                name="sku"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="editVariantDescription">Description:</label>
-              <textarea
-                class="form-control"
-                id="editVariantDescription"
-                name="description"
-                rows="3"
-              ></textarea>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-dismiss="modal"
-            >
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-primary">Save Changes</button>
-          </div>
-        </form>
-      </div>
+      </form>
     </div>
   </div>
+</div>
 
   <!-- Confirmation Modal -->
   <div
@@ -910,6 +915,79 @@
     font-weight: bold;
   }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Function to handle price validation for any form
+  function setupPriceValidation(formSelector, priceId, salePriceId, errorId) {
+    const form = document.querySelector(formSelector);
+    const priceInput = document.getElementById(priceId);
+    const salePriceInput = document.getElementById(salePriceId);
+    const errorText = document.getElementById(errorId);
+
+    // Real-time validation for sale price
+    salePriceInput.addEventListener('input', () => {
+      const price = parseFloat(priceInput.value) || 0;
+      const salePrice = parseFloat(salePriceInput.value) || 0;
+
+      if (salePrice > price && price > 0) {
+        salePriceInput.classList.add('is-invalid');
+        errorText.style.display = 'block';
+      } else {
+        salePriceInput.classList.remove('is-invalid');
+        errorText.style.display = 'none';
+      }
+    });
+
+    // Real-time validation for regular price
+    priceInput.addEventListener('input', () => {
+      const price = parseFloat(priceInput.value) || 0;
+      const salePrice = parseFloat(salePriceInput.value) || 0;
+
+      if (salePrice > price && price > 0) {
+        salePriceInput.classList.add('is-invalid');
+        errorText.style.display = 'block';
+      } else {
+        salePriceInput.classList.remove('is-invalid');
+        errorText.style.display = 'none';
+      }
+    });
+
+    // Form submission validation
+    form.addEventListener('submit', (e) => {
+      const price = parseFloat(priceInput.value) || 0;
+      const salePrice = parseFloat(salePriceInput.value) || 0;
+
+      if (salePrice > price && price > 0) {
+        e.preventDefault();
+        salePriceInput.classList.add('is-invalid');
+        errorText.style.display = 'block';
+        salePriceInput.focus();
+      } else {
+        salePriceInput.classList.remove('is-invalid');
+        errorText.style.display = 'none';
+      }
+    });
+  }
+
+  // Setup validation for Add Variant Modal
+  setupPriceValidation(
+    '#addVariantModal form',
+    'variantPrice',
+    'variantSalePrice',
+    'salePriceError'
+  );
+
+  // Setup validation for Edit Variant Modal
+  setupPriceValidation(
+    '#editVariantForm',
+    'editVariantPrice',
+    'editVariantSalePrice',
+    'editSalePriceError'
+  );
+});
+</script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
 
 <script>

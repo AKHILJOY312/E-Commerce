@@ -335,4 +335,16 @@ const Toast = Swal.mixin({
   });</script>
   <% } %>
 
+  <% if (messages.error) { %>
+    <script>
+Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: "<%= messages.error[0] %>",
+      confirmButtonText: 'OK'
+    });
+    
+  </script>
+  <% } %>
+
 <%- include("../../views/partials/admin/footer.ejs") %>

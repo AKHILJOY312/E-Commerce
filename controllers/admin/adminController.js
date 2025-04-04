@@ -6,7 +6,7 @@ const bcrypt = require("bcryptjs");
 
 exports.loadLogin = (req, res) => {
   if (req.session.admin) {
-    return res.redirect("/admin/dashboard");
+    return res.redirect("/admin");
   }
   res.render("adminLogin", { message: null });
 };
@@ -44,7 +44,7 @@ exports.loadDashboard = async (req, res) => {
     }
 
     
-    const categoryCount = await Category.countDocuments({ status: 'listed' }); 
+    const categoryCount = await Category.countDocuments({ status: 'listed',isDeleted:false }); 
     const totalUsers = await User.countDocuments({ isActive: true }); 
     const totalProducts = await Product.countDocuments({ isDeleted: false }); 
 
@@ -69,15 +69,13 @@ res.render('404page');
 
 exports.adminLogout = async (req, res) => {
   try {
-    req.session.destroy((err) => {
-      if (err) {
-        console.log("Error destroying session:", err);
-        return res.status(500).send("Logout failed");
-      }
-      res.redirect("/admin"); 
-    });
+    if (req.session.admin) {
+      delete req.session.admin; // Remove only the admin session
+    }
+    res.redirect("/admin/login");
   } catch (error) {
     console.log("Logout error:", error);
     res.redirect("/404page"); 
   }
 };
+

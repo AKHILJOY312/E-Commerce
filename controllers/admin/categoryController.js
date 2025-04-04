@@ -18,7 +18,7 @@ exports.categoryInfo = async (req, res) => {
     const totalCategories = await Category.countDocuments({
       title: { $regex: ".*" + search + ".*", $options: "i" },isDeleted: { $ne: true }
     });
-console.log('totalCategories',totalCategories);
+
     const totalPages = Math.ceil(totalCategories / limit);
     
    
@@ -61,20 +61,32 @@ exports.unlistCategory = async (req, res) => {
 
 exports.addCategory = async (req, res) => {
   try {
-      const { title, description, } = req.body;
-      const newCategory = new Category({
-          title,
-          description,
-          created_at: new Date(),
-          updated_at: new Date()
-      });
-      await newCategory.save();
-      console.log("Category added successfully.")
-      req.flash("success", "Category added successfully.");
-      res.redirect('/admin/category');
+    const { title, description } = req.body;
+
+    // Check if category with same title already exists (case-insensitive)
+    const existingCategory = await Category.findOne({ 
+      title: { $regex: new RegExp(`^${title}$`, 'i') }
+    });
+
+    if (existingCategory) {
+      req.flash("error", "A category with this name already exists.");
+      return res.redirect('/admin/category');
+    }
+
+    const newCategory = new Category({
+      title,
+      description,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+    
+    await newCategory.save();
+    console.log("Category added successfully.")
+    req.flash("success", "Category added successfully.");
+    res.redirect('/admin/category');
   } catch (error) {
-      console.error('Error adding category:', error);
-      res.status(500).send('Server Error');
+    console.error('Error adding category:', error);
+    res.status(500).send('Server Error');
   }
 };
 
