@@ -248,6 +248,7 @@ exports.verifyOtp = async (req, res) => {
 
 exports.resendOtp = async (req, res) => {
   try {
+    console.log(req.session.userData);
     const { email } = req.session.userData;
     if (!email) {
       return res
@@ -331,6 +332,39 @@ exports.forgotPassword = async (req, res) => {
     console.error("Forgot password error:", error);
     req.flash("error", "Something went wrong. Please try again.");
     res.redirect("/forgetPassword");
+  }
+};
+exports.ForgotResendOtp = async (req, res) => {
+  try {
+    console.log( req.session.forgotPasswordEmail);
+    const  email  =  req.session.forgotPasswordEmail;
+    if (!email) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email not found in session" });
+    }
+
+    const otp = generateOtp();
+    req.session.forgotPasswordOtp = otp;
+    console.log("worjimg");
+    const emailSend = await sendVerificationEmail(email, otp);
+    if (emailSend) {
+      console.log("Resend Otp:", otp);
+      res
+        .status(200)
+        .json({ success: true, message: "OTP Resend successfully" });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: "Failed to send OTP, please try again.",
+      });
+    }
+  } catch (error) {
+    console.error("Error forgot  resending OTP", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error,Please try again",
+    });
   }
 };
 

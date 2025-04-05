@@ -7,7 +7,7 @@ const productController = {
   
   async getProducts(req, res) {
     try {
-      const perPage = 3;
+      const perPage = 5;
       const page = parseInt(req.query.page) || 1;
       const searchQuery = req.query.search || '';
 

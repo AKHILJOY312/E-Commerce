@@ -5,7 +5,7 @@ exports.categoryInfo = async (req, res) => {
   try {
     const search = req.query.search || "";
     const page = parseInt(req.query.page) || 1;
-    const limit = 3;
+    const limit = 5;
     const skip = (page - 1) * limit;
 
     const categoryData = await Category.find({
@@ -63,11 +63,10 @@ exports.addCategory = async (req, res) => {
   try {
     const { title, description } = req.body;
 
-    // Check if category with same title already exists (case-insensitive)
+    const trimmedTitle= title.trim();
     const existingCategory = await Category.findOne({ 
-      title: { $regex: new RegExp(`^${title}$`, 'i') }
+      title: { $regex: new RegExp(`^${trimmedTitle}$`, 'i') }
     });
-
     if (existingCategory) {
       req.flash("error", "A category with this name already exists.");
       return res.redirect('/admin/category');
@@ -93,6 +92,15 @@ exports.addCategory = async (req, res) => {
 exports.postEditCategory = async (req, res) => {
   try {
       const { id, title, description } = req.body;
+
+      const trimmedTitle= title.trim();
+      const existingCategory = await Category.findOne({ 
+        title: { $regex: new RegExp(`^${trimmedTitle}$`, 'i') }
+      });
+      if (existingCategory) {
+        req.flash("error", "A category with this name already exists.");
+        return res.redirect('/admin/category');
+      }
 
       await Category.findByIdAndUpdate(id, { title, description });
 

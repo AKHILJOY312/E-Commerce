@@ -15,7 +15,7 @@ router.post("/login",adminController.login);
 router.get('/',adminAuth,adminController.loadDashboard);
 router.get("/logout",adminController.adminLogout);
 
-//Costumer Management
+//Customer Management
 router.get("/users",adminAuth,customerController.customerInfo);
 router.get('/blockUser',adminAuth,customerController.userBlocked);
 router.get('/unblockUser',adminAuth,customerController.userUnblocked);

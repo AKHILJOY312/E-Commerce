@@ -20,6 +20,7 @@
       color: #fff;
     }
   </style>
+  <%- include("../../partials/user/auth/authHeader.ejs") %>
 </head>
 <body>
   <div class="modal modal-sheet position-static d-block bg-body-secondary p-4 py-md-5" tabindex="-1" role="dialog" id="modalSignin">
@@ -69,6 +70,7 @@
       </div>
     </div>
   </div>
+  <%- include("../../partials/user/auth/authFoother.ejs") %>
   <script>
     document.addEventListener("DOMContentLoaded", function () {
       function togglePasswordVisibility(toggleBtn, inputField) {

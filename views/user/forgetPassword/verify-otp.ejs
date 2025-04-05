@@ -117,6 +117,7 @@
   </head>
   <body>
     <div class="container">
+      <%- include("../../partials/user/auth/authHeader.ejs") %>
       <header><i class="bx bxs-check-shield"></i></header>
       <h4>Enter OTP Code </h4>
       <form
@@ -184,7 +185,7 @@
     let countdown;
     
     function startResendTimer() {
-      let timeLeft = 30; // Timer in seconds
+      let timeLeft = 5; // Timer in seconds
       resendBtn.disabled = true;
       resendBtn.classList.remove("enabled");
       resendBtn.textContent = " Wait... ";
@@ -286,6 +287,53 @@
     }
     
     window.addEventListener("load", () => inputs[0].focus());
+
+    function resendOtp() {
+  // Reset UI elements
+  resendBtn.disabled = true;
+  resendBtn.classList.remove("enabled");
+  resendBtn.textContent = "Sending...";
+  
+  // Make AJAX request to resend OTP
+  $.ajax({
+    type: "POST",
+    url: "/forgot-resend-otp", // Your backend endpoint for resending OTP
+    success: function(response) {
+      if (response.success) {
+        Swal.fire({
+          icon: 'success',
+          title: 'New OTP Sent',
+          text: 'A new OTP has been sent to your email/phone'
+        });
+        // Restart the timer
+        startResendTimer();
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed to Resend OTP',
+          text: response.message || 'Please try again later'
+        });
+        // Re-enable the button if failed
+        resendBtn.disabled = false;
+        resendBtn.classList.add("enabled");
+        resendBtn.textContent = "Resend OTP";
+      }
+    },
+    error: function() {
+      Swal.fire({
+        icon: 'error',
+        title: 'Server Error',
+        text: 'Failed to connect to the server. Please try again.'
+      });
+      // Re-enable the button if failed
+      resendBtn.disabled = false;
+      resendBtn.classList.add("enabled");
+      resendBtn.textContent = "Resend OTP";
+    }
+  });
+  
+  return false; // Prevent default form behavior
+}
     startResendTimer();
   </script>
   </body>

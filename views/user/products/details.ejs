@@ -1,6 +1,41 @@
 <%- include("../../views/partials/user/header.ejs") %>
-
 <style>
+  /* Add to your existing styles */
+  .variant-thumbnails {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  
+  .variant-thumbnail {
+    width: 50px;
+    height: 50px;
+    border: 1px solid #e5e5e5;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  
+  .variant-thumbnail.active {
+    border: 2px solid #e53637;
+  }
+  
+  .variant-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .variant-thumbnail:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+</style>
+<style>
+  
   .color-link {
     display: block;
     width: 100%;
@@ -161,41 +196,38 @@
               <%= activeVariant.description || 'No description available.' %>
             </p>
             <div class="product__details__option">
-              <div class="product__details__option__size">
-                <span>Size:</span>
-                <% variants.forEach((variant, index) => { %>
-                <label
-                  class="<%= variant._id.toString() === activeVariant._id.toString() ? 'active' : '' %>"
-                  for="size-<%= variant._id %>"
-                >
-                  <%= variant.size %> <input type="radio" id="size-<%=
-                  variant._id %>" name="size" value="<%= variant._id %>" <%=
-                  variant._id.toString() === activeVariant._id.toString() ?
-                  'checked' : '' %>>
-                </label>
-                <% }) %>
-              </div>
-              <div class="product__details__option__color">
-                <span>Color:</span>
-                <% variants.forEach((variant, index) => { %>
-                <label
-                  class="c-<%= index + 1 %>"
-                  for="color-<%= variant._id %>"
-                >
-                  <a
-                    href="/product/<%= product._id %>?variant=<%= variant._id %>"
-                    class="color-link"
-                    style="display: block; width: 100%; height: 100%"
-                  >
-                    <input type="radio" id="color-<%= variant._id %>"
-                    name="color" value="<%= variant.color %>" <%=
-                    variant._id.toString() === activeVariant._id.toString() ?
-                    'checked' : '' %> hidden>
-                  </a>
-                </label>
-                <% }) %>
-              </div>
-            </div>
+  <div class="product__details__option__size">
+    <span>Size:</span>
+    <% variants.forEach((variant, index) => { %>
+    <label
+      class="<%= variant._id.toString() === activeVariant._id.toString() ? 'active' : '' %>"
+      for="size-<%= variant._id %>"
+    >
+      <%= variant.size %> <input type="radio" id="size-<%=
+      variant._id %>" name="size" value="<%= variant._id %>" <%=
+      variant._id.toString() === activeVariant._id.toString() ?
+      'checked' : '' %>>
+    </label>
+    <% }) %>
+  </div>
+  
+  <div class="product__details__option__variants">
+    <span>Variants:</span>
+    <div class="variant-thumbnails">
+      <% variants.forEach((variant, index) => { %>
+        <a href="/product/<%= product._id %>?variant=<%= variant._id %>" 
+          class="variant-thumbnail <%= variant._id.toString() === activeVariant._id.toString() ? 'active' : '' %>">
+          <% if (variant.product_image && variant.product_image.length > 0) { %>
+            <img src="<%= variant.product_image[0] %>" alt="<%= variant.color || 'Variant ' + (index + 1) %>" 
+              title="<%= variant.color || 'Variant ' + (index + 1) %>">
+          <% } else { %>
+            <img src="https://placehold.co/50x50?text=No+Image" alt="No image">
+          <% } %>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+</div>
             <div class="product__details__cart__option">
               <div class="quantity">
                 <div class="pro-qty">
