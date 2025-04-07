@@ -5,6 +5,8 @@ const { assign } = require("nodemailer/lib/shared");
 const passport  = require("passport")
 require("dotenv").config();
 const Product = require("../../models/Product");
+const { generateOtp, sendVerificationEmail, securePassword } = require("../../utils/authUtils");
+
 
 exports.loadHomePage = async (req, res) => {
   try {
@@ -58,12 +60,15 @@ exports.googleAuthCallback = async (req, res, next) => {
       req.login(user, (err) => {
         if (err) return next(err);
         req.session.isAuthenticated = true;
-        req.session.username = user.name; // Store username in session
+        req.session.username = user.name;
+        req.session.email = user.email;
+        req.session.user_id = user._id;
         res.redirect("/");
       });
     }
   })(req, res, next);
 };
+
 exports.getLogin = async (req, res) => {
   try {
     if (req.session.username) {
@@ -110,6 +115,8 @@ console.log('req.body:',req.body)
     // If password is correct, authenticate the user
     req.session.isAuthenticated = true;
     req.session.username = user.name;
+    req.session.email=email;
+    req.session.user_id = user._id;
 
     return res.redirect("/");
   } catch (error) {
@@ -131,48 +138,6 @@ exports.getSignup = async (req, res) => {
   }
 };
 
-function generateOtp() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-// Function to send OTP email
-async function sendVerificationEmail(email, otp) {
-  try {
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      port: 587,
-      secure: false,
-      requireTLS: true,
-      auth: {
-        user: process.env.NODEMAILER_Email,
-        pass: process.env.NODEMAILER_Password,
-      },
-    });
-
-    const info = await transporter.sendMail({
-      from: process.env.NODEMAILER_Email,
-      to: email,
-      subject: "Verify your email",
-      text: `${otp} is your OTP, Please input`,
-      html: `<b>Your OTP: ${otp}</b>`,
-    });
-
-    return info.accepted.length > 0;
-  } catch (error) {
-    console.error("Error sending email", error);
-    return false;
-  }
-}
-
-// Secure password hashing function
-const securePassword = async (password) => {
-  try {
-    return await bcrypt.hash(password, 10);
-  } catch (error) {
-    console.error("Error hashing password:", error);
-    throw new Error("Password hashing failed");
-  }
-};
 
 // User Signup Handler
 exports.signupUser = async (req, res) => {
@@ -204,6 +169,7 @@ exports.signupUser = async (req, res) => {
 
     req.session.userOtp = otp;
     req.session.userData = { name, email, phone, password };
+    req.session.email=email;
 
     res.render("auth/verify-Otp");
     console.log("OTP sent:", otp);
@@ -230,9 +196,13 @@ exports.verifyOtp = async (req, res) => {
         password: passwordHash,
       });
 
-      await newUser.save();
-      req.session.user = newUser.id;
-      req.session.username = userData.name;
+      const savedUser = await newUser.save();
+
+      // ✅ Set session properly
+      req.session.user_id = savedUser._id;
+      req.session.username = savedUser.name;
+      req.session.email = savedUser.email;
+      req.session.isAuthenticated = true;
 
       res.json({ success: true, redirectUrl: "/" });
     } else {
@@ -281,14 +251,27 @@ exports.resendOtp = async (req, res) => {
 
 exports.logout = (req, res, next) => {
   try {
-    if (req.session.username) {
-      delete req.session.username; // Remove only the user session
-      delete req.session.isAuthenticated; // Remove authentication flag
-    }
-    res.redirect("/");
+    
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Session destruction error:", err);
+        
+        return res.status(500).send("Failed to logout. Please try again.");
+      }
+
+      
+      res.clearCookie('yourSessionCookieName', { 
+        httpOnly: true,
+        secure: true,  
+        sameSite: 'Strict' 
+      });
+
+     
+      res.redirect("/");
+    });
   } catch (err) {
     console.error("Logout error:", err);
-    res.redirect("/404page");
+    return res.redirect("/404page"); //  Consider a more generic error page.
   }
 };
 

@@ -1,0 +1,556 @@
+<%- include("../../views/partials/user/header.ejs") %>
+
+<!-- Bootstrap 5 CDN (CSS) -->
+<link
+  href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+  rel="stylesheet"
+/>
+<!-- Font Awesome -->
+<link
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+  rel="stylesheet"
+/>
+<!-- Bootstrap Icons -->
+<link
+  href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
+  rel="stylesheet"
+/>
+
+<style>
+  body {
+    background-color: #f7f7f7; /* Light Gray background */
+    color: #000000; /* Black text */
+  }
+
+  .profile-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background-color: #f7f7f7; /* Light Gray card background */
+    border: 1px solid #854836; /* Brown border */
+  }
+
+  .profile-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+  }
+
+  .profile-img {
+    border: 4px solid #854836; /* Brown border for profile image */
+    transition: transform 0.3s ease;
+  }
+
+  .profile-img:hover {
+    transform: scale(1.05);
+  }
+
+  .profile-nav .nav-link {
+    padding: 10px 15px;
+    font-weight: 500;
+    border-radius: 8px;
+    color: #000000; /* Black text */
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  .profile-nav .nav-link:hover {
+    background-color: #ffb22c; /* Golden Yellow on hover */
+    color: #000000; /* Black text */
+  }
+
+  .profile-nav .nav-link.active {
+    background-color: #ffb22c; /* Golden Yellow for active */
+    color: #000000; /* Black text */
+  }
+
+  .profile-nav .nav-link i {
+    width: 20px;
+    text-align: center;
+  }
+
+  .profile-section p {
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: #000000; /* Black text */
+  }
+
+  .profile-section .badge {
+    font-size: 14px;
+    padding: 5px 10px;
+    border-radius: 8px;
+  }
+
+  .breadcrumb-option {
+    background-color: #f7f7f7; /* Light Gray background */
+  }
+
+  .breadcrumb__links a,
+  .breadcrumb__links span {
+    color: #854836; /* Brown for breadcrumb links */
+  }
+
+  .card-title,
+  .card-subtitle {
+    color: #854836; /* Brown for card titles and subtitles */
+  }
+
+  .text-primary {
+    color: #ffb22c !important; /* Golden Yellow for primary text */
+  }
+
+  .btn-outline-primary {
+    color: #ffb22c; /* Golden Yellow text */
+    border-color: #ffb22c; /* Golden Yellow border */
+  }
+
+  .btn-outline-primary:hover {
+    background-color: #ffb22c; /* Golden Yellow background on hover */
+    color: #000000; /* Black text */
+  }
+
+  .badge.bg-success {
+    background-color: #ffb22c !important; /* Golden Yellow for success badges */
+    color: #000000; /* Black text */
+  }
+
+  .badge.bg-warning {
+    background-color: #854836 !important; /* Brown for warning badges */
+    color: #f7f7f7; /* Light Gray text */
+  }
+
+  .text-muted {
+    color: #854836 !important; /* Brown for muted text */
+  }
+  .settings-list {
+    list-style: none;
+    padding: 0;
+  }
+
+  .settings-list .list-group-item {
+    background-color: #F7F7F7; /* Light Gray background */
+    color: #000000; /* Black text */
+    border: 1px solid #854836; /* Brown border */
+    padding: 10px 15px;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .settings-list .list-group-item:hover {
+    background-color: #FFB22C; /* Golden Yellow on hover */
+    color: #000000; /* Black text */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+</style>
+
+<!-- Breadcrumb Section Begin -->
+<section class="breadcrumb-option bg-light py-3 mb-4">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-12">
+        <div class="breadcrumb__text">
+          <h4>User Profile</h4>
+          <div class="breadcrumb__links">
+            <a href="/"><i class="bi bi-house-door"></i> Home</a>
+            <span class="mx-2">/</span>
+            <span>User Profile</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- Breadcrumb Section End -->
+
+<!-- Profile Section Begin -->
+<section class="profile-container py-4">
+  <div class="container">
+    <div class="row">
+      <!-- Profile Navigation -->
+      <div class="col-lg-4 mb-4">
+        <div class="card profile-card shadow-lg border-0 rounded-4">
+          <div class="card-body text-center">
+            <!-- Profile Image -->
+            <div class="mb-3">
+              <img
+                src="<%= user.profileImage || '/img/profiledemo.jpg' %>"
+                alt="Profile Image"
+                class="rounded-circle profile-img shadow"
+                width="120"
+                height="120"
+                style="object-fit: cover"
+              />
+            </div>
+            <h4 class="card-title fw-semibold"><%= user.name %></h4>
+            <p class="card-subtitle text-muted mb-3"><%= user.email %></p>
+
+            <!-- Nav -->
+            <ul class="nav nav-pills flex-column text-start profile-nav">
+              <li class="nav-item">
+                <a class="nav-link active" href="#account"
+                  ><i class="fas fa-user me-2"></i> Account</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#orders"
+                  ><i class="fas fa-shopping-bag me-2"></i> Orders
+                  <span class="badge bg-warning text-light ms-2"><%= orderCount%></span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#Address"
+                  ><i class="fas fa-map-marker-alt me-2"></i> Address</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#wallet"
+                  ><i class="fas fa-wallet me-2"></i> Wallet</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#Referrals"
+                  ><i class="fas fa-user-friends me-2"></i> Referrals</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#wishlist"
+                  ><i class="fas fa-heart me-2"></i> Wishlist</a
+                >
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#settings"
+                  ><i class="fas fa-cog me-2"></i> Settings</a
+                >
+              </li>
+            </ul>
+
+            <!-- Shopping Stats -->
+            <div class="row text-center mt-4">
+              <div class="col-4">
+                <h6 class="fw-bold text-primary">₹ 1,234</h6>
+                <small class="text-muted">Spent</small>
+              </div>
+              <div class="col-4">
+                <h6 class="fw-bold text-primary">15</h6>
+                <small class="text-muted">Orders</small>
+              </div>
+              <div class="col-4">
+                <h6 class="fw-bold text-primary">8</h6>
+                <small class="text-muted">Saved</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Content -->
+      <div class="col-lg-8">
+        <!-- Account Info -->
+        <div class="card shadow mb-4 profile-section" id="account">
+          <div class="card-body">
+            <h5 class="mb-4">Account Information</h5>
+            <div class="row">
+              <div class="col-md-6">
+                <p><strong>Name:</strong> <%= user.name %></p>
+                <p>
+                  <strong>Phone:</strong>
+                  <%= (!user.phone || user.phone === "" || user.phone ===
+                  "null") ? "Not provided" : user.phone %>
+                </p>
+                <p><strong>Email:</strong> <%= user.email %></p>
+              </div>
+              <div class="col-md-6">
+                <p>
+                  <strong>Account Created:</strong>
+                  <%= new Date(user.created_at).toLocaleDateString() || "N/A" %>
+                </p>
+                <p>
+                  <strong>Last Updated:</strong>
+                  <%= new Date(user.updated_at).toLocaleDateString() || "N/A" %>
+                </p>
+                <p>
+                  <strong>Status:</strong>
+                  <span
+                    class="badge <%= user.isActive ? 'bg-success' : 'bg-danger' %>"
+                  >
+                    <%= user.isActive ? 'Active' : 'Inactive' %>
+                  </span>
+                </p>
+              </div>
+            </div>
+            <a href="/user/edit-profile" class="btn btn-outline-primary mt-3"
+              >Edit Profile</a
+            >
+          </div>
+        </div>
+
+        <!-- Orders Section -->
+        <div
+  class="card shadow mb-4 profile-section"
+  id="orders"
+  style="display: none"
+>
+  <div class="card-body">
+    <h5 class="mb-4">Recent Orders</h5>
+
+    <% if (recentOrders && recentOrders.length > 0) { %>
+      <% recentOrders.forEach(order => { %>
+        <div class="border p-3 mb-3 rounded d-flex justify-content-between align-items-center">
+          <div>
+            <h6>Order #<%= order._id.toString().slice(-5).toUpperCase() %></h6>
+            <p class="text-muted mb-0">Placed: <%= new Date(order.created_at).toLocaleDateString() %></p>
+          </div>
+          <div class="text-end">
+            <span class="badge
+              <% if (order.status === 'delivered') { %> bg-success
+              <% } else if (order.status === 'intransit') { %> bg-info text-dark
+              <% } else if (order.status === 'confirmed') { %> bg-primary
+              <% } else if (order.status === 'cancelled') { %> bg-danger
+              <% } %> mb-1">
+              <%= order.status.charAt(0).toUpperCase() + order.status.slice(1) %>
+            </span>
+            <p class="mb-0 fw-bold">$<%= parseFloat(order.total_amount).toFixed(2) %></p>
+          </div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <p class="text-muted">No recent orders found.</p>
+    <% } %>
+  </div>
+</div>
+
+
+        <!-- Address Section -->
+        <div
+          class="card shadow mb-4 profile-section"
+          id="Address"
+          style="display: none"
+        >
+          <div class="card-body">
+            <h5 class="mb-4">Your Address</h5>
+            <div
+              class="border p-3 mb-3 rounded d-flex justify-content-between align-items-center"
+            >
+              <div>
+                <h6>Order #12345</h6>
+                <p class="text-muted mb-0">Placed: April 1, 2025</p>
+              </div>
+              <div class="text-end">
+                <span class="badge bg-success mb-1">Delivered</span>
+                <p class="mb-0 fw-bold">$89.99</p>
+              </div>
+            </div>
+            <div
+              class="border p-3 rounded d-flex justify-content-between align-items-center"
+            >
+              <div>
+                <h6>Order #12346</h6>
+                <p class="text-muted mb-0">Placed: April 3, 2025</p>
+              </div>
+              <div class="text-end">
+                <span class="badge bg-warning text-dark mb-1">Shipped</span>
+                <p class="mb-0 fw-bold">$149.50</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Wallet Section -->
+        <div
+          class="card shadow mb-4 profile-section"
+          id="wallet"
+          style="display: none"
+        >
+          <div class="card-body">
+            <h5 class="mb-4">Your Wallet</h5>
+            <div
+              class="border p-3 mb-3 rounded d-flex justify-content-between align-items-center"
+            >
+              <div>
+                <h6>Order #12345</h6>
+                <p class="text-muted mb-0">Placed: April 1, 2025</p>
+              </div>
+              <div class="text-end">
+                <span class="badge bg-success mb-1">Delivered</span>
+                <p class="mb-0 fw-bold">$89.99</p>
+              </div>
+            </div>
+            <div
+              class="border p-3 rounded d-flex justify-content-between align-items-center"
+            >
+              <div>
+                <h6>Order #12346</h6>
+                <p class="text-muted mb-0">Placed: April 3, 2025</p>
+              </div>
+              <div class="text-end">
+                <span class="badge bg-warning text-dark mb-1">Shipped</span>
+                <p class="mb-0 fw-bold">$149.50</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Referrals Section -->
+        <div
+          class="card shadow mb-4 profile-section"
+          id="Referrals"
+          style="display: none"
+        >
+          <div class="card-body">
+            <h5 class="mb-4">Your Referrals</h5>
+            <div
+              class="border p-3 mb-3 rounded d-flex justify-content-between align-items-center"
+            >
+              <div>
+                <h6>Order #12345</h6>
+                <p class="text-muted mb-0">Placed: April 1, 2025</p>
+              </div>
+              <div class="text-end">
+                <span class="badge bg-success mb-1">Delivered</span>
+                <p class="mb-0 fw-bold">$89.99</p>
+              </div>
+            </div>
+            <div
+              class="border p-3 rounded d-flex justify-content-between align-items-center"
+            >
+              <div>
+                <h6>Order #12346</h6>
+                <p class="text-muted mb-0">Placed: April 3, 2025</p>
+              </div>
+              <div class="text-end">
+                <span class="badge bg-warning text-dark mb-1">Shipped</span>
+                <p class="mb-0 fw-bold">$149.50</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Wishlist Section -->
+        <div
+          class="card shadow mb-4 profile-section"
+          id="wishlist"
+          style="display: none"
+        >
+          <div class="card-body">
+            <h5 class="mb-4">Wishlist</h5>
+            <div class="d-flex align-items-center mb-3">
+              <img
+                src="https://via.placeholder.com/50"
+                class="me-3 rounded"
+                alt="Product"
+              />
+              <div class="flex-grow-1">
+                <h6 class="mb-1">Premium Headphones</h6>
+                <p class="mb-0 fw-bold text-primary">$199.99</p>
+              </div>
+              <button class="btn btn-sm btn-outline-primary">
+                Add to Cart
+              </button>
+            </div>
+            <div class="d-flex align-items-center">
+              <img
+                src="https://via.placeholder.com/50"
+                class="me-3 rounded"
+                alt="Product"
+              />
+              <div class="flex-grow-1">
+                <h6 class="mb-1">Smart Watch</h6>
+                <p class="mb-0 fw-bold text-primary">$249.99</p>
+              </div>
+              <button class="btn btn-sm btn-outline-primary">
+                Add to Cart
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div
+          class="card shadow mb-4 profile-section"
+          id="settings"
+          style="display: none"
+        >
+          <div class="card-body">
+            <h5 class="mb-4">Settings</h5>
+            <ul class="list-group settings-list">
+              <li
+                class="list-group-item"
+                data-redirect="/user/verify-otp?type=password"
+              >
+                Edit Password
+              </li>
+              <li
+                class="list-group-item"
+                data-redirect="/user/edit-email?type=email"
+              >
+                Edit Email
+              </li>
+              <li
+                class="list-group-item"
+                data-redirect="/user/verify-otp?type=mobile"
+              >
+                Edit Mobile Number
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- Profile Section End -->
+
+<!-- Bootstrap Bundle JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Navigation JS -->
+<script>
+  
+  document.querySelectorAll('.settings-list .list-group-item').forEach(item => {
+    item.addEventListener('click', function() {
+      const redirectUrl = this.getAttribute('data-redirect');
+      window.location.href = redirectUrl;
+    });
+  });
+
+  document.querySelectorAll(".nav-link").forEach((link) => {
+    link.addEventListener("click", function (e) {
+      e.preventDefault();
+      const targetId = this.getAttribute("href").substring(1);
+      document.querySelectorAll(".profile-section").forEach((section) => {
+        section.style.display = "none";
+      });
+      document.getElementById(targetId).style.display = "block";
+      document
+        .querySelectorAll(".nav-link")
+        .forEach((nav) => nav.classList.remove("active"));
+      this.classList.add("active");
+    });
+  });
+  document.getElementById("account").style.display = "block";
+  const Toast = Swal.mixin({
+    toast: true,
+    position: "top-end",
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+      toast.onmouseenter = Swal.stopTimer;
+      toast.onmouseleave = Swal.resumeTimer;
+    },
+  });
+</script>
+<% if (messages.success) { %>
+<script>
+  Toast.fire({
+    icon: "success",
+    title: "<%= messages.success[0] %>",
+  });
+</script>
+<% } %> <% if (messages.error) { %>
+<script>
+  Toast.fire({
+    icon: "error",
+    title: "<%= messages.error[0] %>",
+  });
+</script>
+<% } %> <%- include("../../views/partials/user/footer.ejs") %>
