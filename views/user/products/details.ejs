@@ -236,14 +236,19 @@
               </div>
               <a
                 href="#"
-                class="primary-btn"
+                class="primary-btn add-to-cart"
                 data-product-id="<%= product._id %>"
                 data-variant-id="<%= activeVariant._id %>"
                 >Add to Cart</a
               >
             </div>
             <div class="product__details__btns__option">
-              <a href="#"><i class="fa fa-heart"></i> Add to Wishlist</a>
+              <a 
+              href="#"
+              class="add-to-wishlist"
+                data-product-id="<%= product._id %>"
+                data-variant-id="<%= activeVariant._id %>"
+              ><i class="fa fa-heart"></i> Add to Wishlist</a>
               <a href="#"><i class="fa fa-exchange"></i> Add to Compare</a>
             </div>
             <div class="product__details__last__option">
@@ -361,7 +366,13 @@
             <% } %>
             <ul class="product__hover">
               <li>
-                <a href="#"><img src="/img/icon/heart.png" alt="Wishlist" /></a>
+                <a 
+              href="#"
+              class="add-to-wishlist"
+                data-product-id="<%= relatedProduct._id %>"
+                data-variant-id="<%= relatedVariant._id %>"
+              >
+                  <img src="/img/icon/heart.png" alt="Wishlist" /></a>
               </li>
               <li>
                 <a href="#"
@@ -453,6 +464,91 @@
         }
       });
     });
+
+    document.querySelectorAll('.add-to-cart').forEach(button => {
+    button.addEventListener('click', function(e) {
+      e.preventDefault();
+      const productId = this.getAttribute('data-product-id');
+      const variantId = this.getAttribute('data-variant-id');
+      const quantity = parseInt(document.getElementById('quantityInput') ? document.getElementById('quantityInput').value : 1);
+
+      $.ajax({
+        type: 'POST',
+        url: '/cart/add',
+        data: { variantId: variantId, quantity: quantity },
+        success: function(response) {
+          if (response.success) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Added to Cart',
+              text: 'The item has been added to your cart!',
+              confirmButtonColor: '#FFB22C'
+            }).then(() => {
+              // Optionally redirect to cart page
+              // window.location.href = '/cart';
+            });
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Failed to Add',
+              text: response.message || 'Could not add item to cart.',
+              confirmButtonColor: '#FFB22C'
+            });
+          }
+        },
+        error: function() {
+          Swal.fire({
+            icon: 'error',
+            title: 'Server Error',
+            text: 'Failed to add item to cart. Please try again.',
+            confirmButtonColor: '#FFB22C'
+          });
+        }
+      });
+    });
+  });
+  document.querySelectorAll('.add-to-wishlist').forEach(button => {
+    button.addEventListener('click', function(e) {
+      e.preventDefault();
+      const productId = this.getAttribute('data-product-id');
+      const variantId = this.getAttribute('data-variant-id');
+      const quantity = parseInt(document.getElementById('quantityInput') ? document.getElementById('quantityInput').value : 1);
+
+      $.ajax({
+        type: 'POST',
+        url: '/wishlist/add',
+        data: { variantId: variantId, quantity: quantity },
+        success: function(response) {
+          if (response.success) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Added to Wishlist',
+              text: 'The item has been added to your Wishlist!',
+              confirmButtonColor: '#FFB22C'
+            }).then(() => {
+              // Optionally redirect to cart page
+              // window.location.href = '/cart';
+            });
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Failed to Add',
+              text: response.message || 'Could not add item to cart.',
+              confirmButtonColor: '#FFB22C'
+            });
+          }
+        },
+        error: function() {
+          Swal.fire({
+            icon: 'error',
+            title: 'Server Error',
+            text: 'Failed to add item to cart. Please try again.',
+            confirmButtonColor: '#FFB22C'
+          });
+        }
+      });
+    });
+  });
 </script>
 <script>
   document.querySelectorAll('.zoomable').forEach(img => {

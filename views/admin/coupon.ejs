@@ -1,0 +1,217 @@
+<%- include("../../views/partials/admin/header.ejs") %>
+
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Coupon List</h1>
+    <div class="d-flex align-items-center">
+      <form class="form-inline navbar-search mr-2" action="/admin/coupon" method="GET">
+        <div class="input-group">
+          <input type="text" name="search" class="form-control bg-light border-0 small"
+            placeholder="Search by code..." value="<%= searchQuery || '' %>" required />
+          <div class="input-group-append">
+            <button class="btn btn-primary" type="submit"><i class="fas fa-search fa-sm"></i></button>
+            <button class="btn btn-secondary" type="button" id="resetSearch"><i class="fas fa-times"></i></button>
+          </div>
+        </div>
+      </form>
+
+      <button class="btn btn-success" data-toggle="modal" data-target="#addCouponModal">
+        <i class="fas fa-plus"></i> Add Coupon
+      </button>
+    </div>
+  </div>
+
+  <p class="mb-4">Manage your coupons here. You can list/unlist or update them anytime.</p>
+
+  <div class="card shadow mb-4">
+    <div class="card-header py-3">
+      <h6 class="m-0 font-weight-bold text-primary">Coupon Table</h6>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <% if (coupons.length === 0) { %>
+          <div class="alert alert-warning text-center">No coupons found for "<%= searchQuery %>"</div>
+        <% } else { %>
+        <table class="table table-bordered" width="100%" cellspacing="0">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Discount</th>
+              <th>Usage</th>
+              <th>Status</th>
+              <th>Validity</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% coupons.forEach(coupon => { %>
+              <tr>
+                <td><%= coupon.code %></td>
+                <td><%= coupon.discount_type === 'percentage' ? coupon.discount_value + '%' : '₹' + coupon.discount_value %></td>
+                <td><%= coupon.used_count %> / <%= coupon.usage_limit %></td>
+                <td>
+                  <span class="badge badge-<%= coupon.status ? 'success' : 'danger' %>">
+                    <%= coupon.status ? 'Active' : 'Inactive' %>
+                  </span>
+                </td>
+                <td>
+                  <%= new Date(coupon.start_date).toLocaleDateString() %> - 
+                  <%= new Date(coupon.end_date).toLocaleDateString() %>
+                </td>
+                <td class="d-flex gap-2 justify-content-center">
+                  <button type="button" class="btn btn-light edit-coupon-btn"
+                    data-toggle="modal" data-target="#editCouponModal"
+                    data-id="<%= coupon._id %>" data-code="<%= coupon.code %>"
+                    data-type="<%= coupon.discount_type %>" data-value="<%= coupon.discount_value %>"
+                    data-limit="<%= coupon.usage_limit %>" data-start="<%= coupon.start_date %>"
+                    data-end="<%= coupon.end_date %>" data-status="<%= coupon.status %>">
+                    <i class="fa fa-edit"></i>
+                  </button>
+                  <button class="btn btn-light" onclick="deleteCoupon('<%= coupon._id %>')">
+                    <i class="fa fa-trash text-danger"></i>
+                  </button>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Coupon Modal -->
+<div class="modal fade" id="addCouponModal" tabindex="-1" role="dialog" aria-labelledby="addCouponLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <form action="/admin/coupon/add" method="POST">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add Coupon</h5>
+          <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" name="code" class="form-control mb-2" placeholder="Coupon Code" required />
+          <select name="discount_type" class="form-control mb-2">
+            <option value="percentage">Percentage</option>
+            <option value="fixed">Fixed</option>
+          </select>
+          <input type="number" name="discount_value" class="form-control mb-2" placeholder="Discount Value" required />
+          <input type="number" name="usage_limit" class="form-control mb-2" placeholder="Usage Limit" required />
+          <label>Start Date</label>
+          <input type="date" name="start_date" class="form-control mb-2" required />
+          <label>End Date</label>
+          <input type="date" name="end_date" class="form-control mb-2" required />
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary">Add Coupon</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Coupon Modal -->
+<div class="modal fade" id="editCouponModal" tabindex="-1" role="dialog" aria-labelledby="editCouponLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <form action="/admin/coupon/edit" method="POST">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Coupon</h5>
+          <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="id" id="editCouponId" />
+          <input type="text" name="code" id="editCouponCode" class="form-control mb-2" required />
+          <select name="discount_type" id="editDiscountType" class="form-control mb-2">
+            <option value="percentage">Percentage</option>
+            <option value="fixed">Fixed</option>
+          </select>
+          <input type="number" name="discount_value" id="editDiscountValue" class="form-control mb-2" required />
+          <input type="number" name="usage_limit" id="editUsageLimit" class="form-control mb-2" required />
+          <label>Start Date</label>
+          <input type="date" name="start_date" id="editStartDate" class="form-control mb-2" required />
+          <label>End Date</label>
+          <input type="date" name="end_date" id="editEndDate" class="form-control mb-2" required />
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary">Save Changes</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.getElementById("resetSearch").addEventListener("click", () => {
+    window.location.href = "/admin/coupon";
+  });
+
+  $(".edit-coupon-btn").click(function () {
+    $("#editCouponId").val($(this).data("id"));
+    $("#editCouponCode").val($(this).data("code"));
+    $("#editDiscountType").val($(this).data("type"));
+    $("#editDiscountValue").val($(this).data("value"));
+    $("#editUsageLimit").val($(this).data("limit"));
+    $("#editStartDate").val(new Date($(this).data("start")).toISOString().split('T')[0]);
+    $("#editEndDate").val(new Date($(this).data("end")).toISOString().split('T')[0]);
+  });
+
+  function deleteCoupon(couponId) {
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'This coupon will be soft-deleted.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        fetch('/admin/coupon/delete', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: couponId })
+        }).then(res => res.json()).then(result => {
+          if (result.success) {
+            Swal.fire('Deleted!', 'Coupon has been deleted.', 'success')
+              .then(() => location.reload());
+          } else {
+            Swal.fire('Error!', result.message || 'Could not delete.', 'error');
+          }
+        });
+      }
+    });
+  }
+</script>
+<% if (messages.success) { %>
+    <script>
+const Toast = Swal.mixin({
+    toast: true,
+    position: "top-end",
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+      toast.onmouseenter = Swal.stopTimer;
+      toast.onmouseleave = Swal.resumeTimer;
+    }
+  });
+  Toast.fire({
+    icon: "success",
+    title: "<%= messages.success[0] %>"
+  });</script>
+  <% } %>
+
+  <% if (messages.error) { %>
+    <script>
+Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: "<%= messages.error[0] %>",
+      confirmButtonText: 'OK'
+    });
+    
+  </script>
+  <% } %>
+<%- include("../../views/partials/admin/footer.ejs") %>

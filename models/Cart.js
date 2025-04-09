@@ -14,6 +14,11 @@ const cartSchema = new mongoose.Schema(
           ref: "Product",
           required: true,
         },
+        variant_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Variant",
+          required: true,
+        },
         quantity: {
           type: Number,
           required: true,
@@ -21,6 +26,20 @@ const cartSchema = new mongoose.Schema(
         },
       },
     ],
+    coupon: {
+      code: {
+        type: String,
+        default: null,
+      },
+      discount: {
+        type: Number,
+        default: 0,
+      },
+    },
+    total: {
+      type: Number,
+      default: 0,
+    },
     created_at: {
       type: Date,
       default: Date.now,

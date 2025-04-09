@@ -1,0 +1,426 @@
+<%- include("../../views/partials/user/header.ejs") %>
+
+<!-- Bootstrap 5 CDN (CSS) for additional styling -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<!-- SweetAlert2 CDN -->
+<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<style>
+  .quantity .pro-qty-3 {
+    display: flex;
+    align-items: center;
+  }
+  .quantity .pro-qty-3 .qtybtn {
+    background: #FFB22C; /* Golden Yellow */
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    color: #000000; /* Black text */
+  }
+  .quantity .pro-qty-3 input {
+    width: 50px;
+    text-align: center;
+    border: 1px solid #854836; /* Brown border */
+    background: #F7F7F7; /* Light Gray */
+    color: #000000; /* Black text */
+  }
+  .cart__close {
+    cursor: pointer;
+    color: #854836; /* Brown */
+  }
+  .cart__close:hover {
+    color: #FFB22C; /* Golden Yellow */
+  }
+  .primary-btn, .continue__btn a, .update__btn a {
+    background: #FFB22C; /* Golden Yellow */
+    color: #000000; /* Black text */
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    transition: background 0.3s ease;
+  }
+  .primary-btn:hover, .continue__btn a:hover, .update__btn a:hover {
+    background: #e59f25; /* Darker Golden Yellow */
+    color: #000000;
+    text-decoration: none;
+  }
+  .cart__discount button {
+    background: #854836; /* Brown */
+    color: #F7F7F7; /* Light Gray text */
+    border: none;
+    padding: 5px 15px;
+    border-radius: 5px;
+  }
+  .cart__discount button:hover {
+    background: #6b3a2c; /* Darker Brown */
+  }
+</style>
+
+<!-- Breadcrumb Section Begin -->
+<section class="breadcrumb-option">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-12">
+        <div class="breadcrumb__text">
+          <h4>Shopping Cart</h4>
+          <div class="breadcrumb__links">
+            <a href="/">Home</a>
+            <a href="/shop">Shop</a>
+            <span>Shopping Cart</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- Breadcrumb Section End -->
+
+<!-- Shopping Cart Section Begin -->
+<section class="shopping-cart spad">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-8">
+        <div class="shopping__cart__table">
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Total</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (cart && cart.items && cart.items.length > 0) { %>
+                <% cart.items.forEach(item => { %>
+                  <tr data-variant-id="<%= item.variant._id %>">
+                    <td class="product__cart__item">
+                      <div class="product__cart__item__pic">
+                        <img src="<%= item.variant.product_image[0] || '/img/shopping-cart/default.jpg' %>" alt="<%= item.product.name %>" style="width: 90px;">
+                      </div>
+                      <div class="product__cart__item__text">
+                        <h6><%= item.product.name %> - <%= item.variant.color %> <%= item.variant.size %></h6>
+                        <h5>₹<%= item.variant.sale_price.toFixed(2) %></h5>
+                      </div>
+                    </td>
+                    <td class="quantity__item">
+                      <div class="quantity">
+                        <div class="pro-qty-3">
+                          <button class="qtybtn dec">-</button>
+                          <input type="text" value="<%= item.quantity %>" data-max="<%= item.variant.quantity %>">
+                          <button class="qtybtn inc">+</button>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="cart__price">₹<%= (item.variant.sale_price * item.quantity).toFixed(2) %></td>
+                    <td class="cart__close"><i class="fa fa-close"></i></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr>
+                  <td colspan="4" class="text-center">Your cart is empty.</td>
+                </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+        <div class="row">
+          <div class="col-lg-6 col-md-6 col-sm-6">
+            <div class="continue__btn">
+              <a href="/shop">Continue Shopping</a>
+            </div>
+          </div>
+          <div class="col-lg-6 col-md-6 col-sm-6">
+            <div class="continue__btn update__btn">
+              <a href="#" id="updateCart"><i class="fa fa-spinner"></i> Update cart</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="cart__discount">
+          <h6>Discount codes</h6>
+          <form id="couponForm">
+            <input type="text" name="coupon" placeholder="Coupon code">
+            <input type="hidden" name="cartId" value="<%=  cartId %>">
+            <button type="submit">Apply</button>
+          </form>
+        </div>
+        <div class="cart__total">
+          <h6>Cart total</h6>
+          <ul>
+            <li>Subtotal <span>₹<%= cart && cart.subtotal ? cart.subtotal.toFixed(2) : '0.00' %></span></li>
+            <% if (cart && cart.coupon_applied) { %>
+              <li>Discount (<%= cart.coupon_applied.code %>) 
+                <span>- ₹<%= cart.coupon_applied.discount.toFixed(2) %></span>
+              </li>
+            <% } %>
+            <li>Total <span>₹<%= cart && cart.total ? cart.total.toFixed(2) : '0.00' %></span></li>
+          </ul>
+          
+          <% if (cart && cart.total && cart.total >= 1000) { %>
+            <div class="alert alert-success mt-3" role="alert">
+               You are eligible for <strong>Free Delivery</strong>!
+            </div>
+          <% } %>
+          <a href="/checkout" class="primary-btn">Proceed to checkout</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- Shopping Cart Section End -->
+<!-- Related Section Begin -->
+ <%if(relatedProducts){%>
+
+ 
+<section class="related spad">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-12">
+        <h3 class="related-title">Related Products</h3>
+      </div>
+    </div>
+    <div class="row">
+      <% if (relatedProducts && relatedProducts.length > 0) { %> <%
+      relatedProducts.forEach((relatedProduct, index) => { %> <% const
+      relatedVariant = relatedProduct.variants[0];  %>
+      <div class="col-lg-3 col-md-6 col-sm-6">
+        <div class="product__item">
+          <div
+            class="product__item__pic set-bg"
+            data-setbg="<%= relatedVariant.product_image && relatedVariant.product_image.length > 0 ? relatedVariant.product_image[0] : 'https://placehold.co/400x600?text=Add+image' %>"
+          >
+            <% if (index === 0) { %>
+            <span class="label">New</span>
+            <% } %>
+            <ul class="product__hover">
+              <li>
+                <a 
+              href="#"
+              class="add-to-wishlist"
+                data-product-id="<%= relatedProduct._id %>"
+                data-variant-id="<%= relatedVariant._id %>"
+              >
+                  <img src="/img/icon/heart.png" alt="Wishlist" /></a>
+              </li>
+              <li>
+                <a href="#"
+                  ><img src="/img/icon/compare.png" alt="Compare" />
+                  <span>Compare</span></a
+                >
+              </li>
+              <li>
+                <a href="/product/<%= relatedProduct._id %>"
+                  ><img src="/img/icon/search.png" alt="View"
+                /></a>
+              </li>
+            </ul>
+          </div>
+          <div class="product__item__text">
+            <h6>
+              <%= relatedProduct.name %>
+            </h6>
+            <a
+              href="#"
+              class="add-cart"
+              data-product-id="<%= relatedProduct._id %>"
+              data-variant-id="<%= relatedVariant._id %>"
+              >+ Add To Cart</a
+            >
+            <div class="rating">
+              <% const relatedAvgRating = relatedProduct.reviews ?
+              (relatedProduct.reviews.reduce((sum, r) => sum + r.rating, 0) /
+              relatedProduct.reviews.length).toFixed(1) : 0; %> <% for(let i =
+              1; i <= 5; i++) { %>
+              <i
+                class="fa <%= i <= relatedAvgRating ? 'fa-star' : 'fa-star-o' %>"
+              ></i>
+              <% } %>
+            </div>
+            <h5>
+              ₹<%= relatedVariant.sale_price %> 
+            </h5>
+            <div class="product__color__select">
+              <% relatedProduct.variants.slice(0, 3).forEach((variant,
+              colorIndex) => { %>
+              <label
+                class="<%= colorIndex === 0 ? 'active' : '' %>"
+                for="pc-<%= relatedProduct._id %>-<%= colorIndex %>"
+              >
+                <input
+                  type="radio"
+                  id="pc-<%= relatedProduct._id %>-<%= colorIndex %>"
+                  name="color-<%= relatedProduct._id %>"
+                />
+              </label>
+              <% }) %>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% }) %> <% } else { %>
+      <div class="col-lg-12">
+        <p>No related products found.</p>
+      </div>
+      <% } %>
+    </div>
+  </div>
+</section>
+<% }%>
+<!-- Related Section End -->
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+
+<script>
+  $(document).ready(function() {
+    // Quantity increment/decrement
+    $('.pro-qty-3 .qtybtn').on('click', function() {
+      const $input = $(this).siblings('input');
+      let qty = parseInt($input.val());
+      const max = parseInt($input.data('max'));
+
+      if ($(this).hasClass('inc')) {
+        if (qty < max) $input.val(qty + 1);
+      } else if ($(this).hasClass('dec')) {
+        if (qty > 1) $input.val(qty - 1);
+      }
+
+      updateCartItem($input.closest('tr'));
+    });
+
+    // Remove item
+    $('.cart__close').on('click', function() {
+      const $row = $(this).closest('tr');
+      const variantId = $row.data('variant-id');
+
+      Swal.fire({
+        title: 'Remove Item?',
+        text: 'Are you sure you want to remove this item from your cart?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#FFB22C',
+        cancelButtonColor: '#854836'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          $.ajax({
+            type: 'DELETE',
+            url: '/cart',
+            data: { variantId: variantId },
+            success: function(response) {
+              if (response.success) {
+                $row.remove();
+                updateCartSummary(response.cart);
+                if ($('tbody tr').length === 0) {
+                  $('tbody').html('<tr><td colspan="4" class="text-center">Your cart is empty.</td></tr>');
+                }
+              }
+            }
+          });
+        }
+      });
+    });
+
+    // Update cart
+    $('#updateCart').on('click', function(e) {
+      e.preventDefault();
+      const items = [];
+      $('tbody tr').each(function() {
+        const variantId = $(this).data('variant-id');
+        const quantity = parseInt($(this).find('input').val());
+        items.push({ variantId, quantity });
+      });
+
+      
+$.ajax({
+  type: 'PUT',
+  url: '/cart/update',
+  data: JSON.stringify({ items: items }),  // Convert to JSON string
+  contentType: 'application/json',
+  success: function(response) {
+    console.log('Cart update response:', response);
+    if (response.success) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Cart Updated',
+        text: 'Your cart has been updated successfully!',
+        confirmButtonColor: '#FFB22C'
+      }).then(() => {
+      // ✅ Redirect to /cart
+      window.location.href = '/cart';
+    });
+      updateCartSummary(response.cart);
+    }
+  },
+  error: function(xhr, status, error) {
+    console.error('Cart update failed:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Update Failed',
+      text: 'An error occurred while updating your cart.',
+      confirmButtonColor: '#FFB22C'
+    });
+  }
+});
+    });
+
+    // Apply coupon
+    $('#couponForm').on('submit', function(e) {
+  e.preventDefault();
+
+  const coupon = $('input[name="coupon"]').val();
+  const cartId = $('input[name="cartId"]').val();
+
+  $.ajax({
+    type: 'POST',
+    url: '/cart/apply-coupon',
+    contentType: 'application/json',
+    data: JSON.stringify({ coupon, cartId }),
+    success: function(response) {
+      if (response.success) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Coupon Applied',
+          text: `Discount: ₹${response.cart.coupon_applied.discount.toFixed(2)}`,
+          confirmButtonColor: '#FFB22C'
+        }).then(() => {
+          location.reload(); // Reload to update cart summary
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Invalid Coupon',
+          text: response.message,
+          confirmButtonColor: '#FFB22C'
+        });
+      }
+    },
+    error: function() {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Something went wrong while applying the coupon.',
+        confirmButtonColor: '#FFB22C'
+      });
+    }
+  });
+});
+
+
+    function updateCartItem($row) {
+      const qty = parseInt($row.find('input').val());
+      const price = parseFloat($row.find('.product__cart__item__text h5').text().replace('₹', ''));
+      $row.find('.cart__price').text('₹' + (price * qty).toFixed(2));
+    }
+
+    function updateCartSummary(cart) {
+      $('.cart__total ul li:eq(0) span').text('₹' + cart.subtotal.toFixed(2));
+      $('.cart__total ul li:eq(1) span').text('₹' + cart.total.toFixed(2));
+    }
+  });
+</script>
+
+<%- include("../../views/partials/user/footer.ejs") %>

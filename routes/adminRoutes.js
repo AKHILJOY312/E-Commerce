@@ -6,7 +6,7 @@ const customerController = require("../controllers/admin/customerController");
 const categoryController = require('../controllers/admin/categoryController')
 const productController = require('../controllers/admin/productController');
 const upload = require('../middleware/uploadMiddleware'); 
-
+const CouponController= require("../controllers/admin/CouponController");
 router.get('/404page',adminController.pageNotFound);
 
 //admin login Management
@@ -37,16 +37,19 @@ router.get('/listProduct', adminAuth,productController.listProduct);
 router.get('/unlistProduct',adminAuth, productController.unlistProduct);
 router.put('/products/:productId',adminAuth, productController.updateProduct);
 router.patch('/products/:productId',adminAuth, productController.deleteProduct);
-
 router.post('/products/:productId/variants',adminAuth, productController.createVariant);
 router.get('/products/:productId/variants/:variantId',adminAuth, productController.getVariant);
 router.patch('/products/:productId/variants/:variantId',adminAuth, productController.updateVariant);
-
-
-
 router.patch('/variants/soft-delete/:variantId',adminAuth, productController.softDeleteVariant);
-
 router.post('/products/:productId/variants/:variantId/upload',adminAuth, upload, productController.addImage);
 router.delete('/products/:productId/variants/:variantId/remove-image',adminAuth, productController.removeImage);
+
+
+
+//coupen mangenmet
+router.get('/coupon', CouponController.getCoupons);
+router.post('/coupon/add', CouponController.addCoupon);
+router.post('/coupon/edit', CouponController.editCoupon);
+router.delete('/coupon/delete', CouponController.deleteCoupon);
 
 module.exports =router;

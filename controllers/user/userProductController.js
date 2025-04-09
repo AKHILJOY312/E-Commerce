@@ -211,8 +211,7 @@ exports.productDetail = async (req, res, next) => {
       const productId = req.params.productId;
       const variantId = req.query.variant || null; 
 
-      console.log('productId:',productId);
-      console.log("variantId/:",variantId)
+      
       if (!mongoose.isValidObjectId(productId)) {
        
         return res.redirect('/pageNotFound');
@@ -224,9 +223,9 @@ exports.productDetail = async (req, res, next) => {
           match: { isDeleted: false, status: 'unlisted' },
         })
         .populate('category_id');
-  console.log('poriduct:',product);
+  
       if (!product || !product.variants.length) {
-        console.log("Problem is here:")
+        
         return res.redirect('/pageNotFound');
       }
   

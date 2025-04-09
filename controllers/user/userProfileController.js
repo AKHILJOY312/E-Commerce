@@ -82,8 +82,7 @@ exports.updateProfile = async (req, res) => {
       return res.redirect("/login");
     }
 
-    console.log("req.body:", req.body); // Should show { name: "value" }
-    console.log("req.file:", req.file); // Should show file info if uploaded
+   
 
     const { name } = req.body;
     user.name = name || user.name;
@@ -131,7 +130,7 @@ exports.updateProfile = async (req, res) => {
   exports.verifyOtp = async (req, res) => {
     try {
       const { otp,type } = req.body;
-    console.log("req.BOdy:",req.body);
+    
       console.log("Received OTP:", otp);
   
       if (parseInt(otp) === parseInt(req.session.userOtp)) {

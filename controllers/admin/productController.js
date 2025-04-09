@@ -208,7 +208,7 @@ try {
       const productId = req.params.productId;
       const { color, material, price,salePrice, quantity, sku, description,size } = req.body;
 
-  console.log("req.body:",req.body);
+  
      
       const imagePaths = req.files ? req.files.map(file => `/uploads/variants/${file.filename}`) : [];
   
@@ -265,7 +265,7 @@ try {
       // Check if new files were uploaded
       const imagePaths = req.files ? req.files.map(file => `/uploads/variants/${file.filename}`) : undefined;
 
-      console.log("req.body:",req.body);
+      
       const updateData = {
         color,
         material,
