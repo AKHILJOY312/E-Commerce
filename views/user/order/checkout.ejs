@@ -1,0 +1,232 @@
+<%- include("../../views/partials/user/header.ejs") %>
+
+<style>
+    body {
+        background-color: #F7F7F7;
+        color: #000000;
+    }
+    .checkout__title {
+        color: #854836;
+    }
+    .site-btn {
+        background-color: #FFB22C;
+        color: #000000;
+        border: none;
+    }
+    .site-btn:hover {
+        background-color: #854836;
+        color: #F7F7F7;
+    }
+    .checkout__order {
+        background-color: #FFFFFF;
+        border: 1px solid #FFB22C;
+    }
+    .error-message {
+        background-color: #dc3545;
+        color: #FFFFFF;
+        padding: 10px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+    .address-select {
+        width: 100%;
+        padding: 8px;
+        margin-top: 10px;
+        border: 1px solid #FFB22C;
+        border-radius: 4px;
+    }
+</style>
+
+<!-- Breadcrumb Section Begin -->
+<section class="breadcrumb-option">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="breadcrumb__text">
+                    <h4>Check Out</h4>
+                    <div class="breadcrumb__links">
+                        <a href="/">Home</a>
+                        <a href="/shop">Shop</a>
+                        <span>Check Out</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- Breadcrumb Section End -->
+
+<!-- Checkout Section Begin -->
+<section class="checkout spad">
+    <div class="container">
+        <div class="checkout__form">
+            <% if (messages.error) { %>
+                <div class="error-message"><%= messages.error %></div>
+            <% } %>
+            <% if (messages.success) { %>
+                <div class="success-message" style="background-color: #28a745; color: #FFFFFF; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
+                    <%= messages.success %>
+                </div>
+            <% } %>
+            <form action="/place-order" method="POST" onsubmit="return validatePaymentMethod()">
+                <div class="row">
+                    <div class="col-lg-8 col-md-6">
+                        <h6 class="checkout__title">Billing Details</h6>
+                        <p>Proceed with the default address or choose a address from the drop down or <a href="/user/profile#Address">click here</a>  to edit address</p>
+                        <% if (addresses && addresses.length > 0) { %>
+                            <select name="addressId" id="address-select" class="address-select" onchange="updateAddressDisplay()">
+                                <% addresses.forEach((addr, index) => { %>
+                                    <option value="<%= addr._id %>" <%= addr._id.toString() === (address ? address._id.toString() : '') ? 'selected' : '' %>>
+                                        <%= addr.apartment %>, <%= addr.street %>, <%= addr.city %>
+                                    </option>
+                                <% }) %>
+                            </select>
+                            <div class="checkout__input" id="address-details">
+                                <p>Name: <%= user.name %></p>
+                                <p>Phone: <%= user.phone || 'Not provided' %></p>
+                                <p>Address: <%= address.apartment %>, <%= address.building || '' %>, 
+                                    <%= address.street %>, <%= address.city %>, <%= address.state %>, 
+                                    <%= address.country %> - <%= address.zip_code %></p>
+                            </div>
+                        <% } else { %>
+                            <p>No addresses found. <a href="/profile/add-address">Add an address</a>.</p>
+                        <% } %>
+
+                        <h6 class="checkout__title mt-4">Order Items</h6>
+                        <div class="checkout__order__products mb-3">
+                            <% if (cart && cart.products && cart.products.length > 0) { %>
+                                <% cart.products.forEach((item, index) => { %>
+                                    <div class="row mb-3 align-items-center">
+                                        <div class="col-2">
+                                            <img src="<%= item.variant_id.product_image[0] || '/img/default-product.jpg' %>" 
+                                                 alt="<%= item.product_id.name %>" 
+                                                 style="width: 100%; max-height: 80px; object-fit: cover;">
+                                        </div>
+                                        <div class="col-10">
+                                            <p>
+                                                <%= (index + 1).toString().padStart(2, '0') %>. 
+                                                <%= item.product_id.name %> (<%= item.variant_id.size %>) 
+                                                - <%= item.quantity %> x ₹<%= item.variant_id.sale_price.toFixed(2) %>
+                                                <span class="float-right">₹<%= (item.variant_id.sale_price * item.quantity).toFixed(2) %></span>
+                                            </p>
+                                            <% if (item.variant_id.quantity < item.quantity) { %>
+                                                <p style="color: #dc3545;">Insufficient stock (Available: <%= item.variant_id.quantity %>)</p>
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                <% }) %>
+                            <% } else { %>
+                                <p>Your cart is empty.</p>
+                            <% } %>
+                        </div>
+
+                        <% 
+                            const deliveryDate = new Date();
+                            deliveryDate.setDate(deliveryDate.getDate() + 7);
+                            const formattedDate = deliveryDate.toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                            });
+                        %>
+                        <div class="checkout__input mt-4">
+                            <p>Estimated Delivery Date: <strong><%= formattedDate %></strong></p>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4 col-md-6">
+                        <div class="checkout__order">
+                            <h4 class="order__title">Order Summary</h4>
+                            <div class="checkout__order__products">Product <span>Total</span></div>
+                            <ul class="checkout__total__products">
+                                <% if (cart && cart.products) { %>
+                                    <% cart.products.forEach((item, index) => { %>
+                                        <li>
+                                            <%= (index + 1).toString().padStart(2, '0') %>. 
+                                            <%= item.product_id.name %> (<%= item.variant_id.size %>)
+                                            <span>₹<%= (item.variant_id.sale_price * item.quantity).toFixed(2) %></span>
+                                        </li>
+                                    <% }) %>
+                                <% } %>
+                            </ul>
+                            <ul class="checkout__total__all">
+                                <li>Subtotal <span>₹<%= cart.subtotal.toFixed(2) %></span></li>
+                                <li>Shipping <span><%= cart.shippingCost === 0 ? 'Free' : '₹' + cart.shippingCost.toFixed(2) %></span></li>
+                                <li>Total <span>₹<%= cart.total.toFixed(2) %></span></li>
+                            </ul>
+                            <div class="checkout__input__radio">
+                                <label for="check">
+                                    Check Payment
+                                    <input type="radio" id="check" name="payment_method" value="check">
+                                    <span class="checkmark"></span>
+                                </label>
+                            </div>
+                            <div class="checkout__input__radio">
+                                <label for="razorpay">
+                                    Razorpay
+                                    <input type="radio" id="razorpay" name="payment_method" value="razorpay">
+                                    <span class="checkmark"></span>
+                                </label>
+                            </div>
+                            <div class="checkout__input__radio">
+                                <label for="cod">
+                                    Cash on Delivery
+                                    <input type="radio" id="cod" name="payment_method" value="cod">
+                                    <span class="checkmark"></span>
+                                </label>
+                            </div>
+                            <div id="payment-error" style="color: #854836; display: none;">
+                                Please select a payment method
+                            </div>
+                            <button type="submit" class="site-btn">PLACE ORDER</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<script>
+    function validatePaymentMethod() {
+        const paymentMethods = document.getElementsByName('payment_method');
+        const errorDiv = document.getElementById('payment-error');
+        let isSelected = false;
+
+        for (let method of paymentMethods) {
+            if (method.checked) {
+                isSelected = true;
+                break;
+            }
+        }
+
+        if (!isSelected) {
+            errorDiv.style.display = 'block';
+            return false;
+        }
+        
+        errorDiv.style.display = 'none';
+        return true;
+    }
+
+    function updateAddressDisplay() {
+        const select = document.getElementById('address-select');
+        const addressId = select.value;
+        const addresses = <%- JSON.stringify(addresses) %>;
+        const selectedAddress = addresses.find(addr => addr._id === addressId);
+        
+        if (selectedAddress) {
+            const detailsDiv = document.getElementById('address-details');
+            detailsDiv.innerHTML = `
+                <p>Name: <%= user.name %></p>
+                <p>Phone: <%= user.phone || 'Not provided' %></p>
+                <p>Address: ${selectedAddress.apartment}, ${selectedAddress.building || ''}, 
+                    ${selectedAddress.street}, ${selectedAddress.city}, ${selectedAddress.state}, 
+                    ${selectedAddress.country} - ${selectedAddress.zip_code}</p>
+            `;
+        }
+    }
+</script>
+
+<%- include("../../views/partials/user/footer.ejs") %>

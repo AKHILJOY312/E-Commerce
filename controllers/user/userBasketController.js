@@ -14,42 +14,98 @@ exports.getCart = async (req, res) => {
   try {
     const userId = req.session.user_id;
     if (!userId) {
-      return res.render('basket/cart', { cart: null, currentActivePage: "shop",cartId:null,relatedProducts:null });
+      return res.render('basket/cart', { 
+        cart: null, 
+        currentActivePage: "shop",
+        cartId: null,
+        relatedProducts: null,
+        message: "Please log in to view your cart"
+      });
     }
 
     // Fetch cart from MongoDB
     const cart = await Cart.findOne({ user_id: userId });
     if (!cart || cart.products.length === 0) {
-      return res.render('basket/cart', { cart: null, currentActivePage: "shop",cartId:null,relatedProducts:null });
+      return res.render('basket/cart', { 
+        cart: null, 
+        currentActivePage: "shop",
+        cartId: null,
+        relatedProducts: null,
+        message: "Your cart is empty"
+      });
     }
 
-    // Populate product and variant details
-    const populatedItems = await Promise.all(cart.products.map(async (item) => {
-      const variant = item.variant_id 
-        ? await Variant.findById(item.variant_id).lean() 
-        : await Variant.findById(item.product_id).lean(); // fallback if variant_id is missing
+    // Log raw cart data for debugging
+    console.log('Raw cart products:', JSON.stringify(cart.products, null, 2));
 
-      if (!variant) return null;
+    // Populate product and variant details, filter out invalid or out-of-stock items
+    const populatedItems = await Promise.all(cart.products.map(async (item) => {
+      const variant = await Variant.findById(item.variant_id).lean();
+      
+      if (!variant) {
+        console.log(`Skipping variant ${item.variant_id} - not found`);
+        return null;
+      }
+
+      // Check stock using variant.quantity
+      if (variant.quantity <= 0) {
+        console.log(`Skipping variant ${item.variant_id} - out of stock (quantity: ${variant.quantity})`);
+        return null;
+      }
 
       const product = await Product.findById(variant.product_id).lean();
-      if (!product) return null;
+      if (!product) {
+        console.log(`Skipping product for variant ${item.variant_id} - not found`);
+        return null;
+      }
 
+      // Parse and validate cart quantity
+      const cartQuantity = parseInt(item.quantity, 10);
+      if (isNaN(cartQuantity) || cartQuantity <= 0) {
+        console.log(`Invalid cart quantity for variant ${item.variant_id}: ${item.quantity}`);
+        return null;
+      }
+
+      console.log(`Processed item ${item.variant_id} - cart quantity: ${cartQuantity}, stock: ${variant.quantity}`);
       return {
         product,
         variant,
-        quantity: item.quantity
+        quantity: Math.min(cartQuantity, variant.quantity) // Cap to available stock
       };
     }));
 
-    // Filter out null entries (invalid products/variants)
+    // Filter out null entries
     const validItems = populatedItems.filter(item => item !== null);
 
-    // Calculate totals
-    const subtotal = validItems.reduce((sum, item) => {
-      return sum + (item.variant.sale_price * item.quantity);
-    }, 0);
-    let relatedProducts = [];
+    // Update cart in DB if any items were removed
+    if (validItems.length !== cart.products.length) {
+      cart.products = validItems.map(item => ({
+        product_id: item.product._id,    // Include product_id
+        variant_id: item.variant._id,
+        quantity: item.quantity
+      }));
+      try {
+        await cart.save();
+        req.flash('info', 'Some items were removed from your cart as they are out of stock or had invalid quantities.');
+      } catch (saveError) {
+        console.error('Error saving cart:', saveError);
+        req.flash('error', 'Failed to update cart due to a server error.');
+      }
+    }
 
+    // Calculate totals with detailed logging
+    const subtotal = validItems.reduce((sum, item) => {
+      const itemTotal = item.variant.sale_price * item.quantity;
+      console.log(`Item ${item.variant._id} total: ${itemTotal} (price: ${item.variant.sale_price}, qty: ${item.quantity})`);
+      return sum + (isNaN(itemTotal) ? 0 : itemTotal);
+    }, 0);
+
+    // Log final data
+    console.log('Valid items:', JSON.stringify(validItems, null, 2));
+    console.log('Subtotal:', subtotal);
+
+    // Fetch related products, excluding out-of-stock items
+    let relatedProducts = [];
     if (validItems.length > 0) {
       const currentProduct = validItems[0].product;
       relatedProducts = await Product.find({
@@ -58,37 +114,51 @@ exports.getCart = async (req, res) => {
         isDeleted: false,
         status: 'listed',
       })
-        .populate('variants')
+        .populate({
+          path: 'variants',
+          match: { quantity: { $gt: 0 } }
+        })
+        .lean()
         .limit(4);
+
+      relatedProducts = relatedProducts.filter(product => 
+        product.variants && product.variants.length > 0
+      );
     }
+
     const cartData = {
       items: validItems,
-      subtotal,
-      total: subtotal, // Add discount logic if needed later
+      subtotal: isNaN(subtotal) ? 0 : subtotal,
+      total: isNaN(subtotal) ? 0 : subtotal,
     };
 
     res.render('basket/cart', {
       cart: cartData,
       currentActivePage: "shop",
       cartId: cart._id,
-      relatedProducts
+      relatedProducts,
+      message: req.flash('info') || req.flash('error') || null
     });
   } catch (error) {
     console.error('Error fetching cart:', error);
-    res.render('basket/cart', { cart: null, currentActivePage: "shop" });
+    res.render('basket/cart', { 
+      cart: null, 
+      currentActivePage: "shop",
+      cartId: null,
+      relatedProducts: null,
+      message: "An error occurred while loading your cart"
+    });
   }
 };
-
-
-
 
 exports.addToCart = async (req, res) => {
   try {
     const userId = req.session.user_id;
     const { variantId, quantity = 1 } = req.body;
 
-    console.log('📥 Incoming add-to-cart request:', req.body);
-
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Please log in to add items to cart' });
+    }
 
     if (!variantId || !mongoose.Types.ObjectId.isValid(variantId)) {
       return res.status(400).json({ success: false, message: 'Invalid variant ID' });
@@ -98,8 +168,15 @@ exports.addToCart = async (req, res) => {
     }
 
     const variant = await Variant.findById(variantId).lean();
-    if (!variant || variant.quantity < quantity) {
+    if (!variant) {
       return res.status(400).json({ success: false, message: 'Item not available or out of stock' });
+    }
+
+    console.log("variant.quantity", variant.quantity);
+    console.log("requested quantity", quantity);
+
+    if (variant.quantity < parseInt(quantity)) {
+      return res.status(400).json({ success: false, message: 'Not enough stock' });
     }
 
     const productId = variant.product_id?.toString();
@@ -107,9 +184,8 @@ exports.addToCart = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid product associated with variant' });
     }
 
+    // Check and update cart
     let cart = await Cart.findOne({ user_id: userId });
-    
-
     if (!cart) {
       cart = new Cart({
         user_id: userId,
@@ -120,11 +196,10 @@ exports.addToCart = async (req, res) => {
         }]
       });
     } else {
-      // Filter out invalid products (e.g., missing variant_id) before proceeding
       cart.products = cart.products.filter(p => 
         p.variant_id && mongoose.Types.ObjectId.isValid(p.variant_id)
       );
-      
+
       const existingProduct = cart.products.find(
         p => p.variant_id && p.variant_id.toString() === variantId
       );
@@ -140,9 +215,28 @@ exports.addToCart = async (req, res) => {
       }
     }
 
-    console.log('🧺 Final cart before save:', cart);
+    // Remove from wishlist if it exists
+    const wishlist = await Wishlist.findOne({ user_id: userId });
+    if (wishlist) {
+      const wishlistItemIndex = wishlist.items.findIndex(item =>
+        item.variant_id.toString() === variantId &&
+        item.product_id.toString() === productId
+      );
+
+      if (wishlistItemIndex !== -1) {
+        wishlist.items.splice(wishlistItemIndex, 1); // Remove the item
+        if (wishlist.items.length === 0) {
+          await Wishlist.deleteOne({ user_id: userId }); // Delete wishlist if empty
+        } else {
+          await wishlist.save(); // Save updated wishlist
+        }
+        console.log(`Removed variant ${variantId} from wishlist`);
+      }
+    }
+
+    // Save the cart
     await cart.save();
-    res.json({ success: true, message: 'Added to cart successfully', cart });
+    res.json({ success: true, message: 'Added to cart successfully and removed from wishlist if present', cart });
   } catch (error) {
     console.error('Error adding to cart:', error);
     res.status(500).json({ success: false, message: 'Failed to add to cart' });
@@ -150,60 +244,90 @@ exports.addToCart = async (req, res) => {
 };
 
 
-
   
 
-  exports.updateCart = async (req, res) => {
-    try {
-      const userId = req.session.user_id;
-  
-      if (!userId) {
-        return res.status(401).json({ success: false, message: 'User not authenticated' });
-      }
-      
-      const { items } = req.body;
-  
-      if (!items || !Array.isArray(items)) {
-        return res.status(400).json({ success: false, message: 'Invalid items format' });
-      }
-      
-      const updatedProducts = [];
-  
-      for (const item of items) {
-        if (!item.variantId || !item.quantity || item.quantity < 1) continue;
-  
-        const variant = await Variant.findById(item.variantId).lean();
-        if (!variant || variant.quantity <= 0) continue;
-  
-        const validQty = Math.min(parseInt(item.quantity), variant.quantity);
-  
-        updatedProducts.push({
-          product_id: item.variantId, // In your Cart schema, this points to Variant
-          quantity: validQty,
-        });
-      }
-      
-      if (updatedProducts.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'No valid items to update in cart.',
-        });
-      }
-      
-      // Find and update OR create a cart for the user
-      const updatedCart = await Cart.findOneAndUpdate(
-        { user_id: userId },
-        { products: updatedProducts },
-        { new: true, upsert: true }
-      );
-  
-      res.json({ success: true, cart: updatedCart });
-  
-    } catch (error) {
-      console.error('Error updating cart:', error);
-      res.status(500).json({ success: false, message: 'Failed to update cart' });
+exports.updateCart = async (req, res) => {
+  try {
+    const userId = req.session.user_id;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
     }
-  };
+
+    const { items } = req.body;
+
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({ success: false, message: 'Invalid items format' });
+    }
+
+    let cart = await Cart.findOne({ user_id: userId });
+    if (!cart) {
+      cart = new Cart({ user_id: userId, products: [] });
+    }
+
+    // Filter out invalid products in cart
+    cart.products = cart.products.filter(p => 
+      p.variant_id && mongoose.Types.ObjectId.isValid(p.variant_id)
+    );
+
+    const maxCartQty = 5; // Max quantity limit
+
+    for (const item of items) {
+      if (!item.variantId || !mongoose.Types.ObjectId.isValid(item.variantId) || 
+          isNaN(item.quantity) || item.quantity < 1) {
+        continue; // Skip invalid items
+      }
+
+      const variant = await Variant.findById(item.variantId).lean();
+      if (!variant || variant.quantity <= 0) {
+        continue; // Skip unavailable or out-of-stock items
+      }
+
+      const productId = variant.product_id?.toString();
+      if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
+        continue; // Skip if no valid product ID
+      }
+
+      const requestedQty = parseInt(item.quantity);
+      const existingProduct = cart.products.find(
+        p => p.variant_id && p.variant_id.toString() === item.variantId
+      );
+
+      if (existingProduct) {
+        // Update existing item, cap at 5 or stock
+        const newQty = requestedQty; // Replace quantity, not increment
+        const cappedQty = Math.min(newQty, maxCartQty, variant.quantity);
+        if (cappedQty > variant.quantity) {
+          return res.status(400).json({ 
+            success: false, 
+            message: `Not enough stock for variant ${item.variantId}` 
+          });
+        }
+        existingProduct.quantity = cappedQty;
+      } else {
+        // Add new item, cap at 5 or stock
+        const cappedQty = Math.min(requestedQty, maxCartQty, variant.quantity);
+        cart.products.push({
+          product_id: productId, // Correct product ID
+          variant_id: item.variantId,
+          quantity: cappedQty
+        });
+      }
+    }
+
+    if (cart.products.length === 0) {
+      await Cart.deleteOne({ user_id: userId });
+      return res.json({ success: true, message: 'Cart cleared as no valid items remain', cart: null });
+    }
+
+    await cart.save();
+    res.json({ success: true, message: 'Cart updated successfully', cart });
+
+  } catch (error) {
+    console.error('Error updating cart:', error);
+    res.status(500).json({ success: false, message: 'Failed to update cart' });
+  }
+};
 
   exports.removeFromCart = async (req, res) => {
     try {
@@ -256,129 +380,133 @@ exports.addToCart = async (req, res) => {
   exports.applyCoupon = async (req, res) => {
     try {
       const { coupon, cartId } = req.body;
-      console.log('🚀 Incoming request body:', req.body);
+      
   
-      // 1. Get the cart
+      // 1. Get the cart (raw, without population first)
+      const rawCart = await Cart.findById(cartId);
+     
+  console.log('cheking')
+      // 2. Populate the cart
       const cart = await Cart.findById(cartId)
         .populate('products.variant_id')
         .populate('products.product_id');
-  
-      console.log('🛒 Retrieved Cart:', cart);
+      
   
       if (!cart || !cart.products || cart.products.length === 0) {
-        console.log('❌ Cart not found or empty');
+        
         return res.status(400).json({ success: false, message: 'Cart not found or empty' });
       }
-  
-      // 2. Calculate subtotal
+      console.log('cheking')
+      // 3. Calculate subtotal with detailed logging
       let subtotal = 0;
       cart.products.forEach(item => {
+       
         const variant = item.variant_id;
         if (variant && variant.sale_price) {
+          
           subtotal += variant.sale_price * item.quantity;
+        } else {
+          
         }
       });
   
-      console.log('💰 Calculated Subtotal:', subtotal);
-  
+     
+      console.log('cheking')
       if (subtotal === 0) {
         return res.status(400).json({ success: false, message: 'Invalid cart subtotal' });
       }
   
-      // 3. Validate the coupon
-      const now = new Date();
-      const foundCoupon = await Coupon.findOne({
-        code: coupon,
-        is_deleted: false,
-        status: true,
-        start_date: { $lte: now },
-        end_date: { $gte: now }
-      });
-  
-      console.log('🎟️ Found Coupon:', foundCoupon);
-  
-      if (!foundCoupon) {
-        return res.json({ success: false, message: 'Invalid or expired coupon code' });
-      }
-  
-      if (subtotal < foundCoupon.min_order_value) {
-        return res.json({
-          success: false,
-          message: `Minimum order value should be ₹${foundCoupon.min_order_value}`
-        });
-      }
-  
-      if (foundCoupon.usage_limit > 0 && foundCoupon.used_count >= foundCoupon.usage_limit) {
-        return res.json({ success: false, message: 'This coupon has reached its usage limit' });
-      }
-  
-      // 4. Check user usage
-      const userId = req.session.user_id;
-      console.log('👤 User ID from session:', userId);
-  
-      if (userId && foundCoupon.limit_per_user > 0) {
-        const alreadyUsed = await CouponUsage.findOne({
-          user_id: userId,
-          coupon_id: foundCoupon._id
-        });
-  
-        if (alreadyUsed) {
-          return res.json({ success: false, message: 'You have already used this coupon' });
-        }
-      }
-  
-      // 5. Calculate discount
-      let discount = 0;
-      if (foundCoupon.discount_type === 'percentage') {
-        discount = (subtotal * foundCoupon.discount_value) / 100;
-      } else {
-        discount = foundCoupon.discount_value;
-      }
-  
-      console.log('✅ Calculated Discount:', discount);
-  
-      const total = subtotal - discount;
-  
-      // 6. Save applied coupon to cart
-      cart.coupon = {
-        code: foundCoupon.code,
-        discount: discount
-      };
-      cart.total = total;
-      console.log('✅ total:', total);
-      await cart.save();
-  
-      // 7. Track coupon usage
-      if (userId && foundCoupon.limit_per_user > 0) {
-        await CouponUsage.create({
-          user_id: userId,
-          coupon_id: foundCoupon._id
-        });
-      }
-  
-      // 8. Update global coupon used count
-      foundCoupon.used_count += 1;
-      await foundCoupon.save();
-  
-      // 9. Send response with updated cart
-      res.json({
-        success: true,
-        data: {
-          subtotal,
-          discount,
-          total,
-          couponApplied: cart.coupon,
-          updatedCart: cart
-        }
-      });
-  
+       // 3. Validate the coupon
+       const now = new Date();
+       const foundCoupon = await Coupon.findOne({
+         code: coupon,
+         is_deleted: false,
+         status: true,
+         start_date: { $lte: now },
+         end_date: { $gte: now }
+       });
+   
+       console.log('🎟️ Found Coupon:', foundCoupon);
+   
+       if (!foundCoupon) {
+         return res.json({ success: false, message: 'Invalid or expired coupon code' });
+       }
+   
+       if (subtotal < foundCoupon.min_order_value) {
+         return res.json({
+           success: false,
+           message: `Minimum order value should be ₹${foundCoupon.min_order_value}`
+         });
+       }
+   
+       if (foundCoupon.usage_limit > 0 && foundCoupon.used_count >= foundCoupon.usage_limit) {
+         return res.json({ success: false, message: 'This coupon has reached its usage limit' });
+       }
+   
+       // 4. Check user usage
+       const userId = req.session.user_id;
+       console.log('👤 User ID from session:', userId);
+   
+       if (userId && foundCoupon.limit_per_user > 0) {
+         const alreadyUsed = await CouponUsage.findOne({
+           user_id: userId,
+           coupon_id: foundCoupon._id
+         });
+   
+         if (alreadyUsed) {
+           return res.json({ success: false, message: 'You have already used this coupon' });
+         }
+       }
+   
+       // 5. Calculate discount
+       let discount = 0;
+       if (foundCoupon.discount_type === 'percentage') {
+         discount = (subtotal * foundCoupon.discount_value) / 100;
+       } else {
+         discount = foundCoupon.discount_value;
+       }
+   
+       console.log('✅ Calculated Discount:', discount);
+   
+       const total = subtotal - discount;
+   
+       // 6. Save applied coupon to cart
+       cart.coupon = {
+         code: foundCoupon.code,
+         discount: discount
+       };
+       cart.total = total;
+       console.log('✅ total:', total);
+       await cart.save();
+   
+       // 7. Track coupon usage
+       if (userId && foundCoupon.limit_per_user > 0) {
+         await CouponUsage.create({
+           user_id: userId,
+           coupon_id: foundCoupon._id
+         });
+       }
+   
+       // 8. Update global coupon used count
+       foundCoupon.used_count += 1;
+       await foundCoupon.save();
+   
+       // 9. Send response with updated cart
+       res.json({
+         success: true,
+         data: {
+           subtotal,
+           discount,
+           total,
+           couponApplied: cart.coupon,
+           updatedCart: cart
+         }
+       });
     } catch (error) {
       console.error('❌ Error applying coupon:', error);
       res.status(500).json({ success: false, message: 'Failed to apply coupon' });
     }
   };
-  
-  
   
 
 

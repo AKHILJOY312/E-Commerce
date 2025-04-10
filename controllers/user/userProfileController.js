@@ -3,7 +3,7 @@ const { generateOtp, sendVerificationEmail, securePassword } = require("../../ut
 const bcrypt = require("bcryptjs");
 
 const Order = require("../../models/Order");
-
+const Address= require("../../models/Addresses");
 
 
 exports.loadProfile = async (req, res) => {
@@ -27,7 +27,14 @@ exports.loadProfile = async (req, res) => {
       .sort({ created_at: -1 })
       .limit(5)
       .lean();
-      const orderCount = await Order.countDocuments({ user_id: userData._id });
+
+    const orderCount = await Order.countDocuments({ user_id: userData._id });
+
+    // Fetch addresses for the logged-in user
+    const addresses = await Address.find({ user_id: userData._id }).lean();
+
+
+
     res.render("userProfile/profile", {
       currentActivePage: '',
       user: {
@@ -39,8 +46,9 @@ exports.loadProfile = async (req, res) => {
         updated_at: userData.updated_at,
         isActive: userData.isActive,
       },
-      recentOrders ,
-      orderCount
+      recentOrders,
+      orderCount,
+      addresses // Pass addresses to the template
     });
   } catch (error) {
     console.error("Error loading Profile page", error);
@@ -323,3 +331,87 @@ res.redirect("/");
       res.status(500).json({ success: false, message: "Internal Server Error" });
     }
   }
+
+  exports.addAddress = async (req, res) => {
+    try {
+      const userId = req.user._id; // Assuming you have user auth middleware
+      const newAddressData = {
+        user_id: userId,
+        apartment: req.body.apartment,
+        building: req.body.building,
+        street: req.body.street,
+        city: req.body.city,
+        state: req.body.state,
+        country: req.body.country,
+        zip_code: req.body.zip_code,
+        is_default: req.body.is_default || false
+      };
+  
+      // If the new address is set as default, unset default from all other addresses
+      if (newAddressData.is_default) {
+        await Address.updateMany(
+          { user_id: userId, _id: { $ne: newAddressData._id } },
+          { $set: { is_default: false } }
+        );
+      }
+  
+      const newAddress = new Address(newAddressData);
+      const savedAddress = await newAddress.save();
+  
+      res.status(201).json({ success: true, savedAddress });
+    } catch (error) {
+      console.error("Error adding address:", error);
+      res.status(400).json({ error: error.message });
+    }
+  };
+
+  // Edit Address
+  exports.editAddress = async (req, res) => {
+    try {
+      const addressId = req.params.id;
+      const userId = req.user._id; // Assuming you have user auth middleware
+      const updatedData = {
+        apartment: req.body.apartment,
+        building: req.body.building,
+        street: req.body.street,
+        city: req.body.city,
+        state: req.body.state,
+        country: req.body.country,
+        zip_code: req.body.zip_code,
+        is_default: req.body.is_default || false,
+        updated_at: Date.now()
+      };
+  
+      // If this address is set as default, unset default from all other addresses
+      if (updatedData.is_default) {
+        await Address.updateMany(
+          { user_id: userId, _id: { $ne: addressId } },
+          { $set: { is_default: false } }
+        );
+      }
+  
+      const updatedAddress = await Address.findByIdAndUpdate(addressId, updatedData, { new: true });
+      if (!updatedAddress) {
+        return res.status(404).json({ error: "Address not found" });
+      }
+  
+      res.status(200).json({ success: true, updatedAddress });
+    } catch (error) {
+      console.error("Error updating address:", error);
+      res.status(400).json({ error: error.message });
+    }
+  };
+
+// Delete Address
+exports.deleteAddress = async (req, res) => {
+  try {
+    const addressId = req.params.id;
+    const deletedAddress = await Address.findByIdAndDelete(addressId);
+    if (!deletedAddress) {
+      return res.status(404).json({ error: "Address not found" });
+    }
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};

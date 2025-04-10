@@ -1,0 +1,173 @@
+<%- include("../../views/partials/user/header.ejs") %>
+
+<style>
+    body {
+        background-color: #F7F7F7;
+        color: #000000;
+    }
+    .order-title {
+        color: #854836;
+    }
+    .success-message {
+        background-color: #28a745;
+        color: #FFFFFF;
+        padding: 10px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+    .error-message {
+        background-color: #dc3545;
+        color: #FFFFFF;
+        padding: 10px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+    .order-card {
+        background-color: #FFFFFF;
+        border: 1px solid #FFB22C;
+        margin-bottom: 20px;
+        padding: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .order-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        border-color: #854836;
+    }
+    .order-img {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        margin-right: 15px;
+    }
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 20px;
+    }
+    .pagination a, .pagination span {
+        padding: 8px 12px;
+        margin: 0 5px;
+        border: 1px solid #FFB22C;
+        color: #854836;
+        text-decoration: none;
+    }
+    .pagination a:hover {
+        background-color: #FFB22C;
+        color: #FFFFFF;
+    }
+    .pagination .active {
+        background-color: #854836;
+        color: #FFFFFF;
+        border-color: #854836;
+    }
+    .search-form {
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .search-input {
+        padding: 8px;
+        width: 200px;
+        border: 1px solid #FFB22C;
+        border-radius: 4px;
+    }
+    .search-btn, .refresh-btn {
+        padding: 8px 15px;
+        background-color: #FFB22C;
+        color: #000000;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .search-btn:hover, .refresh-btn:hover {
+        background-color: #854836;
+        color: #F7F7F7;
+    }
+</style>
+
+<!-- Breadcrumb Section Begin -->
+<section class="breadcrumb-option">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="breadcrumb__text">
+                    <h4>Recent Orders</h4>
+                    <div class="breadcrumb__links">
+                        <a href="/">Home</a>
+                        <span>Recent Orders</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- Breadcrumb Section End -->
+
+<section class="orders spad">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <% if (messages.success) { %>
+                    <div class="success-message"><%= messages.success %></div>
+                <% } %>
+                <% if (messages.error) { %>
+                    <div class="error-message"><%= messages.error %></div>
+                <% } %>
+
+                <h3 class="order-title">Your Recent Orders</h3>
+
+                <!-- Search Form with Refresh Button -->
+                <form class="search-form" method="GET" action="/orders/recent">
+                    <input type="text" name="search" class="search-input" 
+                           value="<%= pagination.search %>" placeholder="Search by order number">
+                    <button type="submit" class="search-btn">Search</button>
+                    <button type="button" class="refresh-btn" onclick="window.location.href='/orders/recent'">Refresh</button>
+                </form>
+
+                <% if (!orders || orders.length === 0) { %>
+                    <p>No recent orders found.</p>
+                <% } else { %>
+                    <% orders.forEach(order => { %>
+                        <% if (order) { %>
+                            <div class="order-card" onclick="window.location.href='/orders/details/<%= order._id %>'">
+                                <div class="d-flex align-items-center">
+                                    <img src="<%= order.order_items && order.order_items[0] && order.order_items[0].product_id && order.order_items[0].product_id.variants && order.order_items[0].product_id.variants[0] && order.order_items[0].product_id.variants[0].product_image && order.order_items[0].product_id.variants[0].product_image[0] ? order.order_items[0].product_id.variants[0].product_image[0] : '/img/default-product.jpg' %>" 
+                                         alt="Order Item" 
+                                         class="order-img">
+                                    <div>
+                                        <h5>Order <%= order.order_number || 'N/A' %></h5>
+                                        <p>Delivery Date: <%= order.delivery_date ? new Date(order.delivery_date).toLocaleDateString() : 'Not set' %></p>
+                                    </div>
+                                </div>
+                            </div>
+                        <% } %>
+                    <% }) %>
+                <% } %>
+
+                <!-- Pagination Controls -->
+                <% if (pagination.totalPages > 1) { %>
+                    <div class="pagination">
+                        <% if (pagination.hasPrev) { %>
+                            <a href="?page=<%= pagination.currentPage - 1 %>&limit=<%= pagination.limit %>&search=<%= encodeURIComponent(pagination.search) %>">Previous</a>
+                        <% } %>
+                        <% for (let i = 1; i <= pagination.totalPages; i++) { %>
+                            <a href="?page=<%= i %>&limit=<%= pagination.limit %>&search=<%= encodeURIComponent(pagination.search) %>" 
+                               class="<%= pagination.currentPage === i ? 'active' : '' %>">
+                                <%= i %>
+                            </a>
+                        <% } %>
+                        <% if (pagination.hasNext) { %>
+                            <a href="?page=<%= pagination.currentPage + 1 %>&limit=<%= pagination.limit %>&search=<%= encodeURIComponent(pagination.search) %>">Next</a>
+                        <% } %>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</section>
+
+<%- include("../../views/partials/user/footer.ejs") %>

@@ -10,7 +10,7 @@ exports.getCoupons = async (req, res) => {
     };
 
     const coupons = await Coupon.find(query).sort({ createdAt: -1 });
-console.log("coupens:",coupons);
+
     res.render('coupon', {
       coupons,
       searchQuery

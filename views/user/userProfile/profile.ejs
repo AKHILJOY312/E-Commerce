@@ -124,18 +124,19 @@
   }
 
   .settings-list .list-group-item {
-    background-color: #F7F7F7; /* Light Gray background */
+    background-color: #f7f7f7; /* Light Gray background */
     color: #000000; /* Black text */
     border: 1px solid #854836; /* Brown border */
     padding: 10px 15px;
     margin-bottom: 5px;
     border-radius: 5px;
     cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+    transition: background-color 0.3s ease, transform 0.3s ease,
+      box-shadow 0.3s ease;
   }
 
   .settings-list .list-group-item:hover {
-    background-color: #FFB22C; /* Golden Yellow on hover */
+    background-color: #ffb22c; /* Golden Yellow on hover */
     color: #000000; /* Black text */
     transform: translateY(-2px);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
@@ -193,7 +194,9 @@
               <li class="nav-item">
                 <a class="nav-link" href="#orders"
                   ><i class="fas fa-shopping-bag me-2"></i> Orders
-                  <span class="badge bg-warning text-light ms-2"><%= orderCount%></span>
+                  <span class="badge bg-warning text-light ms-2"
+                    ><%= orderCount%></span
+                  >
                 </a>
               </li>
               <li class="nav-item">
@@ -211,11 +214,7 @@
                   ><i class="fas fa-user-friends me-2"></i> Referrals</a
                 >
               </li>
-              <li class="nav-item">
-                <a class="nav-link" href="#wishlist"
-                  ><i class="fas fa-heart me-2"></i> Wishlist</a
-                >
-              </li>
+
               <li class="nav-item">
                 <a class="nav-link" href="#settings"
                   ><i class="fas fa-cog me-2"></i> Settings</a
@@ -285,40 +284,46 @@
 
         <!-- Orders Section -->
         <div
-  class="card shadow mb-4 profile-section"
-  id="orders"
-  style="display: none"
->
-  <div class="card-body">
-    <h5 class="mb-4">Recent Orders</h5>
+          class="card shadow mb-4 profile-section"
+          id="orders"
+          style="display: none"
+        >
+          <div class="card-body">
+            <h5 class="mb-4">Recent Orders</h5>
 
-    <% if (recentOrders && recentOrders.length > 0) { %>
-      <% recentOrders.forEach(order => { %>
-        <div class="border p-3 mb-3 rounded d-flex justify-content-between align-items-center">
-          <div>
-            <h6>Order #<%= order._id.toString().slice(-5).toUpperCase() %></h6>
-            <p class="text-muted mb-0">Placed: <%= new Date(order.created_at).toLocaleDateString() %></p>
-          </div>
-          <div class="text-end">
-            <span class="badge
-              <% if (order.status === 'delivered') { %> bg-success
-              <% } else if (order.status === 'intransit') { %> bg-info text-dark
-              <% } else if (order.status === 'confirmed') { %> bg-primary
-              <% } else if (order.status === 'cancelled') { %> bg-danger
-              <% } %> mb-1">
-              <%= order.status.charAt(0).toUpperCase() + order.status.slice(1) %>
-            </span>
-            <p class="mb-0 fw-bold">$<%= parseFloat(order.total_amount).toFixed(2) %></p>
+            <% if (recentOrders && recentOrders.length > 0) { %> <%
+            recentOrders.forEach(order => { %>
+            <div
+              class="border p-3 mb-3 rounded d-flex justify-content-between align-items-center"
+            >
+              <div>
+                <h6>
+                  Order #<%= order._id.toString().slice(-5).toUpperCase() %>
+                </h6>
+                <p class="text-muted mb-0">
+                  Placed: <%= new Date(order.created_at).toLocaleDateString() %>
+                </p>
+              </div>
+              <div class="text-end">
+                <span
+                  class="badge <% if (order.status === 'delivered') { %> bg-success <% } else if (order.status === 'intransit') { %> bg-info text-dark <% } else if (order.status === 'confirmed') { %> bg-primary <% } else if (order.status === 'cancelled') { %> bg-danger <% } %> mb-1"
+                >
+                  <%= order.status.charAt(0).toUpperCase() +
+                  order.status.slice(1) %>
+                </span>
+                <p class="mb-0 fw-bold">
+                  $<%= parseFloat(order.total_amount).toFixed(2) %>
+                </p>
+              </div>
+            </div>
+            <% }) %> <% } else { %>
+            <p class="text-muted">No recent orders found.</p>
+            <% } %>
           </div>
         </div>
-      <% }) %>
-    <% } else { %>
-      <p class="text-muted">No recent orders found.</p>
-    <% } %>
-  </div>
-</div>
 
-
+        <!-- Address Section -->
+        <!-- Address Section -->
         <!-- Address Section -->
         <div
           class="card shadow mb-4 profile-section"
@@ -326,34 +331,408 @@
           style="display: none"
         >
           <div class="card-body">
-            <h5 class="mb-4">Your Address</h5>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <h5 class="mb-0">Your Address</h5>
+              <button
+                class="btn btn-add-address"
+                data-bs-toggle="modal"
+                data-bs-target="#addAddressModal"
+                style="background-color: #ffb22c; color: #000000; border: none"
+              >
+                Add Address
+              </button>
+            </div>
+
+            <% if (addresses && addresses.length > 0) { %> <%
+            addresses.forEach(address => { %>
             <div
-              class="border p-3 mb-3 rounded d-flex justify-content-between align-items-center"
+              class="border p-3 mb-3 rounded"
+              style="background-color: #f7f7f7; border-color: #854836"
             >
-              <div>
-                <h6>Order #12345</h6>
-                <p class="text-muted mb-0">Placed: April 1, 2025</p>
-              </div>
-              <div class="text-end">
-                <span class="badge bg-success mb-1">Delivered</span>
-                <p class="mb-0 fw-bold">$89.99</p>
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <p class="mb-1">
+                    <%= address.apartment %>, <%= address.building ?
+                    address.building + ', ' : '' %> <%= address.street %>, <%=
+                    address.city %>, <%= address.state %>, <%= address.country
+                    %> - <%= address.zip_code %>
+                  </p>
+                  <% if (address.is_default) { %>
+                  <span
+                    class="badge"
+                    style="background-color: #ffb22c; color: #000000"
+                    >Default</span
+                  >
+                  <% } %>
+                </div>
+                <div>
+                  <button
+                    class="btn btn-sm btn-outline-primary me-2"
+                    onclick="openEditModal('<%= address._id %>')"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    class="btn btn-sm btn-outline-danger"
+                    onclick="deleteAddress('<%= address._id %>')"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
-            <div
-              class="border p-3 rounded d-flex justify-content-between align-items-center"
-            >
-              <div>
-                <h6>Order #12346</h6>
-                <p class="text-muted mb-0">Placed: April 3, 2025</p>
+            <% }) %> <% } else { %>
+            <p class="text-muted">No addresses saved yet.</p>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Add Address Modal -->
+        <div
+          class="modal fade"
+          id="addAddressModal"
+          tabindex="-1"
+          aria-labelledby="addAddressModalLabel"
+          aria-hidden="true"
+        >
+          <div class="modal-dialog">
+            <div class="modal-content" style="background-color: #f7f7f7">
+              <div
+                class="modal-header"
+                style="border-bottom: 1px solid #854836"
+              >
+                <h5
+                  class="modal-title"
+                  id="addAddressModalLabel"
+                  style="color: #854836"
+                >
+                  Add New Address
+                </h5>
+                <button
+                  type="button"
+                  class="btn-close"
+                  data-bs-dismiss="modal"
+                  aria-label="Close"
+                ></button>
               </div>
-              <div class="text-end">
-                <span class="badge bg-warning text-dark mb-1">Shipped</span>
-                <p class="mb-0 fw-bold">$149.50</p>
+              <div class="modal-body">
+                <form id="addAddressForm">
+                  <div class="mb-3">
+                    <label
+                      for="apartment"
+                      class="form-label"
+                      style="color: #000000"
+                      >Apartment*
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="apartment"
+                      required
+                      style="border-color: #854836"
+                    />
+                  </div>
+                  <div class="mb-3">
+                    <label
+                      for="building"
+                      class="form-label"
+                      style="color: #000000"
+                      >Building</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="building"
+                      style="border-color: #854836"
+                    />
+                  </div>
+                  <div class="mb-3">
+                    <label
+                      for="street"
+                      class="form-label"
+                      style="color: #000000"
+                      >Street*
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="street"
+                      required
+                      style="border-color: #854836"
+                    />
+                  </div>
+                  <div class="mb-3">
+                    <label for="city" class="form-label" style="color: #000000"
+                      >City*
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="city"
+                      required
+                      style="border-color: #854836"
+                    />
+                  </div>
+                  <div class="mb-3">
+                    <label for="state" class="form-label" style="color: #000000"
+                      >State*
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="state"
+                      required
+                      style="border-color: #854836"
+                    />
+                  </div>
+                  <div class="mb-3">
+                    <label
+                      for="country"
+                      class="form-label"
+                      style="color: #000000"
+                      >Country*
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="country"
+                      required
+                      style="border-color: #854836"
+                    />
+                  </div>
+                  <div class="mb-3">
+                    <label
+                      for="zip_code"
+                      class="form-label"
+                      style="color: #000000"
+                      >ZIP Code*
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="zip_code"
+                      required
+                      style="border-color: #854836"
+                    />
+                  </div>
+                  <div class="mb-3 form-check">
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      id="is_default"
+                      style="border-color: #854836"
+                    />
+                    <label
+                      class="form-check-label"
+                      for="is_default"
+                      style="color: #000000"
+                      >Set as default address</label
+                    >
+                  </div>
+                </form>
+              </div>
+              <div class="modal-footer" style="border-top: 1px solid #854836">
+                <button
+                  type="button"
+                  class="btn"
+                  data-bs-dismiss="modal"
+                  style="color: #854836"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  form="addAddressForm"
+                  class="btn"
+                  style="
+                    background-color: #ffb22c;
+                    color: #000000;
+                    border: none;
+                  "
+                >
+                  Save Address
+                </button>
               </div>
             </div>
           </div>
         </div>
 
+        <!-- Edit Address Modal -->
+        <div
+          class="modal fade"
+          id="editAddressModal"
+          tabindex="-1"
+          aria-labelledby="editAddressModalLabel"
+          aria-hidden="true"
+        >
+          <div class="modal-dialog">
+            <div class="modal-content" style="background-color: #f7f7f7">
+              <div
+                class="modal-header"
+                style="border-bottom: 1px solid #854836"
+              >
+                <h5
+                  class="modal-title"
+                  id="editAddressModalLabel"
+                  style="color: #854836"
+                >
+                  Edit Address
+                </h5>
+                <button
+                  type="button"
+                  class="btn-close"
+                  data-bs-dismiss="modal"
+                  aria-label="Close"
+                ></button>
+              </div>
+              <div class="modal-body">
+                <form id="editAddressForm">
+                  <input type="hidden" id="edit_address_id" />
+                  <div class="mb-3">
+                    <label
+                      for="edit_apartment"
+                      class="form-label"
+                      style="color: #000000"
+                      >Apartment*
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="edit_apartment"
+                      required
+                      style="border-color: #854836"
+                    />
+                  </div>
+                  <div class="mb-3">
+                    <label
+                      for="edit_building"
+                      class="form-label"
+                      style="color: #000000"
+                      >Building</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="edit_building"
+                      style="border-color: #854836"
+                    />
+                  </div>
+                  <div class="mb-3">
+                    <label
+                      for="edit_street"
+                      class="form-label"
+                      style="color: #000000"
+                      >Street*
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="edit_street"
+                      required
+                      style="border-color: #854836"
+                    />
+                  </div>
+                  <div class="mb-3">
+                    <label
+                      for="edit_city"
+                      class="form-label"
+                      style="color: #000000"
+                      >City*
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="edit_city"
+                      required
+                      style="border-color: #854836"
+                    />
+                  </div>
+                  <div class="mb-3">
+                    <label
+                      for="edit_state"
+                      class="form-label"
+                      style="color: #000000"
+                      >State*
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="edit_state"
+                      required
+                      style="border-color: #854836"
+                    />
+                  </div>
+                  <div class="mb-3">
+                    <label
+                      for="edit_country"
+                      class="form-label"
+                      style="color: #000000"
+                      >Country*
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="edit_country"
+                      required
+                      style="border-color: #854836"
+                    />
+                  </div>
+                  <div class="mb-3">
+                    <label
+                      for="edit_zip_code"
+                      class="form-label"
+                      style="color: #000000"
+                      >ZIP Code*
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="edit_zip_code"
+                      required
+                      style="border-color: #854836"
+                    />
+                  </div>
+                  <div class="mb-3 form-check">
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      id="edit_is_default"
+                      style="border-color: #854836"
+                    />
+                    <label
+                      class="form-check-label"
+                      for="edit_is_default"
+                      style="color: #000000"
+                      >Set as default address</label
+                    >
+                  </div>
+                </form>
+              </div>
+              <div class="modal-footer" style="border-top: 1px solid #854836">
+                <button
+                  type="button"
+                  class="btn"
+                  data-bs-dismiss="modal"
+                  style="color: #854836"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  form="editAddressForm"
+                  class="btn"
+                  style="
+                    background-color: #ffb22c;
+                    color: #000000;
+                    border: none;
+                  "
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
         <!-- Wallet Section -->
         <div
           class="card shadow mb-4 profile-section"
@@ -424,45 +803,6 @@
           </div>
         </div>
 
-        <!-- Wishlist Section -->
-        <div
-          class="card shadow mb-4 profile-section"
-          id="wishlist"
-          style="display: none"
-        >
-          <div class="card-body">
-            <h5 class="mb-4">Wishlist</h5>
-            <div class="d-flex align-items-center mb-3">
-              <img
-                src="https://via.placeholder.com/50"
-                class="me-3 rounded"
-                alt="Product"
-              />
-              <div class="flex-grow-1">
-                <h6 class="mb-1">Premium Headphones</h6>
-                <p class="mb-0 fw-bold text-primary">$199.99</p>
-              </div>
-              <button class="btn btn-sm btn-outline-primary">
-                Add to Cart
-              </button>
-            </div>
-            <div class="d-flex align-items-center">
-              <img
-                src="https://via.placeholder.com/50"
-                class="me-3 rounded"
-                alt="Product"
-              />
-              <div class="flex-grow-1">
-                <h6 class="mb-1">Smart Watch</h6>
-                <p class="mb-0 fw-bold text-primary">$249.99</p>
-              </div>
-              <button class="btn btn-sm btn-outline-primary">
-                Add to Cart
-              </button>
-            </div>
-          </div>
-        </div>
-
         <!-- Settings Section -->
         <div
           class="card shadow mb-4 profile-section"
@@ -505,12 +845,14 @@
 <!-- Navigation JS -->
 <script>
   
-  document.querySelectorAll('.settings-list .list-group-item').forEach(item => {
-    item.addEventListener('click', function() {
-      const redirectUrl = this.getAttribute('data-redirect');
-      window.location.href = redirectUrl;
+  document
+    .querySelectorAll(".settings-list .list-group-item")
+    .forEach((item) => {
+      item.addEventListener("click", function () {
+        const redirectUrl = this.getAttribute("data-redirect");
+        window.location.href = redirectUrl;
+      });
     });
-  });
 
   document.querySelectorAll(".nav-link").forEach((link) => {
     link.addEventListener("click", function (e) {
@@ -526,6 +868,76 @@
       this.classList.add("active");
     });
   });
+ 
+
+  async function deleteAddress(addressId) {
+    if (confirm("Are you sure you want to delete this address?")) {
+      try {
+        const response = await fetch(`/user/address/${addressId}`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (response.ok) {
+          Toast.fire({
+            icon: "success",
+            title: "Address deleted successfully",
+          });
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          const data = await response.json();
+          Toast.fire({
+            icon: "error",
+            title: "Failed to delete address: " + data.error,
+          });
+        }
+      } catch (error) {
+        console.error("Error deleting address:", error);
+        Toast.fire({
+          icon: "error",
+          title: "An error occurred while deleting the address",
+        });
+      }
+    }
+  }
+  document
+    .getElementById("addAddressForm")
+    .addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const formData = {
+        apartment: document.getElementById("apartment").value,
+        building: document.getElementById("building").value,
+        street: document.getElementById("street").value,
+        city: document.getElementById("city").value,
+        state: document.getElementById("state").value,
+        country: document.getElementById("country").value,
+        zip_code: document.getElementById("zip_code").value,
+        is_default: document.getElementById("is_default").checked,
+      };
+
+      try {
+        const response = await fetch("/user/address", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+
+        console.log("Response Status:", response.status); // Log the status
+        const data = await response.json(); // Parse the response
+        console.log("Response Data:", data); // Log the response data
+
+        if (response.ok) {
+          window.location.href = "/user/profile"; // This should trigger reload
+        } else {
+          console.error("Server Error:", data.error);
+          alert("Failed to save address: " + data.error);
+        }
+      } catch (error) {
+        console.error("Fetch Error:", error);
+        alert("An error occurred while saving the address");
+      }
+    });
   document.getElementById("account").style.display = "block";
   const Toast = Swal.mixin({
     toast: true,
@@ -538,7 +950,103 @@
       toast.onmouseleave = Swal.resumeTimer;
     },
   });
+
+
+  
 </script>
+
+<script>
+  // Existing navigation and add address code...
+
+  // Function to open the edit modal and populate it with address data
+  function openEditModal(addressId) {
+    // Find the address from the addresses array (passed to EJS)
+    const address = <%- JSON.stringify(addresses) %>.find(addr => addr._id === addressId);
+    if (!address) {
+      console.error('Address not found:', addressId);
+      return;
+    }
+
+    // Populate the edit form fields
+    document.getElementById('edit_address_id').value = address._id;
+    document.getElementById('edit_apartment').value = address.apartment;
+    document.getElementById('edit_building').value = address.building || '';
+    document.getElementById('edit_street').value = address.street;
+    document.getElementById('edit_city').value = address.city;
+    document.getElementById('edit_state').value = address.state;
+    document.getElementById('edit_country').value = address.country;
+    document.getElementById('edit_zip_code').value = address.zip_code;
+    document.getElementById('edit_is_default').checked = address.is_default;
+
+    // Show the modal
+    const editModal = new bootstrap.Modal(document.getElementById('editAddressModal'));
+    editModal.show();
+  }
+
+  // Handle edit form submission
+  document.getElementById('editAddressForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const addressId = document.getElementById('edit_address_id').value;
+    const formData = {
+      apartment: document.getElementById('edit_apartment').value,
+      building: document.getElementById('edit_building').value,
+      street: document.getElementById('edit_street').value,
+      city: document.getElementById('edit_city').value,
+      state: document.getElementById('edit_state').value,
+      country: document.getElementById('edit_country').value,
+      zip_code: document.getElementById('edit_zip_code').value,
+      is_default: document.getElementById('edit_is_default').checked
+    };
+
+    try {
+      const response = await fetch(`/user/address/${addressId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        
+        Toast.fire({
+          icon: "success",
+          title: "Address updated successfully",
+        });
+        window.location.reload(); // Reload to reflect changes
+      } else {
+        Toast.fire({
+          icon: "error",
+          title: "Failed to update address: " + data.error
+        });
+      }
+    } catch (error) {
+      console.error('Error updating address:', error);
+      Toast.fire({
+        icon: "error",
+        title: "An error occurred while updating the address"
+      });
+    }
+  });
+
+  // Existing deleteAddress function (if implemented)...
+</script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const hash = window.location.hash;
+    if (hash === "#Address") {
+      document.querySelectorAll(".profile-section").forEach(section => {
+        section.style.display = "none";
+      });
+      const target = document.querySelector(hash);
+      if (target) {
+        target.style.display = "block";
+      }
+    }
+  });
+</script>
+
+
 <% if (messages.success) { %>
 <script>
   Toast.fire({

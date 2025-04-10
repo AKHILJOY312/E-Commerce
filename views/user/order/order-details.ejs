@@ -1,0 +1,215 @@
+<%- include("../../views/partials/user/header.ejs") %>
+
+<style>
+    body {
+        background-color: #F7F7F7;
+        color: #000000;
+    }
+    .order-title {
+        color: #854836;
+    }
+    .order-section {
+        background-color: #FFFFFF;
+        border: 1px solid #FFB22C;
+        border-radius: 5px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .order-item-img {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        margin-right: 15px;
+    }
+    .btn-edit {
+        background-color: #FFB22C;
+        color: #000000;
+        border: none;
+    }
+    .btn-cancel {
+        background-color: #854836;
+        color: #F7F7F7;
+        border: none;
+    }
+    .tracking-timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+    .tracking-step {
+        position: relative;
+        margin-bottom: 30px;
+    }
+    .tracking-step:last-child {
+        margin-bottom: 0;
+    }
+    .tracking-step .circle {
+        width: 20px;
+        height: 20px;
+        background-color: #FFB22C;
+        border-radius: 50%;
+        position: absolute;
+        left: 0;
+        top: 0;
+        z-index: 1;
+        transition: background-color 0.3s;
+    }
+    .tracking-step.active .circle {
+        background-color: #28a745;
+        animation: pulse 1.5s infinite;
+    }
+    .tracking-step.completed .circle {
+        background-color: #28a745;
+    }
+    .tracking-step .line {
+        position: absolute;
+        width: 2px;
+        background-color: #FFB22C;
+        top: 20px;
+        bottom: -30px;
+        left: 9px;
+    }
+    .tracking-step:last-child .line {
+        display: none;
+    }
+    .tracking-step.completed .line {
+        background-color: #28a745;
+    }
+    .tracking-info {
+        margin-left: 40px;
+    }
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+    }
+</style>
+
+<!-- Breadcrumb Section Begin -->
+<section class="breadcrumb-option">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="breadcrumb__text">
+                    <h4>Order Details - <%= order.order_number %></h4>
+                    <div class="breadcrumb__links">
+                        <a href="/">Home</a>
+                        <a href="/orders/recent">Recent Orders</a>
+                        <span>Order Details</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- Breadcrumb Section End -->
+
+<section class="order-details spad">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12">
+                <h3 class="order-title">Order <%= order.order_number %> Overview</h3>
+<!-- Download Invoice Button Top-Right -->
+<div class="d-flex justify-content-end mt-2">
+    <a href="/orders/invoice/<%= order._id %>" class="btn btn-edit btn-sm" target="_blank">
+      Download Invoice
+    </a>
+  </div>
+                <!-- Order Summary -->
+                <div class="order-section">
+                    <h5>Order Summary</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Order Number:</strong> <%= order.order_number || 'N/A' %></p>
+                            <p><strong>Placed On:</strong> <%= order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'Not available' %></p>
+                            <p><strong>Estimated Delivery:</strong> <%= order.delivery_date ? new Date(order.delivery_date).toLocaleDateString() : 'Not set' %></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Subtotal:</strong> ₹<%= order.amount ? order.amount.toFixed(2) : '0.00' %></p>
+                            <p><strong>Delivery Charge:</strong> <%= order.delivery_charge === 0 ? 'Free' : '₹' + (order.delivery_charge ? order.delivery_charge.toFixed(2) : '0.00') %></p>
+                            <p><strong>Total:</strong> ₹<%= order.total_amount ? order.total_amount.toString() : '0.00' %></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Items Ordered -->
+                <div class="order-section">
+                    <h5>Items Ordered</h5>
+                    <ul class="list-unstyled">
+                        <% if (order.order_items && order.order_items.length > 0) { %>
+                            <% order.order_items.forEach(item => { %>
+                                <% if (item && item.product_id) { %>
+                                    <li class="d-flex align-items-center mb-3">
+                                        <img src="<%= item.product_id.variants && item.product_id.variants[0] && item.product_id.variants[0].product_image && item.product_id.variants[0].product_image[0] ? item.product_id.variants[0].product_image[0] : '/img/default-product.jpg' %>" 
+                                             alt="<%= item.product_id.name || 'Product' %>" 
+                                             class="order-item-img">
+                                        <div>
+                                            <strong><%= item.product_id.name || 'Unknown Product' %></strong><br>
+                                            Quantity: <%= item.quantity || 0 %> x ₹<%= item.price ? item.price.toFixed(2) : '0.00' %> = 
+                                            ₹<%= item.total_price ? item.total_price.toFixed(2) : '0.00' %>
+                                        </div>
+                                    </li>
+                                <% } %>
+                            <% }) %>
+                        <% } else { %>
+                            <li>No items found</li>
+                        <% } %>
+                    </ul>
+                </div>
+
+                <!-- Tracking Information -->
+                <div class="order-section">
+                    <h5>Order Tracking</h5>
+                    <div class="tracking-timeline">
+                        <div class="tracking-step <%= order.status === 'confirmed' ? 'active' : 'completed' %>">
+                            <div class="circle"></div>
+                            <div class="line"></div>
+                            <div class="tracking-info">
+                                <strong>Order Confirmed</strong>
+                                <p><%= order.created_at ? new Date(order.created_at).toLocaleDateString() : 'Not available' %></p>
+                            </div>
+                        </div>
+                        <div class="tracking-step <%= order.status === 'intransit' ? 'active' : (order.status === 'delivered' || order.status === 'cancelled' ? 'completed' : '') %>">
+                            <div class="circle"></div>
+                            <div class="line"></div>
+                            <div class="tracking-info">
+                                <strong>In Transit</strong>
+                                <p><%= order.status === 'intransit' || order.status === 'delivered' ? (order.updated_at ? new Date(order.updated_at).toLocaleDateString() : 'In progress') : 'Not yet shipped' %></p>
+                            </div>
+                        </div>
+                        <div class="tracking-step <%= order.status === 'delivered' ? 'active' : '' %>">
+                            <div class="circle"></div>
+                            <div class="tracking-info">
+                                <strong>Delivered</strong>
+                                <p><%= order.status === 'delivered' ? (order.updated_at ? new Date(order.updated_at).toLocaleDateString() : 'Completed') : 'Pending' %></p>
+                            </div>
+                        </div>
+                        <% if (order.status === 'cancelled') { %>
+                            <div class="tracking-step active">
+                                <div class="circle" style="background-color: #dc3545;"></div>
+                                <div class="tracking-info">
+                                    <strong>Cancelled</strong>
+                                    <p><%= order.cancelled_at ? new Date(order.cancelled_at).toLocaleDateString() : 'Not available' %></p>
+                                </div>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <% if (order.status === 'confirmed') { %>
+                    <div class="order-section">
+                        <h5>Actions</h5>
+                        <div class="mt-3">
+                            <a href="/orders/edit/<%= order._id %>" class="btn btn-edit btn-sm mr-2">Edit Order</a>
+                            <form action="/orders/cancel/<%= order._id %>" method="POST" style="display: inline;">
+                                <button type="submit" class="btn btn-cancel btn-sm" onclick="return confirm('Are you sure you want to cancel this order?');">Cancel Order</button>
+                            </form>
+                        </div>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</section>
+
+<%- include("../../views/partials/user/footer.ejs") %>

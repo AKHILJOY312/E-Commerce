@@ -191,7 +191,15 @@
                   </div>
                   <div class="product__item__text">
                     <h6><%= product.name %> <% if (product.brand) { %> - <%= product.brand %> <% } %></h6>
-                    <a href="/cart/add/<%= product._id %>" class="add-cart">+ Add To Cart</a>
+                    
+                      <a
+                      href="#"
+                      class="add-to-cart"
+                      data-product-id="<%= product._id %>"
+                      data-variant-id="<%= product.variants[0]._id %>">
+                       
+                      
+                      + Add To Cart</a>
                     <div class="rating">
                       <% for (let i = 0; i < 5; i++) { %>
                         <i class="fa fa-star-o"></i>
@@ -333,6 +341,50 @@
               icon: 'success',
               title: 'Added to Wishlist',
               text: 'The item has been added to your Wishlist!',
+              confirmButtonColor: '#FFB22C'
+            }).then(() => {
+              // Optionally redirect to cart page
+              // window.location.href = '/cart';
+            });
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Failed to Add',
+              text: response.message || 'Could not add item to cart.',
+              confirmButtonColor: '#FFB22C'
+            });
+          }
+        },
+        error: function() {
+          Swal.fire({
+            icon: 'error',
+            title: 'Server Error',
+            text: 'Failed to add item to cart. Please try again.',
+            confirmButtonColor: '#FFB22C'
+          });
+        }
+      });
+    });
+  });
+
+
+  document.querySelectorAll('.add-to-cart').forEach(button => {
+    button.addEventListener('click', function(e) {
+      e.preventDefault();
+      const productId = this.getAttribute('data-product-id');
+      const variantId = this.getAttribute('data-variant-id');
+      const quantity = parseInt(document.getElementById('quantityInput') ? document.getElementById('quantityInput').value : 1);
+
+      $.ajax({
+        type: 'POST',
+        url: '/cart/add',
+        data: { variantId: variantId, quantity: quantity },
+        success: function(response) {
+          if (response.success) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Added to Cart',
+              text: 'The item has been added to your cart!',
               confirmButtonColor: '#FFB22C'
             }).then(() => {
               // Optionally redirect to cart page

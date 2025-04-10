@@ -7,6 +7,11 @@ const { adminAuth, userAuth } = require("../middleware/auth");
 const userProfileController = require("../controllers/user/userProfileController");
 const profileUpload = require("../middleware/profileUpload");
 const basketController = require("../controllers/user/userBasketController");
+const orderController = require('../controllers/user/orderController');
+
+
+
+
 
 router.get("/pageNotFound", userController.pageNotFound);
 router.get("/", userController.loadHomePage);
@@ -63,6 +68,9 @@ router.post("/user/edit-email", userAuth, userProfileController.editEmail);
 router.get("/user/change-email", userAuth, userProfileController.changeEmail);
 router.get("/user/edit-phone", userAuth, userProfileController.getPhone);
 router.post("/user/update-mobile", userAuth, userProfileController.updatePhone);
+router.post("/user/address", userAuth, userProfileController.addAddress);
+router.put('/user/address/:id', userAuth, userProfileController.editAddress);
+router.delete('/user/address/:id',userAuth, userProfileController.deleteAddress);
 
 //basket manegment
 
@@ -76,5 +84,18 @@ router.post("/cart/apply-coupon", userAuth, basketController.applyCoupon);
 router.get("/wishlist", userAuth, basketController.getWishlist);
 router.post("/wishlist/add", userAuth, basketController.addToWishlist);
 router.post("/wishlist/remove", userAuth, basketController.removeFromWishlist);
+
+
+
+
+router.get('/checkout',userAuth, orderController.getCheckoutPage);
+router.post('/place-order',userAuth, orderController.placeOrder);
+router.get('/orders/recent',userAuth, orderController.getRecentOrders);
+
+router.get('/orders/edit/:orderId',userAuth, orderController.getEditOrder);
+router.post('/orders/edit/:orderId',userAuth, orderController.updateOrder);
+router.post('/orders/cancel/:orderId',userAuth, orderController.cancelOrder);
+router.get('/orders/details/:orderId',userAuth, orderController.getOrderDetails);
+router.get('/orders/invoice/:orderId', userAuth, orderController.downloadInvoice);
 
 module.exports = router;

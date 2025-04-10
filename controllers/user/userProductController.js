@@ -91,6 +91,7 @@ exports.loadShop = async(req, res, next) => {
                             cond: {
                                 $and: [
                                     { $eq: ['$$this.isDeleted', false] },
+                                    { $gt: ['$$this.quantity', 3] },
                                     { $gte: ['$$this.sale_price', minPrice] },
                                     { $lte: ['$$this.sale_price', maxPrice] }
                                 ]
