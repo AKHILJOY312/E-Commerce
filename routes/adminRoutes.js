@@ -7,6 +7,10 @@ const categoryController = require('../controllers/admin/categoryController')
 const productController = require('../controllers/admin/productController');
 const upload = require('../middleware/uploadMiddleware'); 
 const CouponController= require("../controllers/admin/CouponController");
+const adminOrderController= require("../controllers/admin/adminOrderController");
+
+
+
 router.get('/404page',adminController.pageNotFound);
 
 //admin login Management
@@ -51,5 +55,13 @@ router.get('/coupon', CouponController.getCoupons);
 router.post('/coupon/add', CouponController.addCoupon);
 router.post('/coupon/edit', CouponController.editCoupon);
 router.delete('/coupon/delete', CouponController.deleteCoupon);
+
+
+//Order management 
+router.get('/orders',adminAuth, adminOrderController.getOrders);
+router.get('/orders/:id',adminAuth, adminOrderController.getOrderDetails);
+router.post('/updateOrderStatus',adminAuth, adminOrderController.updateOrderStatus);
+router.post('/cancelOrder',adminAuth, adminOrderController.cancelOrder);
+
 
 module.exports =router;

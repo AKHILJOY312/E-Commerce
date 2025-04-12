@@ -9,7 +9,12 @@ const OrderSchema = new mongoose.Schema(
     },
     user_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "users",
+      ref: "User",
+      required: true,
+    },
+    address_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Address",
       required: true,
     },
     coupon_id: {
@@ -42,13 +47,17 @@ const OrderSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    delivered_date: {
+      type: Date,
+      default: null,
+    },
     amount: {
       type: Number,
       required: true,
     },
     status: {
       type: String,
-      enum: ["confirmed", "intransit", "delivered", "cancelled"],
+      enum: ["confirmed", "intransit", "delivered", "cancelled","return_requested","return_allowed"],
       default: "confirmed",
     },
     total_amount: {
@@ -58,6 +67,10 @@ const OrderSchema = new mongoose.Schema(
     refunded_amount: {
       type: mongoose.Decimal128,
       default: 0.0,
+    },
+    return_reason: {
+      type: String,
+      trim: true,
     },
     cancelled_at: {
       type: Date,

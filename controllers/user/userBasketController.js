@@ -157,31 +157,31 @@ exports.addToCart = async (req, res) => {
     const { variantId, quantity = 1 } = req.body;
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: 'Please log in to add items to cart' });
+      return res.json({ success: false, message: 'Please log in to add items to cart' });
     }
 
     if (!variantId || !mongoose.Types.ObjectId.isValid(variantId)) {
-      return res.status(400).json({ success: false, message: 'Invalid variant ID' });
+      return resizeTo.json({ success: false, message: 'Invalid variant ID' });
     }
-    if (isNaN(quantity) || quantity < 1) {
-      return res.status(400).json({ success: false, message: 'Invalid quantity' });
+    if (isNaN(quantity) || quantity < 1 || quantity > 5) {
+      return res.json({ success: false, message: 'Invalid quantity' });
     }
 
     const variant = await Variant.findById(variantId).lean();
     if (!variant) {
-      return res.status(400).json({ success: false, message: 'Item not available or out of stock' });
+      return res.json({ success: false, message: 'Item not available or out of stock' });
     }
 
     console.log("variant.quantity", variant.quantity);
     console.log("requested quantity", quantity);
 
     if (variant.quantity < parseInt(quantity)) {
-      return res.status(400).json({ success: false, message: 'Not enough stock' });
+      return res.json({ success: false, message: 'Not enough stock' });
     }
 
     const productId = variant.product_id?.toString();
     if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
-      return res.status(400).json({ success: false, message: 'Invalid product associated with variant' });
+      return res.json({ success: false, message: 'Invalid product associated with variant' });
     }
 
     // Check and update cart

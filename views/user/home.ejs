@@ -123,7 +123,7 @@
                     </div>
                     <div class="product__item__text">
                       <h6><%= product.name %></h6>
-                      <a href="#" class="add-cart" data-product-id="<%= product._id %>" data-variant-id="<%= variant._id %>">+ Add To Cart</a>
+                      <a href="#" class="add-cart add-to-cart" data-product-id="<%= product._id %>" data-variant-id="<%= variant._id %>">+ Add To Cart</a>
                       <div class="rating">
                         <% const avgRating = product.reviews && product.reviews.length > 0 ? (product.reviews.reduce((sum, r) => sum + r.rating, 0) / product.reviews.length).toFixed(1) : 0; %>
                         <% for(let i = 1; i <= 5; i++) { %>
@@ -185,6 +185,48 @@
           const bg = element.getAttribute('data-setbg');
           element.style.backgroundImage = `url(${bg})`;
         });
+        document.querySelectorAll('.add-to-cart').forEach(button => {
+    button.addEventListener('click', function(e) {
+      e.preventDefault();
+      const productId = this.getAttribute('data-product-id');
+      const variantId = this.getAttribute('data-variant-id');
+      const quantity = parseInt(document.getElementById('quantityInput') ? document.getElementById('quantityInput').value : 1);
+
+      $.ajax({
+        type: 'POST',
+        url: '/cart/add',
+        data: { variantId: variantId, quantity: quantity },
+        success: function(response) {
+          if (response.success) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Added to Cart',
+              text: 'The item has been added to your cart!',
+              confirmButtonColor: '#FFB22C'
+            }).then(() => {
+              // Optionally redirect to cart page
+              // window.location.href = '/cart';
+            });
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Failed to Add',
+              text: response.message || 'Could not add item to cart. Check log in.',
+              confirmButtonColor: '#FFB22C'
+            });
+          }
+        },
+        error: function() {
+          Swal.fire({
+            icon: 'error',
+            title: 'Server Error',
+            text: 'Failed to add item to cart. Please try again.',
+            confirmButtonColor: '#FFB22C'
+          });
+        }
+      });
+    });
+  });
       </script>
     <!-- Latest Blog Section End -->
     <%- include("../../views/partials/user/footer.ejs") %>

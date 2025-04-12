@@ -1,6 +1,7 @@
 const User = require("../../models/User");
 const Product = require('../../models/Product');
 const Category =require('../../models/Category');
+const Order =require('../../models/Order');
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
@@ -47,12 +48,13 @@ exports.loadDashboard = async (req, res) => {
     const categoryCount = await Category.countDocuments({ status: 'listed',isDeleted:false }); 
     const totalUsers = await User.countDocuments({ isActive: true }); 
     const totalProducts = await Product.countDocuments({ isDeleted: false }); 
-
+    const totalOrders = await Order.countDocuments({ status:"confirmed" }); 
     
     res.render('adminDashboard', {
       categoryCount,
       totalUsers,
       totalProducts,
+      totalOrders,
       messages: req.flash() 
     });
   } catch (error) {

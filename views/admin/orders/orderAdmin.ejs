@@ -1,0 +1,212 @@
+<%- include("../../views/partials/admin/header.ejs") %>
+
+<div class="container-fluid">
+
+  <h1 class="h3 mb-4 text-gray-800">Order Management</h1>
+
+  <form class="card shadow mb-4" action="/admin/orders" method="GET">
+    <div class="card-header py-3">
+      <h6 class="m-0 font-weight-bold text-primary">Filter & Search Orders</h6>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-5 col-lg-4 mb-2">
+          <label for="search-input" class="sr-only">Search Orders</label>
+          <div class="input-group">
+            <input
+              type="text"
+              name="search"
+              id="search-input"
+              class="form-control bg-light border-1 small"
+              placeholder="Search by order number..."
+              value="<%= searchQuery || '' %>"
+              aria-label="Search"
+            />
+            <div class="input-group-append">
+              <button class="btn btn-primary" type="submit" aria-label="Search">
+                <i class="fas fa-search fa-sm"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4 col-lg-3 mb-2">
+          <label for="status-filter" class="sr-only">Filter by Status</label>
+          <select name="status" id="status-filter" class="form-control form-control small bg-light border-1">
+            <option value="">-- All Statuses --</option>
+            <option value="confirmed" <%= filterStatus === 'confirmed' ? 'selected' : '' %>>Confirmed</option>
+            <option value="intransit" <%= filterStatus === 'intransit' ? 'selected' : '' %>>In Transit</option>
+             <option value="shipped" <%= filterStatus === 'shipped' ? 'selected' : '' %>>Shipped</option> <option value="delivered" <%= filterStatus === 'delivered' ? 'selected' : '' %>>Delivered</option>
+            <option value="cancelled" <%= filterStatus === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
+          </select>
+        </div>
+
+        <div class="col-md-3 col-lg-5 mb-2 d-flex align-items-end">
+           <button class="btn btn-info btn-sm mr-2" type="submit">Apply Filters</button>
+           <a href="/admin/orders" class="btn btn-secondary btn-sm" id="reset-all">
+             <i class="fas fa-times mr-1"></i> Clear All
+           </a>
+        </div>
+      </div>
+    </div>
+  </form>
+
+
+  <div class="card shadow mb-4">
+    <div class="card-header py-3">
+      <h6 class="m-0 font-weight-bold text-primary">Order List</h6>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <% if (orders.length === 0) { %>
+          <div class="alert alert-warning text-center" role="alert">
+             <% if (searchQuery || filterStatus) { %>
+                No orders found matching your criteria. <a href="/admin/orders">Clear Filters</a>
+             <% } else { %>
+                No orders have been placed yet.
+             <% } %>
+          </div>
+        <% } else { %>
+          <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
+            <thead>
+              <tr>
+                <th>
+                  <a href="?<%= buildQueryString({ sortBy: 'order_number', sortOrder: currentSort.sortBy === 'order_number' && currentSort.sortOrder === 'asc' ? 'desc' : 'asc' }) %>" class="text-<%= currentSort.sortBy === 'order_number' ? 'primary' : 'dark' %>">
+                    Order Number
+                    <i class="fas <%= currentSort.sortBy === 'order_number' ? (currentSort.sortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort text-muted' %> ml-1"></i>
+                  </a>
+                </th>
+                <th>
+                  <a href="?<%= buildQueryString({ sortBy: 'total_amount', sortOrder: currentSort.sortBy === 'total_amount' && currentSort.sortOrder === 'asc' ? 'desc' : 'asc' }) %>" class="text-<%= currentSort.sortBy === 'total_amount' ? 'primary' : 'dark' %>">
+                    Total Amount (₹)
+                    <i class="fas <%= currentSort.sortBy === 'total_amount' ? (currentSort.sortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort text-muted' %> ml-1"></i>
+                  </a>
+                </th>
+                <th>
+                  <a href="?<%= buildQueryString({ sortBy: 'status', sortOrder: currentSort.sortBy === 'status' && currentSort.sortOrder === 'asc' ? 'desc' : 'asc' }) %>" class="text-<%= currentSort.sortBy === 'status' ? 'primary' : 'dark' %>">
+                    Status
+                    <i class="fas <%= currentSort.sortBy === 'status' ? (currentSort.sortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort text-muted' %> ml-1"></i>
+                  </a>
+                </th>
+                <th>
+                  <a href="?<%= buildQueryString({ sortBy: 'delivery_date', sortOrder: currentSort.sortBy === 'delivery_date' && currentSort.sortOrder === 'asc' ? 'desc' : 'asc' }) %>" class="text-<%= currentSort.sortBy === 'delivery_date' ? 'primary' : 'dark' %>">
+                    Delivery Date
+                    <i class="fas <%= currentSort.sortBy === 'delivery_date' ? (currentSort.sortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort text-muted' %> ml-1"></i>
+                  </a>
+                </th>
+                 <th>
+                  <a href="?<%= buildQueryString({ sortBy: 'createdAt', sortOrder: currentSort.sortBy === 'createdAt' && currentSort.sortOrder === 'asc' ? 'desc' : 'asc' }) %>" class="text-<%= currentSort.sortBy === 'createdAt' ? 'primary' : 'dark' %>">
+                    Order Date
+                    <i class="fas <%= currentSort.sortBy === 'createdAt' ? (currentSort.sortOrder === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort text-muted' %> ml-1"></i>
+                  </a>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <% orders.forEach(order => { %>
+              <tr class="order-row" data-id="<%= order._id %>" style="cursor: pointer;">
+                <td><%= order.order_number %></td>
+                <td><%= order.total_amount_display %></td> <td>
+                   <% if (order.status === 'confirmed') { %>
+                    <span class="badge badge-success">Confirmed</span>
+                  <% } else if (order.status === 'shipped') { %>
+                    <span class="badge badge-primary">Shipped</span>
+                  <% } else if (order.status === 'intransit') { %>
+                     <span class="badge badge-primary">In Transit</span>
+                  <% } else if (order.status === 'delivered') { %>
+                    <span class="badge badge-info">Delivered</span>
+                  <% } else if (order.status === 'cancelled') { %>
+                    <span class="badge badge-danger">Cancelled</span>
+                  <% } else { %>
+                    <span class="badge badge-warning"><%= order.status %></span>
+                  <% } %>
+                </td>
+                 <td><%= order.delivery_date ? new Date(order.delivery_date).toLocaleDateString() : 'N/A' %></td>
+                 <td><%= new Date(order.createdAt).toLocaleDateString() %></td> </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        <% } %>
+      </div><% if (totalPages > 1) { %>
+      <nav aria-label="Page navigation" class="mt-3">
+        <ul class="pagination justify-content-center">
+          <li class="page-item <%= currentPage <= 1 ? 'disabled' : '' %>">
+            <a class="page-link" href="?<%= buildQueryString({ page: currentPage - 1 }) %>">Previous</a>
+          </li>
+          <%
+             const maxPagesToShow = 5; // Max number of page links to show
+             let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+             let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+             if (endPage - startPage + 1 < maxPagesToShow) {
+               startPage = Math.max(1, endPage - maxPagesToShow + 1);
+             }
+          %>
+           <% if (startPage > 1) { %>
+                <li class="page-item"><a class="page-link" href="?<%= buildQueryString({ page: 1 }) %>">1</a></li>
+                <% if (startPage > 2) { %><li class="page-item disabled"><span class="page-link">...</span></li><% } %>
+            <% } %>
+
+          <% for (let i = startPage; i <= endPage; i++) { %>
+            <li class="page-item <%= i === currentPage ? 'active' : '' %>">
+              <a class="page-link" href="?<%= buildQueryString({ page: i }) %>"><%= i %></a>
+            </li>
+          <% } %>
+
+          <% if (endPage < totalPages) { %>
+                 <% if (endPage < totalPages - 1) { %><li class="page-item disabled"><span class="page-link">...</span></li><% } %>
+                <li class="page-item"><a class="page-link" href="?<%= buildQueryString({ page: totalPages }) %>"><%= totalPages %></a></li>
+            <% } %>
+
+
+          <li class="page-item <%= currentPage >= totalPages ? 'disabled' : '' %>">
+            <a class="page-link" href="?<%= buildQueryString({ page: currentPage + 1 }) %>">Next</a>
+          </li>
+        </ul>
+      </nav>
+      <% } %>
+
+    </div></div></div>
+<script>
+  // Using plain JavaScript for broader compatibility
+  document.addEventListener('DOMContentLoaded', function() {
+    const orderRows = document.querySelectorAll('.order-row');
+    orderRows.forEach(row => {
+      row.addEventListener('click', function() {
+        const orderId = this.getAttribute('data-id');
+        if (orderId) {
+          window.location.href = `/admin/orders/${orderId}`;
+        }
+      });
+      // Optional: Add hover effect purely with JS if needed, though CSS :hover is better
+      // row.addEventListener('mouseover', function() { this.style.backgroundColor = '#f8f9fa'; });
+      // row.addEventListener('mouseout', function() { this.style.backgroundColor = ''; });
+    });
+
+    // Note: The "Clear All" button is now a simple link, no JS needed.
+    // The "Apply Filters" button is a standard form submit button.
+
+    // Auto-submit filter dropdown on change (optional)
+    const statusFilter = document.getElementById('status-filter');
+     if(statusFilter) {
+        statusFilter.addEventListener('change', function() {
+            this.form.submit(); // Submit the form when status changes
+        });
+     }
+  });
+</script>
+
+<% if (messages.success && messages.success.length > 0) { %>
+<script>
+  // Your existing Swal success notification code
+  const Toast = Swal.mixin({ /* ... */ });
+  Toast.fire({ icon: "success", title: "<%= messages.success[0] %>" });
+</script>
+<% } %>
+<% if (messages.error && messages.error.length > 0) { %>
+<script>
+  // Your existing Swal error notification code
+  Swal.fire({ /* ... */ text: "<%= messages.error[0] %>" });
+</script>
+<% } %>
+
+<%- include("../../views/partials/admin/footer.ejs") %>

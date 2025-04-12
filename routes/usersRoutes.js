@@ -97,5 +97,6 @@ router.post('/orders/edit/:orderId',userAuth, orderController.updateOrder);
 router.post('/orders/cancel/:orderId',userAuth, orderController.cancelOrder);
 router.get('/orders/details/:orderId',userAuth, orderController.getOrderDetails);
 router.get('/orders/invoice/:orderId', userAuth, orderController.downloadInvoice);
+router.post('/orders/return/:orderId', userAuth, orderController.returnOrder);
 
 module.exports = router;

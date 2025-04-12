@@ -4,9 +4,14 @@ const OrderItemSchema = new mongoose.Schema(
   {
     product_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "products",
+      ref: "Product",
       required: true,
     },
+    variant_id: {
+      type:  mongoose.Schema.Types.ObjectId,
+      ref: 'Variant', // Reference the Variant model
+      required: true // An order item must correspond to a specific variant
+  },
     order_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "orders",

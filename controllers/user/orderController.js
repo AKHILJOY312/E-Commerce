@@ -141,6 +141,7 @@ exports.placeOrder = async (req, res) => {
 
             const orderItem = new OrderItem({
                 product_id: item.product_id._id,
+                variant_id:item.variant_id._id,
                 order_id: order._id,
                 quantity: item.quantity,
                 price: item.variant_id.sale_price,
@@ -171,58 +172,61 @@ exports.placeOrder = async (req, res) => {
 
 exports.getRecentOrders = async (req, res) => {
     try {
-        const userId = req.session.user_id;
-        const { page = 1, limit = 5, search = '' } = req.query;
+      const userId = req.session.user_id;
+      const { page = 1, limit = 5, search = '' } = req.query;
+  
+      const pageNum = parseInt(page, 10);
+      const limitNum = parseInt(limit, 10);
+      const skip = (pageNum - 1) * limitNum;
+  
+      const searchQuery = { user_id: userId };
+      if (search) {
+        searchQuery.order_number = { $regex: search, $options: 'i' };
+      }
+  
+      const totalOrders = await Order.countDocuments(searchQuery);
+  
+      const orders = await Order.find(searchQuery)
+        .sort({ createdAt: -1 })
+        .populate({
+          path: 'order_items',
+          populate: [
+            {
+              path: 'product_id',
+              model: 'Product', // Must match models/Product.js
+              select: 'name brand',
+            },
+            {
+              path: 'variant_id',
+              model: 'Variant', // Must match models/Variant.js
+              select: 'product_image material color size price sale_price description',
+            },
+          ],
+        })
+        .skip(skip)
+        .limit(limitNum);
+  
 
-        const pageNum = parseInt(page, 10);
-        const limitNum = parseInt(limit, 10);
-        const skip = (pageNum - 1) * limitNum;
-
-        const searchQuery = { user_id: userId };
-        if (search) {
-            searchQuery.order_number = { $regex: search, $options: 'i' };
-        }
-
-        const totalOrders = await Order.countDocuments(searchQuery);
-
-        const orders = await Order.find(searchQuery)
-            .sort({ created_at: -1 })
-            .populate({
-                path: 'order_items',
-                populate: [
-                    {
-                        path: 'product_id',
-                        model: 'Product',
-                        populate: {
-                            path: 'variants',
-                            model: 'Variant'
-                        }
-                    }
-                ]
-            })
-            .skip(skip)
-            .limit(limitNum);
-
-        const totalPages = Math.ceil(totalOrders / limitNum);
-
-        res.render('order/recent-orders', { 
-            orders,
-            currentActivePage: "shop",
-            pagination: {
-                currentPage: pageNum,
-                totalPages,
-                limit: limitNum,
-                totalOrders,
-                hasPrev: pageNum > 1,
-                hasNext: pageNum < totalPages,
-                search
-            }
-        });
+      const totalPages = Math.ceil(totalOrders / limitNum);
+  
+      res.render('order/recent-orders', {
+        orders,
+        currentActivePage: "shop",
+        pagination: {
+          currentPage: pageNum,
+          totalPages,
+          limit: limitNum,
+          totalOrders,
+          hasPrev: pageNum > 1,
+          hasNext: pageNum < totalPages,
+          search,
+        },
+      });
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Server Error');
+      console.error('Error in getRecentOrders:', error);
+      res.status(500).send('Server Error');
     }
-};
+  };
 
 exports.getEditOrder = async (req, res) => {
     try {
@@ -297,188 +301,406 @@ exports.updateOrder = async (req, res) => {
 
 
 exports.cancelOrder = async (req, res) => {
-    const orderId = req.params.orderId; // Top scope for rollback
+    const orderId = req.params.orderId;
     const userId = req.session.user_id;
+    const { cancellation_reason } = req.body; // Added to accept form input
 
-    try {
-        // Fetch the order
-        const order = await Order.findOne({ _id: orderId, user_id: userId })
-            .populate({
-                path: 'order_items',
-                populate: { path: 'product_id', model: 'products' }
-            });
-        if (!order || order.status !== 'confirmed') {
-            req.flash('error', 'Order cannot be cancelled');
-            return res.redirect('/orders/recent');
+  try {
+    const order = await Order.findOne({ _id: orderId, user_id: userId })
+      .populate({
+        path: 'order_items',
+        select: 'variant_id quantity status',
+      })
+      .select('status order_items');
+
+    if (!order) {
+      req.flash('error', 'Order not found or access denied.');
+      return res.redirect('/orders/recent');
+    }
+
+    if (order.status !== 'confirmed' && order.status !== 'intransit') {
+      req.flash('error', `Order cannot be cancelled (Status: ${order.status})`);
+      return res.redirect('/orders/recent');
+    }
+
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
+      {
+        status: 'cancelled',
+        cancelled_at: new Date(),
+        cancellation_reason: cancellation_reason || 'Cancelled by user', // Use form input or default
+      },
+      { new: true }
+    );
+
+        if (!updatedOrder) {
+            throw new Error('Failed to update order status.'); 
         }
+        console.log(`Order ${orderId} status updated to cancelled.`);
 
-        // Fetch order items
-        const orderItems = await OrderItem.find({ order_id: orderId });
-        if (!orderItems || orderItems.length === 0) {
-            req.flash('error', 'No items found for this order');
-            return res.redirect('/orders/recent');
-        }
-
-        // Update order status
-        order.status = 'cancelled';
-        order.cancelled_at = new Date();
-        order.cancellation_reason = 'Cancelled by user';
-        await order.save();
-
-        // Update order items and increment stock
-        await Promise.all(orderItems.map(async (item) => {
-            // Debug: Log product_id to verify its type
-            console.log(`OrderItem ${item._id} - product_id: ${item.product_id}`);
-
-            // Fetch product and its variants
-            const product = await Product.findById(item.product_id).populate('variants');
-            if (!product || !product.variants || product.variants.length === 0) {
-                console.error(`No variants found for product ${item.product_id}`);
-                throw new Error(`No variants found for product ${item.product_id}`);
+        
+        await Promise.all(order.order_items.map(async (item) => {
+            
+            if (item.status !== 'cancelled') { 
+                await OrderItem.updateOne({ _id: item._id }, { status: 'cancelled' } /*, { session }*/);
             }
 
-            // Find the variant (match by price or size; adjust as needed)
-            const variant = product.variants.find(v => 
-                v.price === item.price && v.isDeleted === false
-            );
-            if (!variant) {
-                console.error(`No active variant found for product ${item.product_id} with price ${item.price}`);
-                throw new Error(`Active variant not found for product ${item.product_id}`);
+            
+            if (item.variant_id && item.quantity > 0) {
+                console.log(`Restocking variant ${item.variant_id} by quantity ${item.quantity}`);
+                const updatedVariant = await Variant.updateOne(
+                    { _id: item.variant_id }, 
+                    { $inc: { quantity: item.quantity } } 
+                    /*, { session } */ // Add session if using transactions
+                );
+                
+                if (updatedVariant.matchedCount === 0) {
+                     console.warn(`Variant ${item.variant_id} not found during restock for order item ${item._id}. Stock may be inaccurate.`);
+                     
+                } else if (updatedVariant.modifiedCount === 0) {
+                     console.warn(`Variant ${item.variant_id} stock was not modified during restock (matchedCount=1, modifiedCount=0).`);
+                } else {
+                    console.log(`Variant ${item.variant_id} stock updated.`);
+                }
+            } else {
+                 console.warn(`OrderItem ${item._id} missing variant_id or quantity <= 0, skipping stock update.`);
             }
-
-            // Debug: Log variant ID and quantity
-            console.log(`Found variant ${variant._id} - current quantity: ${variant.quantity}`);
-
-            // Increment stock for the variant
-            const updatedVariant = await Variant.findOneAndUpdate(
-                { _id: variant._id, isDeleted: false },
-                { $inc: { quantity: item.quantity } },
-                { new: true }
-            );
-
-            if (!updatedVariant) {
-                throw new Error(`Failed to update stock for variant ${variant._id}`);
-            }
-
-            console.log(`Updated variant ${variant._id} - new quantity: ${updatedVariant.quantity}`);
-
-            // Update order item status
-            await OrderItem.updateOne(
-                { _id: item._id },
-                { status: 'cancelled', updated_at: new Date() }
-            );
         }));
 
-        req.flash('success', 'Order cancelled successfully! Stock updated.');
+       
+        req.flash('success', 'Order cancelled successfully and stock updated.');
         res.redirect('/orders/recent');
-    } catch (error) {
-        console.error('Error cancelling order:', error);
 
-        // Rollback: Revert order status if stock update fails
+    } catch (error) {
+        console.error('Error cancelling order:', error); 
+
+        
         try {
-            const rollbackOrder = await Order.findById(orderId);
-            if (rollbackOrder && rollbackOrder.status === 'cancelled') {
-                rollbackOrder.status = 'confirmed';
-                rollbackOrder.cancelled_at = null;
-                rollbackOrder.cancellation_reason = null;
-                await rollbackOrder.save();
-                console.log(`Order ${orderId} status reverted to confirmed`);
+            const checkOrder = await Order.findById(orderId);
+            if (checkOrder && checkOrder.status === 'cancelled') {
+                console.log(`Attempting to rollback status for order ${orderId} due to error: ${error.message}`);
+                await Order.updateOne({ _id: orderId }, {
+                     status: 'confirmed', 
+                     cancelled_at: null,
+                     cancellation_reason: `Rollback due to error: ${error.message}`.substring(0, 200) // Limit reason length
+                 });
             }
         } catch (rollbackError) {
-            console.error('Rollback failed:', rollbackError);
+            console.error(`Rollback attempt for order ${orderId} failed:`, rollbackError);
         }
 
-        req.flash('error', 'Failed to cancel order. Please try again.');
+        req.flash('error', `Failed to cancel order: ${error.message || 'Please try again.'}`);
         res.redirect('/orders/recent');
-    }
+    } /* finally { // Optional: End Session
+        // session.endSession();
+    } */
 };
+
 
 exports.getOrderDetails = async (req, res) => {
     try {
         const orderId = req.params.orderId;
-        const userId = req.session.user_id;
+        const userId = req.session.user_id; // Assuming user session validation is intended
 
+        // Find the order and populate necessary fields
         const order = await Order.findOne({ _id: orderId, user_id: userId })
+            // Populate Order Items and nested Variant/Product
             .populate({
                 path: 'order_items',
-                populate: [
-                    {
+                populate: {
+                    path: 'variant_id',
+                    model: 'Variant',
+                    populate: {
                         path: 'product_id',
-                        model: 'Product',
-                        populate: {
-                            path: 'variants',
-                            model: 'Variant'
-                        }
+                        model: 'Product'
                     }
-                ]
-            });
+                }
+            })
+            // Populate User details (select specific fields for efficiency)
+            .populate('user_id', 'name email phone')
+            // Populate the delivery Address linked to the order
+            .populate('address_id')
+            .lean(); // Use .lean() for performance
 
         if (!order) {
-            req.flash('error', 'Order not found');
-            return res.redirect('/orders/recent');
+            req.flash('error', 'Order not found or access denied.');
+            return res.redirect('/orders/recent'); // Or appropriate redirect
         }
 
-        res.render('order/order-details', {
-            order,
-            currentActivePage: "shop"
+        // --- Optional but Recommended: Pre-format currency/dates ---
+        if (order.total_amount) {
+             try {
+                 order.total_amount_display = parseFloat(order.total_amount.toString()).toFixed(2);
+             } catch { order.total_amount_display = 'N/A'; }
+         } else { order.total_amount_display = '0.00'; }
+
+         if (order.refunded_amount) {
+             try {
+                 order.refunded_amount_display = parseFloat(order.refunded_amount.toString()).toFixed(2);
+             } catch { order.refunded_amount_display = 'N/A'; }
+         } else { order.refunded_amount_display = '0.00'; }
+
+         if(order.order_items) {
+            order.order_items.forEach(item => {
+                if (item.price && typeof item.price !== 'string') {
+                   try { item.price_display = item.price.toFixed(2); } catch { item.price_display = 'N/A'; }
+                } else { item.price_display = item.price || '0.00'; }
+                if (item.total_price && typeof item.total_price !== 'string') {
+                    try { item.total_price_display = item.total_price.toFixed(2); } catch { item.total_price_display = 'N/A'; }
+                } else { item.total_price_display = item.total_price || '0.00'; }
+            });
+         }
+        // --- End Formatting ---
+
+        // Render the details page with the populated order data
+        res.render('order/order-details', { // Ensure this path matches your file structure
+            order, // Order now includes populated user_id and address_id
+            messages: req.flash(),      // Pass flash messages
+            currentActivePage: "shop"  // Your navigation state variable
         });
+
     } catch (error) {
-        console.error(error);
-        req.flash('error', 'Failed to load order details');
-        res.redirect('/orders/recent');
+        console.error("Error fetching order details:", error); // Log the actual error
+        req.flash('error', 'An error occurred while loading order details.');
+        res.redirect('/orders/recent'); // Redirect on error
     }
 };
 
 
+
+
 exports.downloadInvoice = async (req, res) => {
     try {
-      const order = await Order.findById(req.params.orderId)
-        .populate({
-          path: 'order_items',
-          populate: {
-            path: 'product_id',
-            model: 'Product'
-          }
-        });
+        const orderId = req.params.orderId; // Get orderId from route parameter
+
+        if (!orderId) {
+            return res.status(400).send('Order ID is required.');
+        }
+
+        const order = await Order.findById(orderId)
+            .populate({ // Populate items -> variant -> product
+                path: 'order_items',
+                populate: {
+                    path: 'variant_id', // Populate the specific variant ordered
+                    model: 'Variant',
+                    populate: {
+                        path: 'product_id', // Populate product details from variant
+                        model: 'Product',
+                        select: 'name brand' // Select only needed product fields
+                    }
+                }
+            })
+            .populate('user_id', 'name email phone') // Populate User details
+            .populate('address_id')                // Populate Address details
+            .lean(); // Use lean for performance
+
+        if (!order) {
+            return res.status(404).send('Order not found');
+        }
+
+        // Optional: Check if critical populations worked
+        if (!order.user_id) {
+            console.error(`User ID ${order.user_id} could not be populated for Order ${order._id}`);
+            // Handle error appropriately, maybe generate invoice without user details or return error
+        }
+        if (!order.address_id) {
+            console.error(`Address ID ${order.address_id} could not be populated for Order ${order._id}`);
+            // Handle error appropriately
+        }
+
+
+        // --- PDF Generation ---
+        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=invoice_${order.order_number || orderId}.pdf`); // Fallback filename
+        doc.pipe(res);
+
+        // -- Header --
+        doc.fontSize(18).font('Helvetica-Bold').text('Invoice', { align: 'center' });
+        doc.fontSize(14).font('Helvetica').text(`Order #${order.order_number || 'N/A'}`, { align: 'center' });
+        doc.moveDown(2);
+
+        // -- Order Info & Dates --
+        const orderDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A';
+        const deliveryDate = order.delivery_date ? new Date(order.delivery_date).toLocaleDateString() : 'N/A';
+        doc.fontSize(10);
+        doc.text(`Order Date: ${orderDate}`, { align: 'right' });
+        doc.text(`Expected Delivery: ${deliveryDate}`, { align: 'right' });
+        doc.moveDown();
+
+        // -- Customer & Address Info (Using columns) --
+        const customerInfoStartY = doc.y;
+        const columnWidth = (doc.page.width - doc.page.margins.left - doc.page.margins.right - 20) / 2; // Column width with spacing
+
+        // Bill To (Left Column)
+        doc.font('Helvetica-Bold').text('Bill To:', doc.page.margins.left, customerInfoStartY);
+        doc.moveDown(0.5);
+        doc.font('Helvetica');
+        if (order.user_id) {
+            doc.text(order.user_id.name || '', { width: columnWidth });
+            doc.text(order.user_id.email || '', { width: columnWidth });
+            doc.text(order.user_id.phone || 'N/A', { width: columnWidth });
+        } else {
+            doc.text('Customer details unavailable.', { width: columnWidth });
+        }
+        const leftColumnEndY = doc.y; // Record Y position after left column
+
+        // Ship To (Right Column) - Reset Y to top, move X
+        doc.y = customerInfoStartY;
+        doc.font('Helvetica-Bold').text('Ship To:', doc.page.margins.left + columnWidth + 20, customerInfoStartY);
+        doc.moveDown(0.5);
+        doc.font('Helvetica');
+        if (order.address_id) {
+            const addressParts = [
+                order.address_id.apartment,
+                order.address_id.building, // Include building if it exists
+                order.address_id.street,
+                `${order.address_id.city || ''}, ${order.address_id.state || ''} ${order.address_id.zip_code || ''}`.trim(),
+                order.address_id.country
+            ];
+            // Filter out null/empty parts before writing
+            addressParts.filter(part => part).forEach(part => {
+                doc.text(part, doc.page.margins.left + columnWidth + 20, doc.y, { width: columnWidth });
+            });
+        } else {
+            doc.text('Delivery address unavailable.', doc.page.margins.left + columnWidth + 20, doc.y, { width: columnWidth });
+        }
+        const rightColumnEndY = doc.y; // Record Y position after right column
+
+        // Move below the taller of the two columns
+        doc.y = Math.max(leftColumnEndY, rightColumnEndY) + 20; // Add spacing below
+
+        // -- Items Table --
+        const tableTop = doc.y + 10;
+        const itemCol = doc.page.margins.left;
+        const qtyCol = itemCol + 280; // Adjust column positions
+        const priceCol = qtyCol + 50;
+        const totalCol = priceCol + 70;
+        const tableEndX = doc.page.width - doc.page.margins.right;
+
+        // Header Row
+        doc.font('Helvetica-Bold');
+        doc.text('Item Description', itemCol, tableTop);
+        doc.text('Qty', qtyCol, tableTop, { width: 40, align: 'right' });
+        doc.text('Unit Price', priceCol, tableTop, { width: 60, align: 'right' });
+        doc.text('Total', totalCol, tableTop, { width: 70, align: 'right' });
+        doc.moveTo(itemCol, doc.y + 5).lineTo(tableEndX, doc.y + 5).lineWidth(0.5).stroke();
+        doc.moveDown(0.5);
+
+        // Item Rows
+        doc.font('Helvetica');
+        let itemsY = doc.y;
+        if (order.order_items && order.order_items.length > 0) {
+            order.order_items.forEach((item) => {
+                const productName = item.variant_id?.product_id?.name || 'Unknown Product';
+                const brand = item.variant_id?.product_id?.brand || '';
+                const name = `${productName}${brand ? ` (${brand})` : ''}`;
+                const qty = item.quantity || 0;
+                // Use pre-formatted price if available, else format
+                const price = item.price_display ? parseFloat(item.price_display) : (item.price || 0);
+                const total = item.total_price_display ? parseFloat(item.total_price_display) : (item.total_price || 0);
+
+                const initialY = itemsY; // Y pos before writing this row
+                doc.text(name, itemCol, itemsY, { width: 270 }); // Allow item name to wrap
+                const nameHeight = doc.heightOfString(name, { width: 270 });
+
+                // Ensure quantity, price, total align vertically even if name wraps
+                doc.text(qty.toString(), qtyCol, initialY, { width: 40, align: 'right' });
+                doc.text(`INR ${price.toFixed(2)}`, priceCol, initialY, { width: 60, align: 'right' });
+                doc.text(`INR ${total.toFixed(2)}`, totalCol, initialY, { width: 70, align: 'right' });
+
+                // Calculate next Y based on wrapped name height or minimum row height
+                itemsY += Math.max(nameHeight, 15) + 5; // Add padding
+
+                // Optional: Draw light line between items
+                // doc.moveTo(itemCol, itemsY - 2).lineTo(tableEndX, itemsY - 2).lineWidth(0.2).opacity(0.5).stroke().opacity(1);
+            });
+        } else {
+            doc.text('No items found in this order.', itemCol, itemsY);
+            itemsY += 20;
+        }
+        doc.y = itemsY; // Update document Y position
+        doc.moveTo(itemCol, doc.y).lineTo(tableEndX, doc.y).lineWidth(0.5).stroke(); // Line after last item
+        doc.moveDown();
+
+        // -- Totals --
+        const totalsX = tableEndX - 150; // Position for totals section
+        // Use pre-formatted total if available, else parse
+        const totalAmount = order.total_amount_display ? parseFloat(order.total_amount_display) : (order.total_amount ? parseFloat(order.total_amount.toString()) : 0);
+        const deliveryCharge = order.delivery_charge || 0;
+        const subtotal = totalAmount - deliveryCharge; // Recalculate subtotal
+
+        doc.text(`Subtotal:`, totalsX, doc.y, { width: 70, align: 'left' });
+        doc.text(`INR ${subtotal.toFixed(2)}`, totalsX + 70, doc.y, { width: 80, align: 'right' });
+        doc.moveDown(0.5);
+
+        doc.text(`Delivery Charge:`, totalsX, doc.y, { width: 70, align: 'left' });
+        doc.text(`INR ${deliveryCharge.toFixed(2)}`, totalsX + 70, doc.y, { width: 80, align: 'right' });
+        doc.moveDown(0.5);
+
+        doc.font('Helvetica-Bold');
+        doc.text(`Total Amount:`, totalsX, doc.y, { width: 70, align: 'left' });
+        doc.text(`INR ${totalAmount.toFixed(2)}`, totalsX + 70, doc.y, { width: 80, align: 'right' });
+        doc.font('Helvetica');
+        doc.moveDown(2);
+
+        // -- Footer --
+        doc.fontSize(8).text('Thank you for shopping with Solo Fashion!', { align: 'center' });
+
+        // -- Finalize PDF --
+        doc.end();
+
+    } catch (err) {
+        console.error('Error generating invoice:', err);
+        // Avoid sending response if headers already sent (e.g., during streaming)
+        if (!res.headersSent) {
+            res.status(500).send('Server error generating invoice');
+        }
+    }
+};
+
+
+
+exports.returnOrder = async (req, res) => {
+    const orderId = req.params.orderId;
+    const userId = req.session.user_id;
+    const { return_reason } = req.body; // Get optional return reason from form
   
-      if (!order) return res.status(404).send('Order not found');
+    try {
+      const order = await Order.findOne({ _id: orderId, user_id: userId }).select('status delivery_date updatedAt');
   
-      const doc = new PDFDocument();
+      if (!order) {
+        req.flash('error', 'Order not found or access denied.');
+        return res.redirect('/orders/recent');
+      }
   
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=invoice_${order.order_number}.pdf`);
-      doc.pipe(res);
+      if (order.status !== 'delivered') {
+        req.flash('error', 'Only delivered orders can be returned.');
+        return res.redirect(`/orders/details/${orderId}`);
+      }
   
-      // Header
-      doc.fontSize(20).text(`Invoice - Order #${order.order_number}`, { align: 'center' });
-      doc.moveDown();
+      const deliveryDate = order.delivery_date ? new Date(order.delivery_date) : new Date(order.updatedAt);
+      const currentDate = new Date('2025-04-12'); // Fixed date for testing; use new Date() in production
+      const diffDays = Math.ceil((currentDate - deliveryDate) / (1000 * 60 * 60 * 24));
   
-      doc.fontSize(12).text(`Order Date: ${new Date(order.createdAt).toLocaleDateString()}`);
-      doc.text(`Delivery Date: ${new Date(order.delivery_date).toLocaleDateString()}`);
-      doc.moveDown();
+      if (diffDays > 7 || diffDays < 0) {
+        req.flash('error', 'Return period (7 days from delivery) has expired or is invalid.');
+        return res.redirect(`/orders/details/${orderId}`);
+      }
   
-      doc.text('Items:');
-      order.order_items.forEach((item, index) => {
-        const name = item.product_id?.name || 'Unknown Product';
-        const qty = item.quantity || 0;
-        const price = item.price || 0;
-        const total = item.total_price || 0;
-  
-        doc.text(`${index + 1}. ${name} - ${qty} x INR ${price.toFixed(2)} = INR ${total.toFixed(2)}`);
+      // Update order with return status and reason
+      await Order.findByIdAndUpdate(orderId, {
+        status: 'return_requested',
+        updatedAt: new Date(),
+        cancellation_reason: return_reason || 'Return requested by user', // Reuse cancellation_reason field
       });
   
-      doc.moveDown();
-      const totalAmount = parseFloat(order.total_amount.toString());
-      const deliveryCharge = parseFloat(order.delivery_charge?.toString() || '0');
-      const amount = parseFloat(order.amount.toString());
-  
-      doc.text(`Subtotal: INR ${amount.toFixed(2)}`);
-      doc.text(`Delivery Charge: INR ${deliveryCharge.toFixed(2)}`);
-      doc.text(`Total: INR ${totalAmount.toFixed(2)}`);
-  
-      doc.end();
-    } catch (err) {
-      console.error('Error generating invoice:', err);
-      res.status(500).send('Server error');
+      req.flash('success', 'Return request submitted successfully.');
+      res.redirect('/orders/recent');
+    } catch (error) {
+      console.error('Error requesting return:', error);
+      req.flash('error', 'Failed to request return: ' + error.message);
+      res.redirect(`/orders/details/${orderId}`);
     }
   };
