@@ -43,6 +43,29 @@
         </div>
       </div>
       <hr />
+
+
+
+      <!-- User and Delivery Details Section -->
+<h6>User and Delivery Details</h6>
+<div class="row mb-3">
+  <div class="col-md-6">
+    <p><strong>User Name:</strong> <%= order.user_id ? order.user_id.name : 'N/A' %></p>
+    <p><strong>Email:</strong> <%= order.user_id ? order.user_id.email : 'N/A' %></p>
+    <p><strong>Phone:</strong> <%= order.user_id && order.user_id.phone ? order.user_id.phone : 'N/A' %></p>
+  </div>
+  <div class="col-md-6">
+    <p><strong>Delivery Address:</strong></p>
+    <p>
+      <%= order.address_id ? 
+          `${order.address_id.apartment}${order.address_id.building ? ', ' + order.address_id.building : ''}, 
+           ${order.address_id.street}, ${order.address_id.city}, 
+           ${order.address_id.state}, ${order.address_id.country} - ${order.address_id.zip_code}` 
+          : 'N/A' %>
+    </p>
+  </div>
+</div>
+<hr />
   
       <h6>Order Items</h6>
       <ul class="list-group mb-3">
@@ -194,7 +217,7 @@
             <label for="orderStatus">Status</label>
             <select class="form-control" id="orderStatus" name="status" required>
               <option value="confirmed" <%= order.status === 'confirmed' ? 'selected' : '' %>>Confirmed</option>
-              <option value="intransit" <%= order.status === 'intransit' ? 'selected' : '' %>>intransit</option>
+              <option value="intransit" <%= order.status === 'intransit' ? 'selected' : '' %>>In Transit</option>
               <option value="delivered" <%= order.status === 'delivered' ? 'selected' : '' %>>Delivered</option>
             </select>
           </div>
@@ -264,39 +287,33 @@
         confirmButtonText: `Yes, ${actionText} it!`
     }).then((result) => {
         if (result.isConfirmed) {
-            // Use fetch or $.ajax to send a request to your backend
-            fetch(`/admin/updateOrderStatus`, { // Example URL
-                method: 'POST', // Or PUT/PATCH
-                headers: {
-                    'Content-Type': 'application/json',
-                    // Add CSRF token header if needed
-                },
-                body: JSON.stringify({id:orderId, status: newStatus })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    Swal.fire(
-                        `${actionText.charAt(0).toUpperCase() + actionText.slice(1)}!`,
-                        'The order status has been updated.',
-                        'success'
-                    ).then(() => window.location.reload()); // Reload to see changes
-                } else {
-                    Swal.fire(
-                        'Error!',
-                        data.message || 'Failed to update order status.',
-                        'error'
-                    );
-                }
-            })
-            .catch(error => {
-                 console.error('Error updating status:', error);
-                 Swal.fire(
-                    'Error!',
-                    'An error occurred while updating the status.',
-                    'error'
-                 );
-            });
+          fetch(`/admin/updateOrderStatus`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ id: orderId, status: newStatus }),
+})
+  .then((response) => {
+    if (!response.ok) {
+      // Handle non-2xx responses
+      return response.json().then((err) => {
+        throw new Error(err.message || 'An error occurred while updating the status.');
+      });
+    }
+    return response.json(); // Parse the JSON response
+  })
+  .then((data) => {
+    if (data.success) {
+      Swal.fire('Success!', data.message, 'success').then(() => {
+        window.location.href = data.redirectUrl; // Redirect to the specified URL
+      });
+    }
+  })
+  .catch((error) => {
+    console.error('Error updating status:', error);
+    Swal.fire('Error!', error.message || 'An error occurred while updating the status.', 'error');
+  });
         }
     });
   }

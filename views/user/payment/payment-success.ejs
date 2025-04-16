@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <%- include("../partials/user/header") %>
+    <style>
+        :root {
+            --bg-light: #F7F7F7;
+            --primary: #FFB22C;
+            --secondary: #854836;
+            --text-dark: #000000;
+            --text-light: #F7F7F7;
+            --text-muted: #666666;
+            --accent-gradient: linear-gradient(135deg, #FFB22C, #854836);
+        }
+        
+        body {
+            min-height: 100vh;
+            background-color: var(--bg-light);
+            background-image: 
+                radial-gradient(rgba(133, 72, 54, 0.05) 1px, transparent 1px),
+                radial-gradient(rgba(133, 72, 54, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 0;
+        }
+        
+        .success-card {
+            border-radius: 16px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        
+        .success-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-header-success {
+            background: var(--accent-gradient);
+            height: 80px;
+            position: relative;
+        }
+        
+        .success-icon {
+            position: absolute;
+            left: 50%;
+            transform: translate(-50%, 50%);
+            background: white;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 5px 15px rgba(255, 178, 44, 0.3);
+        }
+        
+        .success-icon i {
+            color: var(--primary);
+            font-size: 36px;
+        }
+        
+        .card-body {
+            padding: 60px 2rem 2rem;
+        }
+        
+        @media (max-width: 576px) {
+            .card-body {
+                padding: 60px 1.25rem 1.5rem;
+            }
+            
+            .success-icon {
+                width: 70px;
+                height: 70px;
+            }
+            
+            .success-icon i {
+                font-size: 30px;
+            }
+        }
+        
+        .display-title {
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 1rem;
+            font-size: calc(1.5rem + 1vw);
+        }
+        
+        @media (max-width: 768px) {
+            .display-title {
+                font-size: 1.5rem;
+            }
+        }
+        
+        .lead {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+        }
+        
+        @media (max-width: 576px) {
+            .lead {
+                font-size: 1rem;
+            }
+        }
+        
+        .order-details {
+            background-color: rgba(255, 178, 44, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid var(--primary);
+        }
+        
+        @media (max-width: 576px) {
+            .order-details {
+                padding: 1rem;
+            }
+        }
+        
+        .order-detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px dashed rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+        }
+        
+        @media (max-width: 400px) {
+            .order-detail-row {
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+        }
+        
+        .order-detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            color: var(--secondary);
+            font-weight: 600;
+        }
+        
+        .detail-value {
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+        
+        .btn-action {
+            border-radius: 8px;
+            padding: 0.8rem 1.5rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+        
+        @media (max-width: 576px) {
+            .btn-action {
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            border: none;
+            color: var(--text-dark);
+        }
+        
+        .btn-primary:hover, .btn-primary:focus {
+            background: #e69b18;
+            box-shadow: 0 5px 15px rgba(255, 178, 44, 0.4);
+            transform: translateY(-2px);
+            color: var(--text-dark);
+        }
+        
+        .btn-outline-secondary {
+            color: var(--secondary);
+            border: 2px solid var(--secondary);
+            background: transparent;
+        }
+        
+        .btn-outline-secondary:hover, .btn-outline-secondary:focus {
+            background-color: var(--secondary);
+            border-color: var(--secondary);
+            color: var(--text-light);
+        }
+        
+        .support-link {
+            text-decoration: none;
+            color: var(--secondary);
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        
+        .support-link:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+        
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            opacity: 0;
+            animation: confetti-fall 3s ease-in-out forwards;
+            z-index: -1;
+        }
+        
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100px) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        
+        .order-timeline {
+            position: relative;
+            margin: 1rem 0 2rem;
+            padding-left: 0.5rem;
+        }
+        
+        @media (max-width: 576px) {
+            .order-timeline {
+                padding-left: 0;
+            }
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .timeline-item::before {
+            content: "";
+            position: absolute;
+            left: -5px;
+            top: 5px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            z-index: 1;
+        }
+        
+        .timeline-item::after {
+            content: "";
+            position: absolute;
+            left: 2px;
+            top: 20px;
+            height: calc(100% + 10px);
+            width: 1px;
+            background-color: #ddd;
+        }
+        
+        .timeline-item:last-child::after {
+            display: none;
+        }
+        
+        .timeline-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--text-dark);
+        }
+        
+        .timeline-text {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        
+        .receipt-summary {
+            margin-top: 2rem;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            padding-top: 1rem;
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        
+        .summary-total {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text-dark);
+            border-top: 1px dashed rgba(0,0,0,0.1);
+            padding-top: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .qr-code {
+            width: 100px;
+            height: 100px;
+            background-color: white;
+            border: 1px solid #eee;
+            margin: 1rem auto;
+            padding: 0.5rem;
+        }
+        
+        @media (min-width: 992px) {
+            .success-card {
+                max-width: 800px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <div class="col-md-10 col-lg-8 mx-auto px-3">
+            <div class="card success-card">
+                <div class="card-header-success">
+                    <div class="success-icon">
+                        <i class="fas fa-check"></i>
+                    </div>
+                </div>
+                <div class="card-body text-center">
+                    <h1 class="display-title">Payment Successful!</h1>
+                    <p class="lead mb-4">
+                        Your transaction has been completed and your order is now being processed.
+                    </p>
+                    
+                    <div class="order-details">
+                        <div class="order-detail-row">
+                            <span class="detail-label">Order ID</span>
+                            <span class="detail-value" id="orderNumber"><%= order.order_number %></span>
+                        </div>
+                        <div class="order-detail-row">
+                            <span class="detail-label">Date</span>
+                            <span class="detail-value" id="orderDate"><%= new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+                        </div>
+                        <div class="order-detail-row">
+                            <span class="detail-label">Amount</span>
+                            <span class="detail-value">₹<%= order.total_amount %></span>
+                        </div>
+                        <div class="order-detail-row">
+                            <span class="detail-label">Payment Method</span>
+                            <span class="detail-value"><%= order.payment_method %></span>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="order-timeline text-start">
+                                <div class="timeline-item">
+                                    <div class="timeline-title">Order Confirmed</div>
+                                    <div class="timeline-text">Your payment has been processed successfully</div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-title">Processing Order</div>
+                                    <div class="timeline-text">We're preparing your items</div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-title">Shipping Soon</div>
+                                    <div class="timeline-text">Estimated delivery: <%= new Date(order.delivery_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) %></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-center justify-content-center">
+                            <div>
+                                <div class="qr-code" id="qrCode">
+                                    <svg width="100" height="100" viewBox="0 0 100 100">
+                                        <rect x="10" y="10" width="80" height="80" fill="#fff" />
+                                        <path d="M20,20 h20 v20 h-20 z M30,30 h-5 v-5 h5 z" fill="#000" />
+                                        <path d="M50,20 h20 v20 h-20 z M60,30 h-5 v-5 h5 z" fill="#000" />
+                                        <path d="M20,50 h20 v20 h-20 z M30,60 h-5 v-5 h5 z" fill="#000" />
+                                        <path d="M50,50 h5 v5 h5 v5 h-5 v5 h-5 v-5 h-5 v-5 h5 z" fill="#000" />
+                                        <path d="M70,50 h5 v5 h-5 z M70,60 h5 v5 h-5 z M60,70 h5 v5 h-5 z" fill="#000" />
+                                    </svg>
+                                </div>
+                                <p class="small text-muted">Scan for order details</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="receipt-summary text-start">
+                        <h5 class="mb-3">Order Summary</h5>
+                        <div class="summary-row">
+                            <span>Subtotal</span>
+                            <span>₹<%= order.amount %></span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Shipping</span>
+                            <span>
+                                
+                                <%if( order.delivery_charge<=0 ){%>
+                                    Free
+                                <%}else{%>
+                                    ₹<%= order.delivery_charge %>
+                                <%}%>
+                            
+                            
+                            </span>
+                        </div>
+                        
+                        <div class="summary-row summary-total">
+                            <span>Total</span>
+                            <span>₹<%= order.total_amount %></span>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-3 d-md-flex justify-content-center my-4">
+                        <a href="/orders/recent" class="btn btn-primary btn-action px-4">
+                            <i class="fas fa-home me-2"></i>Recent Oders
+                        </a>
+                        <a href="/shop" class="btn btn-outline-secondary btn-action px-4">
+                            <i class="fas fa-shopping-bag me-2"></i>Continue Shopping
+                        </a>
+                    </div>
+                    
+                    <p class="text-body-secondary mt-4">
+                        Need help with your order? <a href="/support" class="support-link">Contact our support team</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include("../partials/user/footer") %>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create confetti animation with the color theme
+            const colors = ['#FFB22C', '#854836', '#F7F7F7', '#000000'];
+            const confettiCount = 50;
+            
+            for (let i = 0; i < confettiCount; i++) {
+                createConfetti();
+            }
+            
+            function createConfetti() {
+                const confetti = document.createElement('div');
+                confetti.classList.add('confetti');
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.width = Math.random() * 10 + 5 + 'px';
+                confetti.style.height = Math.random() * 10 + 5 + 'px';
+                confetti.style.animationDuration = Math.random() * 3 + 2 + 's';
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                
+                document.body.appendChild(confetti);
+                
+                setTimeout(() => {
+                    confetti.remove();
+                }, 5000);
+            }
+            
+            // Check if screen size changes for responsive adaptations
+            function checkScreenSize() {
+                const buttons = document.querySelectorAll('.btn-action');
+                if (window.innerWidth <= 576) {
+                    buttons.forEach(btn => {
+                        btn.classList.add('w-100');
+                    });
+                } else {
+                    buttons.forEach(btn => {
+                        btn.classList.remove('w-100');
+                    });
+                }
+            }
+            
+            // Run on load and window resize
+            checkScreenSize();
+            window.addEventListener('resize', checkScreenSize);
+        });
+    </script>
+</body>
+</html>

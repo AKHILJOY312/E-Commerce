@@ -13,6 +13,8 @@ const adminRoutes = require("./routes/adminRoutes");
 const usersRoutes = require("./routes/usersRoutes");
 const path = require("path");
 const app = express();
+const walletRoutes = require('./routes/wallet');
+const paymentRoutes = require('./routes/payment');
 
 
 connectDB();
@@ -65,9 +67,19 @@ app.use((req, res, next) => {
   next();
 });
 
-
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.status || 500);
+  res.render("error", {
+    message: err.message || "Something went wrong!",
+    error: process.env.NODE_ENV === "development" ? err : {},
+  });
+});
 app.use("/", usersRoutes);
 app.use("/admin", adminRoutes);
+app.use('/wallet', walletRoutes);
+app.use('/payment', paymentRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(` Server running on port ${PORT}`));

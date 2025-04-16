@@ -1,0 +1,470 @@
+<%- include("../partials/user/header.ejs") %>
+
+<style>
+  :root {
+    --primary-color: #FFB22C;
+    --primary-hover: #e69b18;
+    --secondary-color: #854836;
+    --text-dark: #333333;
+    --text-light: #FFFFFF;
+    --border-radius: 12px;
+    --box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s ease;
+  }
+  
+  .wallet-container {
+    background-color: #FFFFFF;
+    padding: 30px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    margin-top: 30px;
+  }
+  
+  .site-btn {
+    background-color: var(--primary-color);
+    color: var(--text-dark);
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-weight: 600;
+    transition: var(--transition);
+  }
+  
+  .site-btn:hover {
+    background-color: var(--secondary-color);
+    color: var(--text-light);
+    transform: translateY(-2px);
+  }
+  
+  .error-message {
+    background-color: #dc3545;
+    color: #FFFFFF;
+    padding: 12px;
+    margin-bottom: 20px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .success-message {
+    background-color: #28a745;
+    color: #FFFFFF;
+    padding: 12px;
+    margin-bottom: 20px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .wallet-balance {
+    background: linear-gradient(135deg, var(--primary-color), #FFC864);
+    color: var(--text-dark);
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  }
+  
+  .balance-amount {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 10px 0;
+  }
+  
+  .transaction-card {
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    transition: var(--transition);
+    border-left: 4px solid #ccc;
+  }
+  
+  .transaction-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .transaction-credit {
+    border-left-color: #28a745;
+  }
+  
+  .transaction-debit {
+    border-left-color: #dc3545;
+  }
+  
+  .wallet-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 25px;
+  }
+  
+  .section-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f0f0;
+  }
+  
+  .transaction-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+  }
+  
+  .transaction-table th {
+    background-color: #f8f8f8;
+    padding: 12px;
+    font-weight: 600;
+  }
+  
+  .transaction-table td {
+    padding: 12px;
+    border-top: 1px solid #f0f0f0;
+  }
+  
+  .transaction-table tr:hover {
+    background-color: #f9f9f9;
+  }
+  
+  .badge {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .badge-success {
+    background-color: #d4edda;
+    color: #155724;
+  }
+  
+  .badge-pending {
+    background-color: #fff3cd;
+    color: #856404;
+  }
+  
+  .badge-failed {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+  
+  /* Modal Styles */
+  .modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    visibility: hidden;
+    opacity: 0;
+    transition: var(--transition);
+  }
+  
+  .modal-backdrop.active {
+    visibility: visible;
+    opacity: 1;
+  }
+  
+  .modal-content {
+    background-color: #FFFFFF;
+    padding: 30px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    max-width: 400px;
+    width: 90%;
+    transform: translateY(-20px);
+    transition: transform 0.3s ease;
+  }
+  
+  .modal-backdrop.active .modal-content {
+    transform: translateY(0);
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  .modal-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+  }
+  
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #999;
+    transition: var(--transition);
+  }
+  
+  .modal-close:hover {
+    color: #333;
+  }
+  
+  .modal-body {
+    margin-bottom: 20px;
+  }
+  
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: var(--transition);
+  }
+  
+  .form-control:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 178, 44, 0.2);
+  }
+  .pagination {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pagination a {
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+}
+
+.pagination a:hover:not(.active) {
+  background-color: #f0f0f0;
+}
+</style>
+
+<section class="wallet spad">
+  <div class="container">
+    <div class="wallet-container">
+      <h4 class="mb-4">My Wallet</h4>
+      <% if (messages.error) { %>
+        <div class="error-message">
+          <i class="fa fa-exclamation-circle me-2"></i>
+          <%= messages.error %>
+        </div>
+      <% } %>
+      <% if (messages.success) { %>
+        <div class="success-message">
+          <i class="fa fa-check-circle me-2"></i>
+          <%= messages.success %>
+        </div>
+      <% } %>
+      
+      <div class="wallet-balance">
+        <p>Current Balance</p>
+        <div class="balance-amount">₹<%= user.wallet.toFixed(2) %></div>
+      </div>
+
+      <div class="wallet-actions">
+        <button type="button" class="site-btn" id="openAddMoneyBtn">
+          <i class="fa fa-plus-circle me-2"></i> Add Money
+        </button>
+      </div>
+
+      <div class="transaction-history mt-4">
+        <h6 class="section-title">Transaction History</h6>
+        <% if (transactions.length > 0) { %>
+          <div class="table-responsive">
+            <table class="transaction-table">
+              <thead>
+                <tr>
+                  <th>Date & Time</th>
+                  <th>Description</th>
+                  <th>Amount</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% transactions.forEach(tx => { %>
+                  <tr>
+                    <td><%= new Date(tx.created_at).toLocaleString() %></td>
+                    <td><%= tx.description %></td>
+                    <td class="<%= tx.transaction_type === 'credit' ? 'text-success' : 'text-danger' %>">
+                      ₹<%= tx.amount.toFixed(2) %>
+                    </td>
+                    <td>
+                      <span class="badge <%= tx.transaction_type === 'credit' ? 'badge-success' : 'badge-pending' %>">
+                        <%= tx.transaction_type %>
+                      </span>
+                    </td>
+                    <td>
+                      <% if (tx.status === 'completed') { %>
+                        <span class="badge badge-success">Success</span>
+                      <% } else if (tx.status === 'pending') { %>
+                        <span class="badge badge-pending">Pending</span>
+                      <% } else { %>
+                        <span class="badge badge-failed">Failed</span>
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+            <% if (transactions.length > 0) { %>
+              <div class="pagination mt-4 d-flex justify-content-center">
+                <% if (hasPrevPage) { %>
+                  <a href="?page=<%= currentPage - 1 %>" class="site-btn me-2">Previous</a>
+                <% } %>
+                
+                <% for (let i = 1; i <= totalPages; i++) { %>
+                  <a href="?page=<%= i %>" class="site-btn <%= currentPage === i ? 'active' : '' %> me-2" 
+                     style="<%= currentPage === i ? 'background-color: var(--secondary-color); color: white;' : '' %>">
+                    <%= i %>
+                  </a>
+                <% } %>
+                
+                <% if (hasNextPage) { %>
+                  <a href="?page=<%= currentPage + 1 %>" class="site-btn">Next</a>
+                <% } %>
+              </div>
+            <% } %>
+          </div>
+        <% } else { %>
+          <div class="text-center py-4">
+            <i class="fa fa-history fa-3x text-muted mb-3"></i>
+            <p>No transactions found.</p>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Add Money Modal -->
+<div class="modal-backdrop" id="addMoneyModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">Add Money to Wallet</h5>
+      <button type="button" class="modal-close" id="closeModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="add-money-form">
+        <div class="form-group mb-3">
+          <label for="amount" class="form-label">Amount (₹)</label>
+          <input type="number" id="amount" class="form-control" min="1" placeholder="Enter amount" required />
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="site-btn" id="cancelAddMoney">Cancel</button>
+      <button type="button" class="site-btn" onclick="initRazorpay()">Proceed to Payment</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+  // Modal functionality
+  const openAddMoneyBtn = document.getElementById('openAddMoneyBtn');
+  const addMoneyModal = document.getElementById('addMoneyModal');
+  const closeModal = document.getElementById('closeModal');
+  const cancelAddMoney = document.getElementById('cancelAddMoney');
+  
+  openAddMoneyBtn.addEventListener('click', () => {
+    addMoneyModal.classList.add('active');
+  });
+  
+  function closeAddMoneyModal() {
+    addMoneyModal.classList.remove('active');
+  }
+  
+  closeModal.addEventListener('click', closeAddMoneyModal);
+  cancelAddMoney.addEventListener('click', closeAddMoneyModal);
+  
+  // Close modal when clicking outside
+  addMoneyModal.addEventListener('click', (e) => {
+    if (e.target === addMoneyModal) {
+      closeAddMoneyModal();
+    }
+  });
+
+  function initRazorpay() {
+    const amount = document.getElementById('amount').value;
+    if (!amount || amount <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+
+    fetch('/wallet/add-money', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: '<%= user._id %>', amount }),
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.id) {
+          const options = {
+            key: '<%= process.env.RAZORPAY_KEY_ID %>',
+            amount: data.amount,
+            currency: data.currency,
+            name: 'Solo Fashion',
+            description: 'Add Money to Wallet',
+            order_id: data.id,
+            handler: function (response) {
+              closeAddMoneyModal();
+              
+              // Show loading indicator
+              const loadingHtml = `
+                <div class="success-message">
+                  <i class="fa fa-circle-notch fa-spin me-2"></i>
+                  Processing your payment...
+                </div>
+              `;
+              document.querySelector('.wallet-container').insertAdjacentHTML('afterbegin', loadingHtml);
+              
+              fetch('/wallet/verify-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  user_id: '<%= user._id %>',
+                  amount: amount,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_signature: response.razorpay_signature,
+                }),
+              })
+                .then(() => (window.location.href = '/wallet'));
+            },
+            prefill: {
+              name: '<%= user.name %>',
+              email: '<%= user.email %>',
+              contact: '<%= user.phone || "" %>',
+            },
+            theme: { color: '#FFB22C' },
+          };
+          const rzp = new Razorpay(options);
+          rzp.open();
+        } else {
+          alert('Failed to initiate payment');
+        }
+      })
+      .catch(error => {
+        console.error(error);
+        alert('Something went wrong');
+      });
+  }
+</script>
+
+<%- include("../partials/user/footer.ejs") %>

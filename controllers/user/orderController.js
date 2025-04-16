@@ -7,12 +7,14 @@ const Order = require('../../models/Order');
 const OrderItem = require('../../models/orderItems');
 const mongoose = require('mongoose');
 const PDFDocument = require('pdfkit');
+const crypto = require("crypto");
+const Transaction=require('../../models/WalletTransaction');
 
 
 exports.getCheckoutPage = async (req, res) => {
     try {
         const userId = req.session.user_id;
-        
+
         const cart = await Cart.findOne({ user_id: userId })
             .populate({
                 path: 'products.product_id',
@@ -22,26 +24,28 @@ exports.getCheckoutPage = async (req, res) => {
                 path: 'products.variant_id',
                 model: 'Variant'
             });
-
+            
         // Fetch all addresses for the user, not just the default one
         const addresses = await Address.find({ user_id: userId }).lean();
         const defaultAddress = addresses.find(addr => addr.is_default) || addresses[0] || null; // Fallback to first address if no default
         const user = await User.findById(userId);
 
-        if (!cart || !cart.products) {
-            return res.render('order/checkout', {
-                cart: null,
-                addresses: [],
-                address: null,
-                user,
-                currentActivePage: "shop"
-            });
+        // Check if cart is empty and redirect to shop with SweetAlert
+        if (!cart || !cart.products || cart.products.length === 0) {
+           req.flash('error', 'Your cart is empty. Please add items to your cart before checking out.');
+            return res.redirect('/shop');
         }
 
         const availableProducts = cart.products.filter(item => 
             item.variant_id && item.variant_id.quantity > 0 && 
             item.quantity <= item.variant_id.quantity
         );
+
+        // Check if there are no available products after filtering
+        if (availableProducts.length === 0) {
+           
+            return res.redirect('/cart');
+        }
 
         let subtotal = availableProducts.reduce((sum, item) => 
             sum + (item.variant_id.sale_price * item.quantity), 0);
@@ -61,114 +65,183 @@ exports.getCheckoutPage = async (req, res) => {
             currentActivePage: "shop"
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Server Error');
+        console.error("error getting the checkout",error);
+      
+        res.redirect('/cart');
     }
 };
+
+
+const verifyRazorpaySignature = (order_id, payment_id, signature) => {
+  console.log("Verifying Razorpay signature with:");
+  console.log("Order ID:", order_id);
+  console.log("Payment ID:", payment_id);
+  console.log("Received Signature:", signature);
+  
+  const body = order_id + "|" + payment_id;
+  console.log("Generated body string:", body);
+  
+  const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(body)
+      .digest("hex");
+  
+  console.log("Expected Signature:", expectedSignature);
+  console.log("Signatures match?", expectedSignature === signature);
+  
+  return expectedSignature === signature;
+};
+
 
 exports.placeOrder = async (req, res) => {
     try {
-        const userId = req.session.user_id;
-        const { payment_method, addressId } = req.body;
-
-        if (!payment_method) {
-            req.flash('error', 'Please select a payment method');
-            return res.redirect('/checkout');
-        }
-
-        if (!addressId || !mongoose.Types.ObjectId.isValid(addressId)) {
-            req.flash('error', 'Please select a valid address');
-            return res.redirect('/checkout');
-        }
-
+      const userId = req.session.user_id;
+      const { payment_method, addressId } = req.body;
+  console.log("place order",req.body)
+      if (!payment_method) {
+        req.flash('error', 'Please select a payment method');
+        console.log('Payment method not selected:', req.body);
+        return res.redirect('/checkout');
+      }
+  
+      const user = await User.findById(userId);
+  
+      if (payment_method === 'wallet') {
         const cart = await Cart.findOne({ user_id: userId })
-            .populate('products.product_id')
-            .populate('products.variant_id');
-
+          .populate('products.product_id')
+          .populate('products.variant_id');
+  
         if (!cart || !cart.products.length) {
-            req.flash('error', 'Cart is empty');
-            return res.redirect('/checkout');
+          req.flash('error', 'Cart is empty');
+          return res.redirect('/checkout');
         }
-
-        // Check if the selected address exists for the user
-        const selectedAddress = await Address.findOne({ _id: addressId, user_id: userId });
-        if (!selectedAddress) {
-            req.flash('error', 'Selected address not found');
-            return res.redirect('/checkout');
-        }
-
-        const availableProducts = cart.products.filter(item => 
-            item.variant_id && item.variant_id.quantity >= item.quantity
-        );
-
-        if (availableProducts.length === 0) {
-            req.flash('error', 'No items in cart are available in sufficient quantity');
-            return res.redirect('/checkout');
-        }
-
-        const subtotal = availableProducts.reduce((sum, item) => 
-            sum + (item.variant_id.sale_price * item.quantity), 0);
+  
+        const subtotal = cart.products.reduce((sum, item) => 
+          sum + (item.variant_id.sale_price * item.quantity), 0);
         const deliveryCharge = subtotal > 1000 ? 0 : 50;
         const total = subtotal + deliveryCharge;
-
-        const deliveryDate = new Date();
-        deliveryDate.setDate(deliveryDate.getDate() + 7);
-
-        // Create order with selected address
-        const order = new Order({
-            user_id: userId,
-            payment_id: new mongoose.Types.ObjectId(),
-            delivery_charge: deliveryCharge,
-            delivery_date: deliveryDate,
-            amount: subtotal,
-            total_amount: total.toString(),
-            status: 'confirmed',
-            address_id: addressId // Add address_id to order schema if needed
-        });
-
-        await order.save();
-
-        const orderItems = await Promise.all(availableProducts.map(async item => {
-            const variant = await Variant.findOneAndUpdate(
-                { _id: item.variant_id._id, quantity: { $gte: item.quantity } },
-                { $inc: { quantity: -item.quantity } },
-                { new: true }
-            );
-
-            if (!variant) {
-                throw new Error(`Insufficient stock for variant ${item.variant_id._id}`);
-            }
-
-            const orderItem = new OrderItem({
-                product_id: item.product_id._id,
-                variant_id:item.variant_id._id,
-                order_id: order._id,
-                quantity: item.quantity,
-                price: item.variant_id.sale_price,
-                total_price: item.variant_id.sale_price * item.quantity
-            });
-            await orderItem.save();
-
-            return orderItem._id;
-        }));
-
-        order.order_items = orderItems;
-        await order.save();
-
-        await Cart.findOneAndDelete({ user_id: userId });
-
-        req.flash('success', `Order ${order.order_number} placed successfully!`);
-        res.redirect('/orders/recent');
-    } catch (error) {
-        console.error('Error placing order:', error);
-        if (order && order._id) {
-            await Order.deleteOne({ _id: order._id });
-            await OrderItem.deleteMany({ order_id: order._id });
+  
+        if (user.wallet < total) {
+          req.flash('error', 'Insufficient wallet balance');
+          return res.redirect('/checkout');
         }
-        req.flash('error', 'Failed to place order. Please try again.');
-        res.redirect('/checkout');
+  
+        user.wallet -= total;
+        const userSave = await user.save();
+        if(userSave){
+           const txn = await Transaction.create({
+                user_id:userId,
+                amount:total,
+                balance: user.wallet,
+                transaction_type: 'purchase',
+                description: 'Purchase from wallet', 
+                status: 'completed',
+              });
+        }
+  
+      }
+  
+      if (payment_method === 'razorpay') {
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+        const isValid = verifyRazorpaySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
+  
+        if (!isValid) {
+          req.flash('error', 'verification failed');
+          return res.redirect('/checkout');
+        }
+      }
+  
+      if (!addressId || !mongoose.Types.ObjectId.isValid(addressId)) {
+        req.flash('error', 'Please select a valid address');
+        return res.redirect('/checkout');
+      }
+  
+      const cart = await Cart.findOne({ user_id: userId })
+        .populate('products.product_id')
+        .populate('products.variant_id');
+  
+      if (!cart || !cart.products.length) {
+        req.flash('error', 'Cart is empty');
+        return res.redirect('/checkout');
+      }
+  
+      const selectedAddress = await Address.findOne({ _id: addressId, user_id: userId });
+      if (!selectedAddress) {
+        req.flash('error', 'Selected address not found');
+        return res.redirect('/checkout');
+      }
+  
+      const availableProducts = cart.products.filter(item => 
+        item.variant_id && item.variant_id.quantity >= item.quantity
+      );
+  
+      if (availableProducts.length === 0) {
+        req.flash('error', 'No items in cart are available in sufficient quantity');
+        return res.redirect('/checkout');
+      }
+  
+      const subtotal = availableProducts.reduce((sum, item) => 
+        sum + (item.variant_id.sale_price * item.quantity), 0);
+      const deliveryCharge = subtotal > 1000 ? 0 : 50;
+      const total = subtotal + deliveryCharge;
+  
+      const deliveryDate = new Date();
+      deliveryDate.setDate(deliveryDate.getDate() + 7);
+  
+      const order = new Order({
+        user_id: userId,
+        payment_id: new mongoose.Types.ObjectId(),
+        delivery_charge: deliveryCharge,
+        delivery_date: deliveryDate,
+        amount: subtotal,
+        total_amount: total.toString(),
+        status: 'confirmed',
+        address_id: addressId,
+      });
+  
+      await order.save();
+  
+      const orderItems = await Promise.all(availableProducts.map(async item => {
+        const variant = await Variant.findOneAndUpdate(
+          { _id: item.variant_id._id, quantity: { $gte: item.quantity } },
+          { $inc: { quantity: -item.quantity } },
+          { new: true }
+        );
+  
+        if (!variant) {
+          throw new Error(`Insufficient stock for variant ${item.variant_id._id}`);
+        }
+  
+        const orderItem = new OrderItem({
+          product_id: item.product_id._id,
+          variant_id: item.variant_id._id,
+          order_id: order._id,
+          quantity: item.quantity,
+          price: item.variant_id.sale_price,
+          total_price: item.variant_id.sale_price * item.quantity,
+        });
+        await orderItem.save();
+  
+        return orderItem._id;
+      }));
+  
+      order.order_items = orderItems;
+      await order.save();
+  
+      await Cart.findOneAndDelete({ user_id: userId });
+  
+      
+      res.render('payment/payment-success',{currentActivePage:"",order});
+    } catch (error) {
+      console.error('Error placing order:', error);
+      if (order && order._id) {
+        await Order.deleteOne({ _id: order._id });
+        await OrderItem.deleteMany({ order_id: order._id });
+      }
+      req.flash('error', 'Failed to place order. Please try again.');
+      res.redirect('/cart');
     }
-};
+  };
 
 exports.getRecentOrders = async (req, res) => {
     try {
@@ -336,7 +409,7 @@ exports.cancelOrder = async (req, res) => {
         if (!updatedOrder) {
             throw new Error('Failed to update order status.'); 
         }
-        console.log(`Order ${orderId} status updated to cancelled.`);
+        
 
         
         await Promise.all(order.order_items.map(async (item) => {
@@ -347,7 +420,7 @@ exports.cancelOrder = async (req, res) => {
 
             
             if (item.variant_id && item.quantity > 0) {
-                console.log(`Restocking variant ${item.variant_id} by quantity ${item.quantity}`);
+                
                 const updatedVariant = await Variant.updateOne(
                     { _id: item.variant_id }, 
                     { $inc: { quantity: item.quantity } } 
@@ -378,7 +451,7 @@ exports.cancelOrder = async (req, res) => {
         try {
             const checkOrder = await Order.findById(orderId);
             if (checkOrder && checkOrder.status === 'cancelled') {
-                console.log(`Attempting to rollback status for order ${orderId} due to error: ${error.message}`);
+            
                 await Order.updateOne({ _id: orderId }, {
                      status: 'confirmed', 
                      cancelled_at: null,
@@ -666,9 +739,9 @@ exports.returnOrder = async (req, res) => {
     const orderId = req.params.orderId;
     const userId = req.session.user_id;
     const { return_reason } = req.body; // Get optional return reason from form
-  
+    
     try {
-      const order = await Order.findOne({ _id: orderId, user_id: userId }).select('status delivery_date updatedAt');
+      const order = await Order.findOne({ _id: orderId, user_id: userId }).select('status delivery_date return_deadline updatedAt');
   
       if (!order) {
         req.flash('error', 'Order not found or access denied.');
@@ -679,16 +752,22 @@ exports.returnOrder = async (req, res) => {
         req.flash('error', 'Only delivered orders can be returned.');
         return res.redirect(`/orders/details/${orderId}`);
       }
-  
-      const deliveryDate = order.delivery_date ? new Date(order.delivery_date) : new Date(order.updatedAt);
-      const currentDate = new Date('2025-04-12'); // Fixed date for testing; use new Date() in production
-      const diffDays = Math.ceil((currentDate - deliveryDate) / (1000 * 60 * 60 * 24));
-  
-      if (diffDays > 7 || diffDays < 0) {
-        req.flash('error', 'Return period (7 days from delivery) has expired or is invalid.');
+      
+      const currentDate = new Date();
+      
+      // Check if return_deadline exists and is valid
+      if (!order.return_deadline) {
+        req.flash('error', 'Return deadline is not set for this order.');
         return res.redirect(`/orders/details/${orderId}`);
       }
-  
+      
+      // Compare current date with return_deadline
+      if (currentDate > order.return_deadline) {
+        req.flash('error', 'Return period (7 days from delivery) has expired or is invalid.');
+        console.warn(`User attempted to return order ${orderId} after the deadline: ${order.return_deadline}`);
+        return res.redirect(`/orders/details/${orderId}`);
+      }
+     
       // Update order with return status and reason
       await Order.findByIdAndUpdate(orderId, {
         status: 'return_requested',

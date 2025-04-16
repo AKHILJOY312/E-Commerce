@@ -35,6 +35,17 @@
         border: 1px solid #FFB22C;
         border-radius: 4px;
     }
+    .wallet-balance {
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        margin-bottom: 15px;
+    }
+    .payment-info {
+        font-size: 14px;
+        color: #6c757d;
+        margin-top: 5px;
+    }
 </style>
 
 <!-- Breadcrumb Section Begin -->
@@ -68,7 +79,7 @@
                     <%= messages.success %>
                 </div>
             <% } %>
-            <form action="/place-order" method="POST" onsubmit="return validatePaymentMethod()">
+            <form id="checkout-form" action="/place-order" method="POST" onsubmit="return processPayment()">
                 <div class="row">
                     <div class="col-lg-8 col-md-6">
                         <h6 class="checkout__title">Billing Details</h6>
@@ -151,16 +162,32 @@
                                 <% } %>
                             </ul>
                             <ul class="checkout__total__all">
-                                <li>Subtotal <span>₹<%= cart.subtotal.toFixed(2) %></span></li>
-                                <li>Shipping <span><%= cart.shippingCost === 0 ? 'Free' : '₹' + cart.shippingCost.toFixed(2) %></span></li>
-                                <li>Total <span>₹<%= cart.total.toFixed(2) %></span></li>
+                                <li>Subtotal <span>₹<%= (cart && cart.subtotal) ? cart.subtotal.toFixed(2) : '0.00' %></span></li>
+                                <li>Shipping <span><%= (cart && cart.shippingCost !== undefined) ? (cart.shippingCost === 0 ? 'Free' : '₹' + cart.shippingCost.toFixed(2)) : 'Free' %></span></li>
+                                <li>Total <span>₹<%= (cart && cart.total) ? cart.total.toFixed(2) : '0.00' %></span></li>
                             </ul>
+                            
+                            <% if (user && user.wallet !== undefined) { %>
+                            <div class="wallet-balance">
+                                <p>Wallet Balance: <strong>₹<%= user.wallet.toFixed(2) %></strong></p>
+                            </div>
+                            <% } %>
+                            
                             <div class="checkout__input__radio">
                                 <label for="check">
-                                    Check Payment
-                                    <input type="radio" id="check" name="payment_method" value="check">
+                                    Wallet
+                                    <input type="radio" id="check" name="payment_method" value="wallet" onchange="checkWalletBalance()">
                                     <span class="checkmark"></span>
                                 </label>
+                                <div id="wallet-info" class="payment-info" style="display: none;">
+                                    <% if (user && user.wallet !== undefined && cart && cart.total) { %>
+                                        <% if (user.wallet >= cart.total) { %>
+                                            <span style="color: #28a745;">Sufficient balance available</span>
+                                        <% } else { %>
+                                            <span style="color: #dc3545;">Insufficient balance (₹<%= user.wallet.toFixed(2) %> available)</span>
+                                        <% } %>
+                                    <% } %>
+                                </div>
                             </div>
                             <div class="checkout__input__radio">
                                 <label for="razorpay">
@@ -168,6 +195,9 @@
                                     <input type="radio" id="razorpay" name="payment_method" value="razorpay">
                                     <span class="checkmark"></span>
                                 </label>
+                                <div id="razorpay-info" class="payment-info" style="display: none;">
+                                    Online payment via credit/debit card, UPI, net banking, etc.
+                                </div>
                             </div>
                             <div class="checkout__input__radio">
                                 <label for="cod">
@@ -175,10 +205,16 @@
                                     <input type="radio" id="cod" name="payment_method" value="cod">
                                     <span class="checkmark"></span>
                                 </label>
+                                <div id="cod-info" class="payment-info" style="display: none;">
+                                    Pay with cash upon delivery
+                                </div>
                             </div>
                             <div id="payment-error" style="color: #854836; display: none;">
                                 Please select a payment method
                             </div>
+                            <input type="hidden" name="razorpay_payment_id" id="razorpay_payment_id">
+                            <input type="hidden" name="razorpay_order_id" id="razorpay_order_id">
+                            <input type="hidden" name="razorpay_signature" id="razorpay_signature">
                             <button type="submit" class="site-btn">PLACE ORDER</button>
                         </div>
                     </div>
@@ -188,7 +224,31 @@
     </div>
 </section>
 
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
+    // Show/hide payment info based on selection
+    document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            // Hide all info divs
+            document.querySelectorAll('.payment-info').forEach(div => {
+                div.style.display = 'none';
+            });
+            
+            // Show the selected payment method info
+            const infoDiv = document.getElementById(`${this.value}-info`);
+            if (infoDiv) {
+                infoDiv.style.display = 'block';
+            }
+        });
+    });
+
+    function checkWalletBalance() {
+        const walletInfo = document.getElementById('wallet-info');
+        if (walletInfo) {
+            walletInfo.style.display = 'block';
+        }
+    }
+
     function validatePaymentMethod() {
         const paymentMethods = document.getElementsByName('payment_method');
         const errorDiv = document.getElementById('payment-error');
@@ -209,6 +269,100 @@
         errorDiv.style.display = 'none';
         return true;
     }
+
+    function processPayment() {
+        if (!validatePaymentMethod()) {
+            return false;
+        }
+
+        const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
+        
+        // For wallet payment
+        if (paymentMethod === 'wallet') {
+            <% if (user && user.wallet !== undefined && cart && cart.total) { %>
+                <% if (user.wallet < cart.total) { %>
+                    alert('Insufficient wallet balance. Please choose another payment method.');
+                    return false;
+                <% } %>
+            <% } %>
+            return true; // Continue with form submission for wallet payment
+        }
+        
+        // For Razorpay payment
+        if (paymentMethod === 'razorpay') {
+            initRazorpay();
+            return false; // Prevent form submission as we'll handle it via Razorpay
+        }
+        
+        // For COD, just submit the form
+        if (paymentMethod === 'cod') {
+            return true;
+        }
+        
+        return true;
+    }
+
+    function initRazorpay() {
+    // Create a form data object to send to the server
+    const amount = <%= (cart && cart.total) ? cart.total : 0 %>;
+    
+    // Send a request to create a Razorpay order
+    fetch('/payment/create-order', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+            user_id: '<%= user._id %>',
+            amount: amount 
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.order) {
+            // Store the order ID in a variable for later use
+            const razorpayOrderId = data.order.id;
+            
+            // Configure Razorpay options
+            const options = {
+                key: '<%= process.env.RAZORPAY_KEY_ID %>',
+                amount: data.order.amount,
+                currency: data.order.currency,
+                name: 'Solo Fashion',
+                description: 'Purchase Payment',
+                order_id: razorpayOrderId,
+                handler: function (response) {
+                    console.log("Razorpay response:", response);
+                    
+                    // Store Razorpay payment details in hidden fields
+                    document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id;
+                    document.getElementById('razorpay_order_id').value = razorpayOrderId; // Use the stored order ID
+                    document.getElementById('razorpay_signature').value = response.razorpay_signature;
+                    
+                    // Submit the form to complete the order
+                    document.getElementById('checkout-form').submit();
+                },
+                prefill: {
+                    name: '<%= user.name %>',
+                    email: '<%= user.email %>',
+                    contact: '<%= user.phone || "" %>'
+                },
+                theme: {
+                    color: '#FFB22C'
+                }
+            };
+            
+            const rzp = new Razorpay(options);
+            rzp.open();
+        } else {
+            alert('Failed to create payment order. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Something went wrong. Please try again later.');
+    });
+}
 
     function updateAddressDisplay() {
         const select = document.getElementById('address-select');

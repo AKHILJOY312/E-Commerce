@@ -341,7 +341,7 @@
               <td>₹<%= variant.salePrice %></td>
               <td><%= variant.size %></td>
               <td>
-                <% if (variant.quantity < 10) { %>
+                <% if (variant.quantity == 0) { %>
                 <span class="badge badge-danger ml-1">Out of Stock</span>
                 <% } else if(variant.quantity < 20) { %>
                 <span class="badge badge-warning ml-1">Only Few</span>

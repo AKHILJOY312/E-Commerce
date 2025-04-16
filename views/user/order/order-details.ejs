@@ -259,38 +259,77 @@
                 </div>
 
                 <!-- Cancellation Modal -->
-                <div class="modal fade" id="cancelModal<%= order._id %>" tabindex="-1" role="dialog" aria-labelledby="cancelModalLabel" aria-hidden="true">
-                    <div class="modal-dialog" role="document">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="cancelModalLabel">Cancel Order <%= order.order_number %></h5>
-                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                    <span aria-hidden="true">×</span>
-                                </button>
-                            </div>
-                            <form action="/orders/cancel/<%= order._id %>" method="POST">
-                                <div class="modal-body">
-                                    <p>Are you sure you want to cancel this order? This action cannot be undone.</p>
-                                    <div class="form-group">
-                                        <label for="cancellationReason">Cancellation Reason (Optional)</label>
-                                        <textarea class="form-control" id="cancellationReason" name="cancellation_reason" rows="3" placeholder="e.g., Changed my mind"></textarea>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                                    <button type="submit" class="btn btn-cancel">Confirm Cancellation</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+                <!-- Cancellation Modal -->
+<div class="modal fade" id="cancelModal<%= order._id %>" tabindex="-1" role="dialog" aria-labelledby="cancelModalLabel<%= order._id %>" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <!-- Modal Header -->
+        <div class="modal-header bg-light border-bottom d-flex align-items-center">
+          <h5 class="modal-title mb-0" id="cancelModalLabel<%= order._id %>">Cancel Order <%= order.order_number %></h5>
+          <button type="button" class="close ml-auto" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <!-- Modal Body -->
+        <form action="/orders/cancel/<%= order._id %>" method="POST">
+          <div class="modal-body px-4">
+            <div class="alert alert-warning d-flex align-items-center mb-3" role="alert">
+              <i class="fas fa-exclamation-triangle mr-2"></i>
+              <span>Are you sure you want to cancel this order? This action cannot be undone.</span>
+            </div>
+            <div class="form-group mb-0">
+              <label for="cancellationReason<%= order._id %>" class="font-weight-bold mb-1">Reason for Cancellation</label>
+              <select 
+                class="form-control" 
+                id="cancellationReason<%= order._id %>" 
+                name="cancellation_reason" 
+                required 
+                aria-describedby="cancellationReasonHelp<%= order._id %>"
+              >
+                <option value="" disabled selected>Choose a reason...</option>
+                <option value="Changed my mind">Changed my mind</option>
+                <option value="Ordered by mistake">Ordered by mistake</option>
+                <option value="Found a better price elsewhere">Found a better price elsewhere</option>
+                <option value="Product no longer needed">Product no longer needed</option>
+                <option value="Delivery time too long">Delivery time too long</option>
+                <option value="Incorrect item ordered">Incorrect item ordered</option>
+                <option value="Financial reasons">Financial reasons</option>
+                <option value="Dissatisfied with product details">Dissatisfied with product details</option>
+                <option value="Shipping cost too high">Shipping cost too high</option>
+                <option value="Other">Other</option>
+              </select>
+              <small id="cancellationReasonHelp<%= order._id %>" class="form-text text-muted mt-1">
+                Please select the reason for cancelling the order.
+              </small>
+            </div>
+          </div>
+          <!-- Modal Footer -->
+          <div class="modal-footer border-top d-flex justify-content-end">
+            <button 
+              type="button" 
+              class="btn btn-secondary mr-2" 
+              data-dismiss="modal" 
+              aria-label="Close modal"
+            >
+              <i class="fas fa-times mr-1"></i> Cancel
+            </button>
+            <button 
+              type="submit" 
+              class="btn btn-danger" 
+              aria-label="Confirm order cancellation"
+            >
+              <i class="fas fa-trash-alt mr-1"></i> Confirm Cancellation
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
             <% } else if (order.status === 'delivered') { %>
                 <% 
-                    const deliveryDate = order.delivery_date ? new Date(order.delivery_date) : (order.updatedAt && order.status === 'delivered' ? new Date(order.updatedAt) : null);
-                    const currentDate = new Date('2025-04-12'); // Current date as per your system
-                    const diffTime = deliveryDate ? (currentDate - deliveryDate) : Infinity;
-                    const diffDays = deliveryDate ? Math.ceil(diffTime / (1000 * 60 * 60 * 24)) : Infinity;
-                    const withinReturnPeriod = deliveryDate && diffDays >= 0 && diffDays <= 7;
+                       const currentDate = new Date();
+        const returnDeadline = order.return_deadline ? new Date(order.return_deadline) : null;
+        const withinReturnPeriod = returnDeadline && currentDate <= returnDeadline;
                 %>
                 <% if (withinReturnPeriod) { %>
                     <div class="order-section">
@@ -331,5 +370,24 @@
         </div>
     </div>
 </section>
-
+<% if(messages.succuss){ %>
+<script>
+    Swal.fire({
+        icon: 'success',
+        title: '<%= messages.succuss %>',
+        showConfirmButton: false,
+        timer: 1500
+    });
+</script>
+<% } %>
+<% if(messages.error){ %>
+    <script>
+        Swal.fire({
+            icon: 'error',
+            title: '<%= messages.error %>',
+            showConfirmButton: false,
+            timer: 1500
+        });
+    </script>
+    <% } %>
 <%- include("../../views/partials/user/footer.ejs") %>

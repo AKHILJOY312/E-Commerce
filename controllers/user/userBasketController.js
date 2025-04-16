@@ -35,38 +35,35 @@ exports.getCart = async (req, res) => {
       });
     }
 
-    // Log raw cart data for debugging
-    console.log('Raw cart products:', JSON.stringify(cart.products, null, 2));
+   
 
     // Populate product and variant details, filter out invalid or out-of-stock items
     const populatedItems = await Promise.all(cart.products.map(async (item) => {
       const variant = await Variant.findById(item.variant_id).lean();
       
       if (!variant) {
-        console.log(`Skipping variant ${item.variant_id} - not found`);
+       
         return null;
       }
 
       // Check stock using variant.quantity
       if (variant.quantity <= 0) {
-        console.log(`Skipping variant ${item.variant_id} - out of stock (quantity: ${variant.quantity})`);
+      
         return null;
       }
 
       const product = await Product.findById(variant.product_id).lean();
       if (!product) {
-        console.log(`Skipping product for variant ${item.variant_id} - not found`);
+        
         return null;
       }
 
       // Parse and validate cart quantity
       const cartQuantity = parseInt(item.quantity, 10);
       if (isNaN(cartQuantity) || cartQuantity <= 0) {
-        console.log(`Invalid cart quantity for variant ${item.variant_id}: ${item.quantity}`);
+       
         return null;
       }
-
-      console.log(`Processed item ${item.variant_id} - cart quantity: ${cartQuantity}, stock: ${variant.quantity}`);
       return {
         product,
         variant,
@@ -96,12 +93,10 @@ exports.getCart = async (req, res) => {
     // Calculate totals with detailed logging
     const subtotal = validItems.reduce((sum, item) => {
       const itemTotal = item.variant.sale_price * item.quantity;
-      console.log(`Item ${item.variant._id} total: ${itemTotal} (price: ${item.variant.sale_price}, qty: ${item.quantity})`);
+     
       return sum + (isNaN(itemTotal) ? 0 : itemTotal);
     }, 0);
 
-    // Log final data
-    console.log('Valid items:', JSON.stringify(validItems, null, 2));
     console.log('Subtotal:', subtotal);
 
     // Fetch related products, excluding out-of-stock items
@@ -172,8 +167,7 @@ exports.addToCart = async (req, res) => {
       return res.json({ success: false, message: 'Item not available or out of stock' });
     }
 
-    console.log("variant.quantity", variant.quantity);
-    console.log("requested quantity", quantity);
+   
 
     if (variant.quantity < parseInt(quantity)) {
       return res.json({ success: false, message: 'Not enough stock' });
@@ -230,7 +224,7 @@ exports.addToCart = async (req, res) => {
         } else {
           await wishlist.save(); // Save updated wishlist
         }
-        console.log(`Removed variant ${variantId} from wishlist`);
+       
       }
     }
 
@@ -385,7 +379,7 @@ exports.updateCart = async (req, res) => {
       // 1. Get the cart (raw, without population first)
       const rawCart = await Cart.findById(cartId);
      
-  console.log('cheking')
+
       // 2. Populate the cart
       const cart = await Cart.findById(cartId)
         .populate('products.variant_id')
@@ -396,7 +390,7 @@ exports.updateCart = async (req, res) => {
         
         return res.status(400).json({ success: false, message: 'Cart not found or empty' });
       }
-      console.log('cheking')
+    
       // 3. Calculate subtotal with detailed logging
       let subtotal = 0;
       cart.products.forEach(item => {
@@ -411,7 +405,7 @@ exports.updateCart = async (req, res) => {
       });
   
      
-      console.log('cheking')
+      
       if (subtotal === 0) {
         return res.status(400).json({ success: false, message: 'Invalid cart subtotal' });
       }
@@ -426,8 +420,7 @@ exports.updateCart = async (req, res) => {
          end_date: { $gte: now }
        });
    
-       console.log('🎟️ Found Coupon:', foundCoupon);
-   
+       
        if (!foundCoupon) {
          return res.json({ success: false, message: 'Invalid or expired coupon code' });
        }
@@ -445,7 +438,6 @@ exports.updateCart = async (req, res) => {
    
        // 4. Check user usage
        const userId = req.session.user_id;
-       console.log('👤 User ID from session:', userId);
    
        if (userId && foundCoupon.limit_per_user > 0) {
          const alreadyUsed = await CouponUsage.findOne({

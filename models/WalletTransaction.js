@@ -26,10 +26,15 @@ const WalletTransactionSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
+  description: { type: String },
   status: {
     type: String,
     enum: ['pending', 'completed', 'failed'],
     default: 'pending'
+  },
+  razorpay_order_id: {
+    type: String,
+    default: null
   },
   created_at: {
     type: Date,

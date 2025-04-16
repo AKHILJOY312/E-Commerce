@@ -6,15 +6,18 @@ const passport  = require("passport")
 require("dotenv").config();
 const Product = require("../../models/Product");
 const { generateOtp, sendVerificationEmail, securePassword } = require("../../utils/authUtils");
-
+const Cart = require("../../models/Cart");
 
 exports.loadHomePage = async (req, res) => {
   try {
     
     let username = null;
+    let cartCount = 0;
+    
     const user = req.session.username;
+    const  user_id= req.session.user_id;
     if (user) {
-      const userData = await User.findOne({ _id: user._id });
+      const userData = await User.findOne({ _id: user_id });
       username = user;
     }
 
@@ -25,13 +28,16 @@ exports.loadHomePage = async (req, res) => {
           .sort({created_at:-1})
             .populate('variants')
             .limit(4); 
+
+           
     res.render("home", {
        username,
       newArrivals,
-      currentActivePage:'home'
+      currentActivePage:'home',
+      cartCount,
       });
   } catch (error) {
-    console.error("Home page not found");
+    console.error("Home page not found",error);
     res.status(500).send("Server error");
   }
 };

@@ -8,7 +8,8 @@ const userProfileController = require("../controllers/user/userProfileController
 const profileUpload = require("../middleware/profileUpload");
 const basketController = require("../controllers/user/userBasketController");
 const orderController = require('../controllers/user/orderController');
-
+// const paymentController = require('../controllers/user/paymentController');
+// const { verifyUser } = require("../middleware/userAuthMiddleware");
 
 
 
@@ -98,5 +99,17 @@ router.post('/orders/cancel/:orderId',userAuth, orderController.cancelOrder);
 router.get('/orders/details/:orderId',userAuth, orderController.getOrderDetails);
 router.get('/orders/invoice/:orderId', userAuth, orderController.downloadInvoice);
 router.post('/orders/return/:orderId', userAuth, orderController.returnOrder);
+
+//payments 
+// router.post("/create-order", userAuth,paymentController.createOrder);
+
+
+
+
+
+
+
+
+
 
 module.exports = router;

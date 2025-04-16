@@ -309,6 +309,16 @@
  
 </style>
 <!-- Inline Scripts -->
+ <% if(messages.error){ %>
+ <script>
+  Swal.fire({
+    icon: 'error',
+    title: 'Error',
+    text: '<%= messages.error %>',
+    confirmButtonColor: '#FFB22C'
+  });
+ </script>
+ <% } %>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     // Handle background images
@@ -385,10 +395,18 @@
               icon: 'success',
               title: 'Added to Cart',
               text: 'The item has been added to your cart!',
-              confirmButtonColor: '#FFB22C'
-            }).then(() => {
-              // Optionally redirect to cart page
-              // window.location.href = '/cart';
+              confirmButtonColor: '#FFB22C',
+              showCancelButton: true,
+              cancelButtonText: 'Continue Shopping',
+              confirmButtonText: 'Go to Cart'
+            }).then((result) => {
+              if (result.isConfirmed) {
+                window.location.href = '/cart';
+
+              } else {
+                // Do nothing, just close the modal
+              }
+             
             });
           } else {
             Swal.fire({

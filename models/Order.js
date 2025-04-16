@@ -72,6 +72,10 @@ const OrderSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    return_deadline: {
+      type: Date,
+      default: null,
+    },
     cancelled_at: {
       type: Date,
       default: null,
