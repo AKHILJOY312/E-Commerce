@@ -80,6 +80,7 @@ router.get("/cart", userAuth, basketController.getCart);
 router.put("/cart/update", userAuth, basketController.updateCart);
 router.delete("/cart", userAuth, basketController.removeFromCart);
 router.post("/cart/apply-coupon", userAuth, basketController.applyCoupon);
+router.post('/cart/remove-coupon', userAuth, basketController.removeCoupon);
 
 //wish list
 router.get("/wishlist", userAuth, basketController.getWishlist);
@@ -100,8 +101,6 @@ router.get('/orders/details/:orderId',userAuth, orderController.getOrderDetails)
 router.get('/orders/invoice/:orderId', userAuth, orderController.downloadInvoice);
 router.post('/orders/return/:orderId', userAuth, orderController.returnOrder);
 
-//payments 
-// router.post("/create-order", userAuth,paymentController.createOrder);
 
 
 

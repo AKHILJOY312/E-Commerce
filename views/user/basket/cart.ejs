@@ -58,7 +58,66 @@
     background: #6b3a2c; /* Darker Brown */
   }
 </style>
-
+<style>
+  .applied-coupon {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f5f5f5;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-top: 10px;
+  }
+  
+  .coupon-code {
+    font-weight: bold;
+    margin-right: 10px;
+  }
+  
+  .coupon-discount {
+    color: #28a745;
+  }
+  
+  .remove-coupon-btn {
+    background: none;
+    color: #dc3545;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    text-decoration: underline;
+  }
+  
+  .coupon-info {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .coupon-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px;
+    background-color: #fff;
+    border-left: 4px solid;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+    transition: all 0.3s ease;
+    opacity: 0;
+  }
+  
+  .coupon-notification.success {
+    border-left-color: #28a745;
+  }
+  
+  .coupon-notification.error {
+    border-left-color: #dc3545;
+  }
+  
+  .coupon-notification.show {
+    opacity: 1;
+  }
+</style>
 <!-- Breadcrumb Section Begin -->
 <section class="breadcrumb-option">
   <div class="container">
@@ -141,32 +200,48 @@
         </div>
       </div>
       <div class="col-lg-4">
-        <div class="cart__discount">
-          <h6>Discount codes</h6>
-          <form id="couponForm">
-            <input type="text" name="coupon" placeholder="Coupon code">
-            <input type="hidden" name="cartId" value="<%=  cartId %>">
-            <button type="submit">Apply</button>
-          </form>
-        </div>
+        <% if (cart && cart.items && cart.items.length > 0) { %>
+          <div class="cart__discount">
+            <h6>Discount codes</h6>
+            <form id="couponForm">
+              <input type="text" name="coupon" placeholder="Coupon code">
+              <input type="hidden" name="cartId" value="<%= cartId %>">
+              <button type="submit">Apply</button>
+            </form>
+            <% if (cart && cart.coupon_applied) { %>
+              <div class="applied-coupon mt-3">
+                <div class="coupon-info">
+                  <span class="coupon-code"><%= cart.coupon_applied.code %></span>
+                  <span class="coupon-discount">₹<%= cart.coupon_applied.discount && !isNaN(cart.coupon_applied.discount) ? cart.coupon_applied.discount.toFixed(2) : '0.00' %> off</span>
+                </div>
+                <button type="button" id="removeCoupon" class="remove-coupon-btn">Remove</button>
+              </div>
+            <% } %>
+          </div>
+        <% } %>
+        
         <div class="cart__total">
           <h6>Cart total</h6>
           <ul>
             <li>Subtotal <span>₹<%= cart && cart.subtotal ? cart.subtotal.toFixed(2) : '0.00' %></span></li>
-            <% if (cart && cart.coupon_applied) { %>
-              <li>Discount (<%= cart.coupon_applied.code %>) 
-                <span>- ₹<%= cart.coupon_applied.discount.toFixed(2) %></span>
+            <% if (cart && cart.coupon_applied && cart.coupon_applied.discount) { %>
+              <li>Discount (<%= cart.coupon_applied.code %>)
+                <span>- ₹<%= !isNaN(cart.coupon_applied.discount) ? cart.coupon_applied.discount.toFixed(2) : '0.00' %></span>
               </li>
             <% } %>
             <li>Total <span>₹<%= cart && cart.total ? cart.total.toFixed(2) : '0.00' %></span></li>
           </ul>
-          
           <% if (cart && cart.total && cart.total >= 1000) { %>
             <div class="alert alert-success mt-3" role="alert">
-               You are eligible for <strong>Free Delivery</strong>!
+              You are eligible for <strong>Free Delivery</strong>!
             </div>
           <% } %>
-          <a href="/checkout" class="primary-btn">Proceed to checkout</a>
+          
+          <% if (cart && cart.items && cart.items.length > 0) { %>
+            <a href="/checkout" class="primary-btn">Proceed to checkout</a>
+          <% } else { %>
+            <a href="/shop" class="primary-btn">Continue shopping</a>
+          <% } %>
         </div>
       </div>
     </div>
@@ -367,47 +442,47 @@ $.ajax({
 });
     });
 
-    // Apply coupon
-    $('#couponForm').on('submit', function(e) {
-  e.preventDefault();
+//     // Apply coupon
+//     $('#couponForm').on('submit', function(e) {
+//   e.preventDefault();
 
-  const coupon = $('input[name="coupon"]').val();
-  const cartId = $('input[name="cartId"]').val();
+//   const coupon = $('input[name="coupon"]').val();
+//   const cartId = $('input[name="cartId"]').val();
 
-  $.ajax({
-    type: 'POST',
-    url: '/cart/apply-coupon',
-    contentType: 'application/json',
-    data: JSON.stringify({ coupon, cartId }),
-    success: function(response) {
-      if (response.success) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Coupon Applied',
-          text: `Discount: ₹${response.cart.coupon_applied.discount.toFixed(2)}`,
-          confirmButtonColor: '#FFB22C'
-        }).then(() => {
-          location.reload(); // Reload to update cart summary
-        });
-      } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Invalid Coupon',
-          text: response.message,
-          confirmButtonColor: '#FFB22C'
-        });
-      }
-    },
-    error: function() {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Something went wrong while applying the coupon.',
-        confirmButtonColor: '#FFB22C'
-      });
-    }
-  });
-});
+//   $.ajax({
+//     type: 'POST',
+//     url: '/cart/apply-coupon',
+//     contentType: 'application/json',
+//     data: JSON.stringify({ coupon, cartId }),
+//     success: function(response) {
+//       if (response.success) {
+//         Swal.fire({
+//           icon: 'success',
+//           title: 'Coupon Applied',
+//           text: `Discount: ₹${response.cart.coupon_applied.discount.toFixed(2)}`,
+//           confirmButtonColor: '#FFB22C'
+//         }).then(() => {
+//           location.reload(); // Reload to update cart summary
+//         });
+//       } else {
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Invalid Coupon',
+//           text: response.message,
+//           confirmButtonColor: '#FFB22C'
+//         });
+//       }
+//     },
+//     error: function() {
+//       Swal.fire({
+//         icon: 'error',
+//         title: 'Error',
+//         text: 'Something went wrong while applying the coupon.',
+//         confirmButtonColor: '#FFB22C'
+//       });
+//     }
+//   });
+// });
 
 
     function updateCartItem($row) {
@@ -421,6 +496,127 @@ $.ajax({
       $('.cart__total ul li:eq(1) span').text('₹' + cart.total.toFixed(2));
     }
   });
+
+
+  document.addEventListener('DOMContentLoaded', function() {
+  // Coupon form submission
+  const couponForm = document.getElementById('couponForm');
+  if (couponForm) {
+    couponForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const couponCode = this.querySelector('input[name="coupon"]').value.trim();
+      const cartId = this.querySelector('input[name="cartId"]').value;
+      
+      if (!couponCode) {
+        showNotification('Please enter a coupon code', 'error');
+        return;
+      }
+      
+      // Check if cartId is valid
+      if (!cartId || cartId.trim() === '') {
+        showNotification('Your cart is empty. Add some products first.', 'error');
+        return;
+      }
+      
+      applyCoupon(couponCode, cartId);
+    });
+  }
+  
+  // Remove coupon button
+  const removeCouponBtn = document.getElementById('removeCoupon');
+  if (removeCouponBtn) {
+    removeCouponBtn.addEventListener('click', function() {
+      const cartId = document.querySelector('input[name="cartId"]').value;
+      removeCoupon(cartId);
+    });
+  }
+  
+  // Apply coupon function
+  function applyCoupon(couponCode, cartId) {
+    fetch('/cart/apply-coupon', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ coupon: couponCode, cartId: cartId })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showNotification('Coupon applied successfully!', 'success');
+        // Reload the page to show updated cart totals
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        showNotification(data.message, 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Error applying coupon:', error);
+      showNotification('Failed to apply coupon. Please try again.', 'error');
+    });
+  }
+  
+  // Remove coupon function
+  function removeCoupon(cartId) {
+    fetch('/cart/remove-coupon', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ cartId: cartId })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showNotification('Coupon removed successfully!', 'success');
+        // Reload the page to show updated cart totals
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        showNotification(data.message, 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Error removing coupon:', error);
+      showNotification('Failed to remove coupon. Please try again.', 'error');
+    });
+  }
+  
+  // Notification function
+  function showNotification(message, type) {
+    // Check if notification already exists, remove it if it does
+    const existingNotification = document.querySelector('.coupon-notification');
+    if (existingNotification) {
+      existingNotification.remove();
+    }
+    
+    // Create new notification
+    const notification = document.createElement('div');
+    notification.className = `coupon-notification ${type}`;
+    notification.textContent = message;
+    
+    // Add to body
+    document.body.appendChild(notification);
+    
+    // Show notification
+    setTimeout(() => {
+      notification.classList.add('show');
+    }, 10);
+    
+    // Hide and remove after 3 seconds
+    setTimeout(() => {
+      notification.classList.remove('show');
+      setTimeout(() => {
+        notification.remove();
+      }, 300);
+    }, 3000);
+  }
+});
+
 </script>
 
 <%- include("../../views/partials/user/footer.ejs") %>

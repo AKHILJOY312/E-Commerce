@@ -12,65 +12,81 @@ const Transaction=require('../../models/WalletTransaction');
 
 
 exports.getCheckoutPage = async (req, res) => {
-    try {
-        const userId = req.session.user_id;
-
-        const cart = await Cart.findOne({ user_id: userId })
-            .populate({
-                path: 'products.product_id',
-                model: 'Product'
-            })
-            .populate({
-                path: 'products.variant_id',
-                model: 'Variant'
-            });
-            
-        // Fetch all addresses for the user, not just the default one
-        const addresses = await Address.find({ user_id: userId }).lean();
-        const defaultAddress = addresses.find(addr => addr.is_default) || addresses[0] || null; // Fallback to first address if no default
-        const user = await User.findById(userId);
-
-        // Check if cart is empty and redirect to shop with SweetAlert
-        if (!cart || !cart.products || cart.products.length === 0) {
-           req.flash('error', 'Your cart is empty. Please add items to your cart before checking out.');
-            return res.redirect('/shop');
-        }
-
-        const availableProducts = cart.products.filter(item => 
-            item.variant_id && item.variant_id.quantity > 0 && 
-            item.quantity <= item.variant_id.quantity
-        );
-
-        // Check if there are no available products after filtering
-        if (availableProducts.length === 0) {
-           
-            return res.redirect('/cart');
-        }
-
-        let subtotal = availableProducts.reduce((sum, item) => 
-            sum + (item.variant_id.sale_price * item.quantity), 0);
-        const shippingCost = subtotal > 1000 ? 0 : 50;
-        const total = subtotal + shippingCost;
-
-        res.render('order/checkout', {
-            cart: {
-                products: availableProducts,
-                subtotal,
-                shippingCost,
-                total
-            },
-            addresses, // Pass all addresses
-            address: defaultAddress, // Initially selected address
-            user,
-            currentActivePage: "shop"
-        });
-    } catch (error) {
-        console.error("error getting the checkout",error);
-      
-        res.redirect('/cart');
+  try {
+    const userId = req.session.user_id;
+    
+    const cart = await Cart.findOne({ user_id: userId })
+      .populate({
+        path: 'products.product_id',
+        model: 'Product'
+      })
+      .populate({
+        path: 'products.variant_id',
+        model: 'Variant'
+      });
+    
+    // Fetch all addresses for the user, not just the default one
+    const addresses = await Address.find({ user_id: userId }).lean();
+    const defaultAddress = addresses.find(addr => addr.is_default) || addresses[0] || null; // Fallback to first address if no default
+    const user = await User.findById(userId);
+    
+    // Check if cart is empty and redirect to shop with SweetAlert
+    if (!cart || !cart.products || cart.products.length === 0) {
+      req.flash('error', 'Your cart is empty. Please add items to your cart before checking out.');
+      return res.redirect('/shop');
     }
+    
+    const availableProducts = cart.products.filter(item =>
+      item.variant_id && item.variant_id.quantity > 0 &&
+      item.quantity <= item.variant_id.quantity
+    );
+    
+    // Check if there are no available products after filtering
+    if (availableProducts.length === 0) {
+      return res.redirect('/cart');
+    }
+    
+    // Calculate subtotal
+    let subtotal = availableProducts.reduce((sum, item) =>
+      sum + (item.variant_id.sale_price * item.quantity), 0);
+    
+    // Check for applied coupon and calculate discount
+    let discount = 0;
+    let couponApplied = null;
+    
+    if (cart.coupon && cart.coupon.code && cart.coupon.discount) {
+      couponApplied = {
+        code: cart.coupon.code,
+        discount: parseFloat(cart.coupon.discount) || 0
+      };
+      discount = couponApplied.discount;
+    }
+    
+    // Calculate shipping cost
+    const shippingCost = subtotal > 1000 ? 0 : 50;
+    
+    // Calculate total including discount
+    const total = subtotal - discount + shippingCost;
+    
+    res.render('order/checkout', {
+      cart: {
+        products: availableProducts,
+        subtotal,
+        discount: discount,
+        couponApplied: couponApplied,
+        shippingCost,
+        total
+      },
+      addresses, // Pass all addresses
+      address: defaultAddress, // Initially selected address
+      user,
+      currentActivePage: "shop"
+    });
+  } catch (error) {
+    console.error("error getting the checkout", error);
+    res.redirect('/cart');
+  }
 };
-
 
 const verifyRazorpaySignature = (order_id, payment_id, signature) => {
   console.log("Verifying Razorpay signature with:");
@@ -97,6 +113,10 @@ exports.placeOrder = async (req, res) => {
     try {
       const userId = req.session.user_id;
       const { payment_method, addressId } = req.body;
+
+
+      let discount = 0;
+      let couponCode = null;
   console.log("place order",req.body)
       if (!payment_method) {
         req.flash('error', 'Please select a payment method');
@@ -115,11 +135,17 @@ exports.placeOrder = async (req, res) => {
           req.flash('error', 'Cart is empty');
           return res.redirect('/checkout');
         }
+        
+        
+        if (cart.coupon && cart.coupon.code && cart.coupon.discount) {
+          discount = parseFloat(cart.coupon.discount) || 0;
+          couponCode = cart.coupon.code;
+        }
   
         const subtotal = cart.products.reduce((sum, item) => 
           sum + (item.variant_id.sale_price * item.quantity), 0);
         const deliveryCharge = subtotal > 1000 ? 0 : 50;
-        const total = subtotal + deliveryCharge;
+        const total = subtotal- discount + deliveryCharge;
   
         if (user.wallet < total) {
           req.flash('error', 'Insufficient wallet balance');
@@ -179,11 +205,18 @@ exports.placeOrder = async (req, res) => {
         req.flash('error', 'No items in cart are available in sufficient quantity');
         return res.redirect('/checkout');
       }
+
+      
+      
+      if (cart.coupon && cart.coupon.code && cart.coupon.discount) {
+        discount = parseFloat(cart.coupon.discount) || 0;
+        couponCode = cart.coupon.code;
+      }
   
       const subtotal = availableProducts.reduce((sum, item) => 
         sum + (item.variant_id.sale_price * item.quantity), 0);
       const deliveryCharge = subtotal > 1000 ? 0 : 50;
-      const total = subtotal + deliveryCharge;
+      const total = subtotal-discount + deliveryCharge;
   
       const deliveryDate = new Date();
       deliveryDate.setDate(deliveryDate.getDate() + 7);
@@ -231,7 +264,7 @@ exports.placeOrder = async (req, res) => {
       await Cart.findOneAndDelete({ user_id: userId });
   
       
-      res.render('payment/payment-success',{currentActivePage:"",order});
+      res.render('payment/payment-success',{currentActivePage:"",order,payment_method,couponCode,discount});
     } catch (error) {
       console.error('Error placing order:', error);
       if (order && order._id) {

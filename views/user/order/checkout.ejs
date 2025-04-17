@@ -163,6 +163,11 @@
                             </ul>
                             <ul class="checkout__total__all">
                                 <li>Subtotal <span>₹<%= (cart && cart.subtotal) ? cart.subtotal.toFixed(2) : '0.00' %></span></li>
+                                <li> <% if (cart.couponApplied) { %>
+                                    <div class="checkout__order__discount">
+                                      Discount (<%= cart.couponApplied.code %>) <span>-₹<%= cart.discount.toFixed(2) %></span>
+                                    </div>
+                                  <% } %></li>
                                 <li>Shipping <span><%= (cart && cart.shippingCost !== undefined) ? (cart.shippingCost === 0 ? 'Free' : '₹' + cart.shippingCost.toFixed(2)) : 'Free' %></span></li>
                                 <li>Total <span>₹<%= (cart && cart.total) ? cart.total.toFixed(2) : '0.00' %></span></li>
                             </ul>

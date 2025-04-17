@@ -360,43 +360,10 @@
                         </div>
                         <div class="order-detail-row">
                             <span class="detail-label">Payment Method</span>
-                            <span class="detail-value"><%= order.payment_method %></span>
+                            <span class="detail-value"><%= payment_method %></span>
                         </div>
                     </div>
                     
-                    <div class="row">
-                        <div class="col-md-8">
-                            <div class="order-timeline text-start">
-                                <div class="timeline-item">
-                                    <div class="timeline-title">Order Confirmed</div>
-                                    <div class="timeline-text">Your payment has been processed successfully</div>
-                                </div>
-                                <div class="timeline-item">
-                                    <div class="timeline-title">Processing Order</div>
-                                    <div class="timeline-text">We're preparing your items</div>
-                                </div>
-                                <div class="timeline-item">
-                                    <div class="timeline-title">Shipping Soon</div>
-                                    <div class="timeline-text">Estimated delivery: <%= new Date(order.delivery_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) %></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 d-flex align-items-center justify-content-center">
-                            <div>
-                                <div class="qr-code" id="qrCode">
-                                    <svg width="100" height="100" viewBox="0 0 100 100">
-                                        <rect x="10" y="10" width="80" height="80" fill="#fff" />
-                                        <path d="M20,20 h20 v20 h-20 z M30,30 h-5 v-5 h5 z" fill="#000" />
-                                        <path d="M50,20 h20 v20 h-20 z M60,30 h-5 v-5 h5 z" fill="#000" />
-                                        <path d="M20,50 h20 v20 h-20 z M30,60 h-5 v-5 h5 z" fill="#000" />
-                                        <path d="M50,50 h5 v5 h5 v5 h-5 v5 h-5 v-5 h-5 v-5 h5 z" fill="#000" />
-                                        <path d="M70,50 h5 v5 h-5 z M70,60 h5 v5 h-5 z M60,70 h5 v5 h-5 z" fill="#000" />
-                                    </svg>
-                                </div>
-                                <p class="small text-muted">Scan for order details</p>
-                            </div>
-                        </div>
-                    </div>
                     
                     <div class="receipt-summary text-start">
                         <h5 class="mb-3">Order Summary</h5>
@@ -404,6 +371,16 @@
                             <span>Subtotal</span>
                             <span>₹<%= order.amount %></span>
                         </div>
+
+                        <div class="summary-row">
+                        
+                             <% if (couponCode) { %>
+                                <span>
+                                  Discount (<%= couponCode %>) <span>-₹<%= discount.toFixed(2) %></span>
+                                </span>
+                              <% } %>
+
+                            </div>
                         <div class="summary-row">
                             <span>Shipping</span>
                             <span>

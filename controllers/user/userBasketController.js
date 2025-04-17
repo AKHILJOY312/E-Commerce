@@ -10,141 +10,141 @@ const CouponUsage = require('../../models/CouponUsage'); // import at top
 
 
 
-exports.getCart = async (req, res) => {
-  try {
-    const userId = req.session.user_id;
-    if (!userId) {
-      return res.render('basket/cart', { 
-        cart: null, 
-        currentActivePage: "shop",
-        cartId: null,
-        relatedProducts: null,
-        message: "Please log in to view your cart"
-      });
-    }
+// exports.getCart = async (req, res) => {
+//   try {
+//     const userId = req.session.user_id;
+//     if (!userId) {
+//       return res.render('basket/cart', { 
+//         cart: null, 
+//         currentActivePage: "shop",
+//         cartId: null,
+//         relatedProducts: null,
+//         message: "Please log in to view your cart"
+//       });
+//     }
 
-    // Fetch cart from MongoDB
-    const cart = await Cart.findOne({ user_id: userId });
-    if (!cart || cart.products.length === 0) {
-      return res.render('basket/cart', { 
-        cart: null, 
-        currentActivePage: "shop",
-        cartId: null,
-        relatedProducts: null,
-        message: "Your cart is empty"
-      });
-    }
+//     // Fetch cart from MongoDB
+//     const cart = await Cart.findOne({ user_id: userId });
+//     if (!cart || cart.products.length === 0) {
+//       return res.render('basket/cart', { 
+//         cart: null, 
+//         currentActivePage: "shop",
+//         cartId: null,
+//         relatedProducts: null,
+//         message: "Your cart is empty"
+//       });
+//     }
 
    
 
-    // Populate product and variant details, filter out invalid or out-of-stock items
-    const populatedItems = await Promise.all(cart.products.map(async (item) => {
-      const variant = await Variant.findById(item.variant_id).lean();
+//     // Populate product and variant details, filter out invalid or out-of-stock items
+//     const populatedItems = await Promise.all(cart.products.map(async (item) => {
+//       const variant = await Variant.findById(item.variant_id).lean();
       
-      if (!variant) {
+//       if (!variant) {
        
-        return null;
-      }
+//         return null;
+//       }
 
-      // Check stock using variant.quantity
-      if (variant.quantity <= 0) {
+//       // Check stock using variant.quantity
+//       if (variant.quantity <= 0) {
       
-        return null;
-      }
+//         return null;
+//       }
 
-      const product = await Product.findById(variant.product_id).lean();
-      if (!product) {
+//       const product = await Product.findById(variant.product_id).lean();
+//       if (!product) {
         
-        return null;
-      }
+//         return null;
+//       }
 
-      // Parse and validate cart quantity
-      const cartQuantity = parseInt(item.quantity, 10);
-      if (isNaN(cartQuantity) || cartQuantity <= 0) {
+//       // Parse and validate cart quantity
+//       const cartQuantity = parseInt(item.quantity, 10);
+//       if (isNaN(cartQuantity) || cartQuantity <= 0) {
        
-        return null;
-      }
-      return {
-        product,
-        variant,
-        quantity: Math.min(cartQuantity, variant.quantity) // Cap to available stock
-      };
-    }));
+//         return null;
+//       }
+//       return {
+//         product,
+//         variant,
+//         quantity: Math.min(cartQuantity, variant.quantity) // Cap to available stock
+//       };
+//     }));
 
-    // Filter out null entries
-    const validItems = populatedItems.filter(item => item !== null);
+//     // Filter out null entries
+//     const validItems = populatedItems.filter(item => item !== null);
 
-    // Update cart in DB if any items were removed
-    if (validItems.length !== cart.products.length) {
-      cart.products = validItems.map(item => ({
-        product_id: item.product._id,    // Include product_id
-        variant_id: item.variant._id,
-        quantity: item.quantity
-      }));
-      try {
-        await cart.save();
-        req.flash('info', 'Some items were removed from your cart as they are out of stock or had invalid quantities.');
-      } catch (saveError) {
-        console.error('Error saving cart:', saveError);
-        req.flash('error', 'Failed to update cart due to a server error.');
-      }
-    }
+//     // Update cart in DB if any items were removed
+//     if (validItems.length !== cart.products.length) {
+//       cart.products = validItems.map(item => ({
+//         product_id: item.product._id,    // Include product_id
+//         variant_id: item.variant._id,
+//         quantity: item.quantity
+//       }));
+//       try {
+//         await cart.save();
+//         req.flash('info', 'Some items were removed from your cart as they are out of stock or had invalid quantities.');
+//       } catch (saveError) {
+//         console.error('Error saving cart:', saveError);
+//         req.flash('error', 'Failed to update cart due to a server error.');
+//       }
+//     }
 
-    // Calculate totals with detailed logging
-    const subtotal = validItems.reduce((sum, item) => {
-      const itemTotal = item.variant.sale_price * item.quantity;
+//     // Calculate totals with detailed logging
+//     const subtotal = validItems.reduce((sum, item) => {
+//       const itemTotal = item.variant.sale_price * item.quantity;
      
-      return sum + (isNaN(itemTotal) ? 0 : itemTotal);
-    }, 0);
+//       return sum + (isNaN(itemTotal) ? 0 : itemTotal);
+//     }, 0);
 
-    console.log('Subtotal:', subtotal);
+//     console.log('Subtotal:', subtotal);
 
-    // Fetch related products, excluding out-of-stock items
-    let relatedProducts = [];
-    if (validItems.length > 0) {
-      const currentProduct = validItems[0].product;
-      relatedProducts = await Product.find({
-        _id: { $ne: currentProduct._id },
-        category_id: currentProduct.category_id,
-        isDeleted: false,
-        status: 'listed',
-      })
-        .populate({
-          path: 'variants',
-          match: { quantity: { $gt: 0 } }
-        })
-        .lean()
-        .limit(4);
+//     // Fetch related products, excluding out-of-stock items
+//     let relatedProducts = [];
+//     if (validItems.length > 0) {
+//       const currentProduct = validItems[0].product;
+//       relatedProducts = await Product.find({
+//         _id: { $ne: currentProduct._id },
+//         category_id: currentProduct.category_id,
+//         isDeleted: false,
+//         status: 'listed',
+//       })
+//         .populate({
+//           path: 'variants',
+//           match: { quantity: { $gt: 0 } }
+//         })
+//         .lean()
+//         .limit(4);
 
-      relatedProducts = relatedProducts.filter(product => 
-        product.variants && product.variants.length > 0
-      );
-    }
+//       relatedProducts = relatedProducts.filter(product => 
+//         product.variants && product.variants.length > 0
+//       );
+//     }
 
-    const cartData = {
-      items: validItems,
-      subtotal: isNaN(subtotal) ? 0 : subtotal,
-      total: isNaN(subtotal) ? 0 : subtotal,
-    };
+//     const cartData = {
+//       items: validItems,
+//       subtotal: isNaN(subtotal) ? 0 : subtotal,
+//       total: isNaN(subtotal) ? 0 : subtotal,
+//     };
 
-    res.render('basket/cart', {
-      cart: cartData,
-      currentActivePage: "shop",
-      cartId: cart._id,
-      relatedProducts,
-      message: req.flash('info') || req.flash('error') || null
-    });
-  } catch (error) {
-    console.error('Error fetching cart:', error);
-    res.render('basket/cart', { 
-      cart: null, 
-      currentActivePage: "shop",
-      cartId: null,
-      relatedProducts: null,
-      message: "An error occurred while loading your cart"
-    });
-  }
-};
+//     res.render('basket/cart', {
+//       cart: cartData,
+//       currentActivePage: "shop",
+//       cartId: cart._id,
+//       relatedProducts,
+//       message: req.flash('info') || req.flash('error') || null
+//     });
+//   } catch (error) {
+//     console.error('Error fetching cart:', error);
+//     res.render('basket/cart', { 
+//       cart: null, 
+//       currentActivePage: "shop",
+//       cartId: null,
+//       relatedProducts: null,
+//       message: "An error occurred while loading your cart"
+//     });
+//   }
+// };
 
 exports.addToCart = async (req, res) => {
   try {
@@ -371,137 +371,366 @@ exports.updateCart = async (req, res) => {
   
 
 
-  exports.applyCoupon = async (req, res) => {
+  // 1. First, let's update the controller to add a removeCoupon function
+  exports.removeCoupon = async (req, res) => {
     try {
-      const { coupon, cartId } = req.body;
+      const { cartId } = req.body;
       
-  
-      // 1. Get the cart (raw, without population first)
-      const rawCart = await Cart.findById(cartId);
-     
-
-      // 2. Populate the cart
-      const cart = await Cart.findById(cartId)
-        .populate('products.variant_id')
-        .populate('products.product_id');
-      
-  
-      if (!cart || !cart.products || cart.products.length === 0) {
-        
-        return res.status(400).json({ success: false, message: 'Cart not found or empty' });
+      // Validate cartId
+      if (!cartId || cartId.trim() === '') {
+        return res.status(400).json({ success: false, message: 'Invalid cart ID' });
       }
-    
-      // 3. Calculate subtotal with detailed logging
-      let subtotal = 0;
-      cart.products.forEach(item => {
-       
-        const variant = item.variant_id;
-        if (variant && variant.sale_price) {
-          
-          subtotal += variant.sale_price * item.quantity;
-        } else {
-          
+      
+      // Check if cartId is a valid MongoDB ObjectId
+      if (!mongoose.Types.ObjectId.isValid(cartId)) {
+        return res.status(400).json({ success: false, message: 'Invalid cart ID format' });
+      }
+      
+      // Find the cart
+      const cart = await Cart.findById(cartId);
+      
+      if (!cart) {
+        return res.status(404).json({ success: false, message: 'Cart not found' });
+      }
+      
+      // Check if there's a coupon to remove
+      if (!cart.coupon) {
+        return res.status(400).json({ success: false, message: 'No coupon applied to remove' });
+      }
+      
+      // Get coupon code for the success message
+      const removedCouponCode = cart.coupon.code;
+      
+      // Remove the coupon from cart
+      cart.coupon = null;
+      
+      // Recalculate total without discount
+      const subtotal = cart.subtotal || 0;
+      cart.total = subtotal;
+      
+      await cart.save();
+      
+      res.json({
+        success: true,
+        message: `Coupon ${removedCouponCode} has been removed`,
+        data: {
+          subtotal,
+          discount: 0,
+          total: subtotal,
+          updatedCart: cart
         }
       });
-  
-     
       
-      if (subtotal === 0) {
-        return res.status(400).json({ success: false, message: 'Invalid cart subtotal' });
-      }
-  
-       // 3. Validate the coupon
-       const now = new Date();
-       const foundCoupon = await Coupon.findOne({
-         code: coupon,
-         is_deleted: false,
-         status: true,
-         start_date: { $lte: now },
-         end_date: { $gte: now }
-       });
-   
-       
-       if (!foundCoupon) {
-         return res.json({ success: false, message: 'Invalid or expired coupon code' });
-       }
-   
-       if (subtotal < foundCoupon.min_order_value) {
-         return res.json({
-           success: false,
-           message: `Minimum order value should be ₹${foundCoupon.min_order_value}`
-         });
-       }
-   
-       if (foundCoupon.usage_limit > 0 && foundCoupon.used_count >= foundCoupon.usage_limit) {
-         return res.json({ success: false, message: 'This coupon has reached its usage limit' });
-       }
-   
-       // 4. Check user usage
-       const userId = req.session.user_id;
-   
-       if (userId && foundCoupon.limit_per_user > 0) {
-         const alreadyUsed = await CouponUsage.findOne({
-           user_id: userId,
-           coupon_id: foundCoupon._id
-         });
-   
-         if (alreadyUsed) {
-           return res.json({ success: false, message: 'You have already used this coupon' });
-         }
-       }
-   
-       // 5. Calculate discount
-       let discount = 0;
-       if (foundCoupon.discount_type === 'percentage') {
-         discount = (subtotal * foundCoupon.discount_value) / 100;
-       } else {
-         discount = foundCoupon.discount_value;
-       }
-   
-       console.log('✅ Calculated Discount:', discount);
-   
-       const total = subtotal - discount;
-   
-       // 6. Save applied coupon to cart
-       cart.coupon = {
-         code: foundCoupon.code,
-         discount: discount
-       };
-       cart.total = total;
-       console.log('✅ total:', total);
-       await cart.save();
-   
-       // 7. Track coupon usage
-       if (userId && foundCoupon.limit_per_user > 0) {
-         await CouponUsage.create({
-           user_id: userId,
-           coupon_id: foundCoupon._id
-         });
-       }
-   
-       // 8. Update global coupon used count
-       foundCoupon.used_count += 1;
-       await foundCoupon.save();
-   
-       // 9. Send response with updated cart
-       res.json({
-         success: true,
-         data: {
-           subtotal,
-           discount,
-           total,
-           couponApplied: cart.coupon,
-           updatedCart: cart
-         }
-       });
     } catch (error) {
-      console.error('❌ Error applying coupon:', error);
-      res.status(500).json({ success: false, message: 'Failed to apply coupon' });
+      console.error('❌ Error removing coupon:', error);
+      res.status(500).json({ success: false, message: 'Failed to remove coupon' });
     }
   };
+
+// 2. Let's add a helper function to calculate the cart totals
+exports.calculateCartTotals = async (cart) => {
+  let subtotal = 0;
   
+  // Calculate subtotal from products
+  if (cart.products && cart.products.length > 0) {
+    cart.products.forEach(item => {
+      const variant = item.variant_id;
+      if (variant && variant.sale_price) {
+        subtotal += variant.sale_price * item.quantity;
+      }
+    });
+  }
+  
+  // Set subtotal
+  cart.subtotal = subtotal;
+  
+  // Calculate total with discount if coupon is applied
+  if (cart.coupon && cart.coupon.discount) {
+    cart.total = subtotal - cart.coupon.discount;
+  } else {
+    cart.total = subtotal;
+  }
+  
+  return cart;
+};
 
+// 3. Update the applyCoupon function to use the helper
+exports.applyCoupon = async (req, res) => {
+  try {
+    const { coupon, cartId } = req.body;
+    
+    // Validate inputs
+    if (!coupon || !coupon.trim()) {
+      return res.status(400).json({ success: false, message: 'Coupon code is required' });
+    }
+    
+    // Check if cartId is valid
+    if (!cartId || cartId.trim() === '') {
+      return res.status(400).json({ success: false, message: 'Your cart is empty. Add some products first.' });
+    }
+    
+    // Validate if cartId is a valid MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(cartId)) {
+      return res.status(400).json({ success: false, message: 'Invalid cart ID' });
+    }
+    
+    // 1. Get the cart (raw, without population first)
+    const rawCart = await Cart.findById(cartId);
+    
+    if (!rawCart) {
+      return res.status(404).json({ success: false, message: 'Cart not found' });
+    }
+    
+    // 2. Populate the cart
+    const cart = await Cart.findById(cartId)
+      .populate('products.variant_id')
+      .populate('products.product_id');
+   
+    if (!cart || !cart.products || cart.products.length === 0) {
+      return res.status(400).json({ success: false, message: 'Your cart is empty. Add some products first.' });
+    }
 
+    // 3. Calculate subtotal with detailed logging
+    let subtotal = 0;
+    cart.products.forEach(item => {
+      const variant = item.variant_id;
+      if (variant && variant.sale_price) {
+        subtotal += variant.sale_price * item.quantity;
+      }
+    });
+   
+    if (subtotal === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid cart subtotal' });
+    }
+
+    // 3. Validate the coupon
+    const now = new Date();
+    const foundCoupon = await Coupon.findOne({
+      code: coupon,
+      is_deleted: false,
+      status: true,
+      start_date: { $lte: now },
+      end_date: { $gte: now }
+    });
+
+    if (!foundCoupon) {
+      return res.json({ success: false, message: 'Invalid or expired coupon code' });
+    }
+
+    if (subtotal < foundCoupon.min_order_value) {
+      return res.json({
+        success: false,
+        message: `Minimum order value should be ₹${foundCoupon.min_order_value}`
+      });
+    }
+
+    if (foundCoupon.usage_limit > 0 && foundCoupon.used_count >= foundCoupon.usage_limit) {
+      return res.json({ success: false, message: 'This coupon has reached its usage limit' });
+    }
+
+    // 4. Check user usage
+    const userId = req.session.user_id;
+
+    if (userId && foundCoupon.limit_per_user > 0) {
+      const alreadyUsed = await CouponUsage.findOne({
+        user_id: userId,
+        coupon_id: foundCoupon._id
+      });
+
+      if (alreadyUsed) {
+        return res.json({ success: false, message: 'You have already used this coupon' });
+      }
+    }
+
+    // 5. Calculate discount
+    let discount = 0;
+    if (foundCoupon.discount_type === 'percentage') {
+      discount = (subtotal * foundCoupon.discount_value) / 100;
+    } else {
+      discount = foundCoupon.discount_value;
+    }
+
+    console.log('✅ Calculated Discount:', discount);
+
+    const total = subtotal - discount;
+
+    // 6. Save applied coupon to cart
+    cart.coupon = {
+      code: foundCoupon.code,
+      discount: discount
+    };
+    cart.total = total;
+    cart.subtotal = subtotal;
+    console.log('✅ total:', total);
+    await cart.save();
+
+    // 7. Track coupon usage
+    if (userId && foundCoupon.limit_per_user > 0) {
+      await CouponUsage.create({
+        user_id: userId,
+        coupon_id: foundCoupon._id
+      });
+    }
+
+    // 8. Update global coupon used count
+    foundCoupon.used_count += 1;
+    await foundCoupon.save();
+
+    // 9. Send response with updated cart
+    res.json({
+      success: true,
+      data: {
+        subtotal,
+        discount,
+        total,
+        couponApplied: cart.coupon,
+        updatedCart: cart
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error applying coupon:', error);
+    res.status(500).json({ success: false, message: 'Failed to apply coupon' });
+  }
+};
+
+// 4. Update the getCart function to include coupon data in the cart view
+exports.getCart = async (req, res) => {
+  try {
+    const userId = req.session.user_id;
+    if (!userId) {
+      return res.render('basket/cart', {
+        cart: null,
+        currentActivePage: "shop",
+        cartId: null,
+        relatedProducts: null,
+        message: "Please log in to view your cart"
+      });
+    }
+    // Fetch cart from MongoDB
+    const cart = await Cart.findOne({ user_id: userId });
+    if (!cart || cart.products.length === 0) {
+      return res.render('basket/cart', {
+        cart: null,
+        currentActivePage: "shop",
+        cartId: null,
+        relatedProducts: null,
+        message: "Your cart is empty"
+      });
+    }
+   
+    // Populate product and variant details
+    const populatedItems = await Promise.all(cart.products.map(async (item) => {
+      const variant = await Variant.findById(item.variant_id).lean();
+     
+      if (!variant) {
+        return null;
+      }
+      // Check stock using variant.quantity
+      if (variant.quantity <= 0) {
+        return null;
+      }
+      const product = await Product.findById(variant.product_id).lean();
+      if (!product) {
+        return null;
+      }
+      // Parse and validate cart quantity
+      const cartQuantity = parseInt(item.quantity, 10);
+      if (isNaN(cartQuantity) || cartQuantity <= 0) {
+        return null;
+      }
+      return {
+        product,
+        variant,
+        quantity: Math.min(cartQuantity, variant.quantity) // Cap to available stock
+      };
+    }));
+    
+    // Filter out null entries
+    const validItems = populatedItems.filter(item => item !== null);
+    
+    // Update cart in DB if any items were removed
+    if (validItems.length !== cart.products.length) {
+      cart.products = validItems.map(item => ({
+        product_id: item.product._id,
+        variant_id: item.variant._id,
+        quantity: item.quantity
+      }));
+      try {
+        await cart.save();
+        req.flash('info', 'Some items were removed from your cart as they are out of stock or had invalid quantities.');
+      } catch (saveError) {
+        console.error('Error saving cart:', saveError);
+        req.flash('error', 'Failed to update cart due to a server error.');
+      }
+    }
+    
+    // Calculate totals
+    const subtotal = validItems.reduce((sum, item) => {
+      const itemTotal = item.variant.sale_price * item.quantity;
+      return sum + (isNaN(itemTotal) ? 0 : itemTotal);
+    }, 0);
+    
+    // Get discount if coupon is applied
+    let discount = 0;
+    let couponApplied = null;
+    
+    if (cart.coupon && typeof cart.coupon === 'object' && cart.coupon.code) {
+      couponApplied = {
+        code: cart.coupon.code,
+        discount: parseFloat(cart.coupon.discount) || 0
+      };
+      discount = couponApplied.discount;
+    }
+    
+    // Calculate total (subtotal - discount)
+    const total = subtotal - discount;
+    
+    // Fetch related products
+    let relatedProducts = [];
+    if (validItems.length > 0) {
+      const currentProduct = validItems[0].product;
+      relatedProducts = await Product.find({
+        _id: { $ne: currentProduct._id },
+        category_id: currentProduct.category_id,
+        isDeleted: false,
+        status: 'listed',
+      })
+        .populate({
+          path: 'variants',
+          match: { quantity: { $gt: 0 } }
+        })
+        .lean()
+        .limit(4);
+      relatedProducts = relatedProducts.filter(product =>
+        product.variants && product.variants.length > 0
+      );
+    }
+    
+    const cartData = {
+      items: validItems,
+      subtotal: isNaN(subtotal) ? 0 : subtotal,
+      total: isNaN(total) ? 0 : total,
+      coupon_applied: couponApplied
+    };
+    
+    res.render('basket/cart', {
+      cart: cartData,
+      currentActivePage: "shop",
+      cartId: cart._id,
+      relatedProducts,
+      message: req.flash('info') || req.flash('error') || null
+    });
+  } catch (error) {
+    console.error('Error fetching cart:', error);
+    res.render('basket/cart', {
+      cart: null,
+      currentActivePage: "shop",
+      cartId: null,
+      relatedProducts: null,
+      message: "An error occurred while loading your cart"
+    });
+  }
+};
 
 
 
