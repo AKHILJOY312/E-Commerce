@@ -4,23 +4,46 @@ const Coupon = require('../../models/Coupon');
 exports.getCoupons = async (req, res) => {
   try {
     const searchQuery = req.query.search || '';
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10; // Number of coupons per page
+    const skip = (page - 1) * limit;
+    const startDate = req.query.startDate || '';
+    const endDate = req.query.endDate || '';
+
     const query = {
       is_deleted: false,
       code: { $regex: searchQuery, $options: 'i' }
     };
 
-    const coupons = await Coupon.find(query).sort({ createdAt: -1 });
+    // Add date filters if provided
+    if (startDate) {
+      query.start_date = { $gte: new Date(startDate) };
+    }
+    if (endDate) {
+      query.end_date = { $lte: new Date(endDate) };
+    }
+
+    const totalCoupons = await Coupon.countDocuments(query);
+    const coupons = await Coupon.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalPages = Math.ceil(totalCoupons / limit);
 
     res.render('coupon', {
       coupons,
-      searchQuery
+      searchQuery,
+      currentPage: page,
+      totalPages,
+      startDate,
+      endDate
     });
   } catch (error) {
     console.error('Error fetching coupons:', error);
     res.redirect('/admin/dashboard');
   }
 };
-
 // POST: Add Coupon
 exports.addCoupon = async (req, res) => {
   try {

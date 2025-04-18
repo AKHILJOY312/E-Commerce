@@ -1,5 +1,11 @@
 <%- include("../../views/partials/admin/header.ejs") %>
 
+<style>
+   .expired-coupon {
+      opacity: 0.6;
+      background-color: #f8f9fa;
+    }
+</style>
 <div class="container-fluid">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h3 mb-0 text-gray-800">Coupon List</h1>
@@ -28,6 +34,24 @@
       <h6 class="m-0 font-weight-bold text-primary">Coupon Table</h6>
     </div>
     <div class="card-body">
+      <!-- Filter Form -->
+      <div class="mb-4">
+        <form action="/admin/coupon" method="GET" class="d-flex gap-3">
+          <div class="form-group">
+            <label for="startDate">Start Date</label>
+            <input type="date" class="form-control" id="startDate" name="startDate" value="<%= startDate || '' %>">
+          </div>
+          <div class="form-group">
+            <label for="endDate">End Date</label>
+            <input type="date" class="form-control" id="endDate" name="endDate" value="<%= endDate || '' %>">
+          </div>
+          <div class="form-group align-self-end">
+            <button type="submit" class="btn btn-primary">Filter</button>
+            <a href="/admin/coupon" class="btn btn-secondary">Clear</a>
+          </div>
+        </form>
+      </div>
+
       <div class="table-responsive">
         <% if (coupons.length === 0) { %>
           <div class="alert alert-warning text-center">No coupons found for "<%= searchQuery %>"</div>
@@ -45,14 +69,18 @@
           </thead>
           <tbody>
             <% coupons.forEach(coupon => { %>
-              <tr>
+              <tr class="<%= new Date(coupon.end_date) < new Date() ? 'expired-coupon' : '' %>">
                 <td><%= coupon.code %></td>
                 <td><%= coupon.discount_type === 'percentage' ? coupon.discount_value + '%' : '₹' + coupon.discount_value %></td>
                 <td><%= coupon.used_count %> / <%= coupon.usage_limit %></td>
                 <td>
-                  <span class="badge badge-<%= coupon.status ? 'success' : 'danger' %>">
-                    <%= coupon.status ? 'Active' : 'Inactive' %>
-                  </span>
+                  <% if (new Date(coupon.end_date) < new Date()) { %>
+                    <span class="badge badge-danger">Expired</span>
+                  <% } else { %>
+                    <span class="badge badge-<%= coupon.status ? 'success' : 'danger' %>">
+                      <%= coupon.status ? 'Active' : 'Inactive' %>
+                    </span>
+                  <% } %>
                 </td>
                 <td>
                   <%= new Date(coupon.start_date).toLocaleDateString() %> - 
@@ -75,10 +103,34 @@
             <% }) %>
           </tbody>
         </table>
+        <!-- Pagination -->
+        <nav aria-label="Coupon pagination">
+          <ul class="pagination justify-content-center mt-4">
+            <% if (currentPage > 1) { %>
+              <li class="page-item">
+                <a class="page-link" href="?page=<%= currentPage - 1 %>&search=<%= searchQuery %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">Previous</a>
+              </li>
+            <% } %>
+            
+            <% for(let i = 1; i <= totalPages; i++) { %>
+              <li class="page-item <%= currentPage === i ? 'active' : '' %>">
+                <a class="page-link" href="?page=<%= i %>&search=<%= searchQuery %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>"><%= i %></a>
+              </li>
+            <% } %>
+            
+            <% if (currentPage < totalPages) { %>
+              <li class="page-item">
+                <a class="page-link" href="?page=<%= currentPage + 1 %>&search=<%= searchQuery %>&startDate=<%= startDate || '' %>&endDate=<%= endDate || '' %>">Next</a>
+              </li>
+            <% } %>
+          </ul>
+        </nav>
         <% } %>
       </div>
     </div>
   </div>
+
+  
 </div>
 
 <!-- Add Coupon Modal -->

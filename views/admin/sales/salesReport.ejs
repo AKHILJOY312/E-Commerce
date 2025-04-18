@@ -1,0 +1,278 @@
+<%- include("../../views/partials/admin/header.ejs") %>
+
+<style>
+  .table-responsive { max-height: 500px; overflow-y: auto; }
+  .filter-form { display: flex; gap: 15px; flex-wrap: wrap; }
+  .filter-form .form-group { min-width: 150px; }
+</style>
+
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Sales Report</h1>
+    <div class="d-flex align-items-center">
+      <form class="form-inline navbar-search mr-2" action="/admin/sales" method="GET">
+        <div class="input-group">
+          <input type="text" name="search" class="form-control bg-light border-0 small"
+            placeholder="Search by order number or customer..." value="<%= searchQuery || '' %>" />
+          <div class="input-group-append">
+            <button class="btn btn-primary" type="submit"><i class="fas fa-search fa-sm"></i></button>
+            <button class="btn btn-secondary" type="button" id="resetSearch"><i class="fas fa-times"></i></button>
+          </div>
+        </div>
+      </form>
+      <button class="btn btn-primary" data-toggle="modal" data-target="#filterModal">
+        <i class="fas fa-filter"></i> Filters
+      </button>
+    </div>
+  </div>
+
+  <p class="mb-4">View and download sales reports for your e-commerce platform.</p>
+
+  <div class="card shadow mb-4">
+    <div class="card-header py-3">
+      <h6 class="m-0 font-weight-bold text-primary">Sales Report</h6>
+    </div>
+    <div class="card-body">
+      <!-- Filter Display -->
+      <div class="mb-4">
+        <form action="/admin/sales" method="GET" class="filter-form">
+          <div class="form-group">
+            <label for="period">Period</label>
+            <select class="form-control" id="period" name="period">
+              <option value="daily" <%= period === 'daily' ? 'selected' : '' %>>Daily</option>
+              <option value="weekly" <%= period === 'weekly' ? 'selected' : '' %>>Weekly</option>
+              <option value="yearly" <%= period === 'yearly' ? 'selected' : '' %>>Yearly</option>
+              <option value="custom" <%= period === 'custom' ? 'selected' : '' %>>Custom</option>
+            </select>
+          </div>
+          <div class="form-group" id="customDateRange" style="display: <%= period === 'custom' ? 'block' : 'none' %>;">
+            <label for="startDate">Start Date</label>
+            <input type="date" class="form-control" id="startDate" name="startDate" value="<%= startDate || '' %>">
+          </div>
+          <div class="form-group" id="endDateGroup" style="display: <%= period === 'custom' ? 'block' : 'none' %>;">
+            <label for="endDate">End Date</label>
+            <input type="date" class="form-control" id="endDate" name="endDate" value="<%= endDate || '' %>">
+          </div>
+          <div class="form-group align-self-end">
+            <button type="submit" class="btn btn-primary">Apply</button>
+            <a href="/admin/sales" class="btn btn-secondary">Clear</a>
+          </div>
+        </form>
+      </div>
+
+      <!-- Download Buttons -->
+      <div class="mb-4">
+        <button class="btn btn-success mr-2" id="downloadPDF">Download PDF</button>
+        <button class="btn btn-info" id="downloadExcel">Download Excel</button>
+      </div>
+
+      <!-- Report Table -->
+      <div class="table-responsive">
+        <% if (!reportData || reportData.length === 0) { %>
+          <div class="alert alert-warning text-center">No sales data found for the selected filters.</div>
+        <% } else { %>
+          <table class="table table-bordered" width="100%" cellspacing="0">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Sales Count</th>
+                <th>Total Revenue</th>
+                <th>Total Discounts</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% reportData.forEach(row => { %>
+                <tr>
+                  <td><%= row.date || period %></td>
+                  <td><%= row.salesCount %></td>
+                  <td>₹<%= row.totalRevenue.toFixed(2) %></td>
+                  <td>₹<%= row.totalDiscounts.toFixed(2) %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+
+          <!-- Pagination -->
+          <nav aria-label="Sales report pagination">
+            <ul class="pagination justify-content-center mt-4">
+              <% if (currentPage > 1) { %>
+                <li class="page-item">
+                  <a class="page-link" href="?page=<%= currentPage - 1 %>&period=<%= encodeURIComponent(period) %>&startDate=<%= encodeURIComponent(startDate || '') %>&endDate=<%= encodeURIComponent(endDate || '') %>&search=<%= encodeURIComponent(searchQuery || '') %>&categoryId=<%= encodeURIComponent(categoryId || '') %>&region=<%= encodeURIComponent(region || '') %>">Previous</a>
+                </li>
+              <% } %>
+              <% for(let i = 1; i <= totalPages; i++) { %>
+                <li class="page-item <%= currentPage === i ? 'active' : '' %>">
+                  <a class="page-link" href="?page=<%= i %>&period=<%= encodeURIComponent(period) %>&startDate=<%= encodeURIComponent(startDate || '') %>&endDate=<%= encodeURIComponent(endDate || '') %>&search=<%= encodeURIComponent(searchQuery || '') %>&categoryId=<%= encodeURIComponent(categoryId || '') %>&region=<%= encodeURIComponent(region || '') %>"><%= i %></a>
+                </li>
+              <% } %>
+              <% if (currentPage < totalPages) { %>
+                <li class="page-item">
+                  <a class="page-link" href="?page=<%= currentPage + 1 %>&period=<%= encodeURIComponent(period) %>&startDate=<%= encodeURIComponent(startDate || '') %>&endDate=<%= encodeURIComponent(endDate || '') %>&search=<%= encodeURIComponent(searchQuery || '') %>&categoryId=<%= encodeURIComponent(categoryId || '') %>&region=<%= encodeURIComponent(region || '') %>">Next</a>
+                </li>
+              <% } %>
+            </ul>
+          </nav>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filter Modal -->
+<div class="modal fade" id="filterModal" tabindex="-1" role="dialog" aria-labelledby="filterModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <form id="advancedFilterForm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Advanced Filters</h5>
+          <button type="button" class="close" data-dismiss="modal"><span>×</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="categoryId">Category</label>
+            <select class="form-control" id="categoryId" name="categoryId">
+              <option value="">All Categories</option>
+              <% categories.forEach(category => { %>
+                <option value="<%= category._id %>" <%= categoryId === category._id.toString() ? 'selected' : '' %>>
+                  <%= category.title %>
+                </option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="region">Region</label>
+            <input type="text" class="form-control" id="region" name="region" value="<%= region || '' %>" placeholder="e.g., North America">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Apply Filters</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+
+$("#advancedFilterForm").submit(function (e) {
+  e.preventDefault();
+  const categoryId = $("#categoryId").val();
+  const region = $("#region").val();
+  const period = $("#period").val();
+  const startDate = $("#startDate").val();
+  const endDate = $("#endDate").val();
+  const search = new URLSearchParams(window.location.search).get("search") || "";
+
+  if (period === "custom" && (!startDate || !endDate)) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Start and end dates are required for custom period.',
+    });
+    return;
+  }
+
+  let url = `/admin/sales?period=${encodeURIComponent(period)}&search=${encodeURIComponent(search)}`;
+  if (period === "custom" && startDate && endDate) {
+    url += `&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+  }
+  if (categoryId) url += `&categoryId=${encodeURIComponent(categoryId)}`;
+  if (region && region.trim()) url += `&region=${encodeURIComponent(region)}`;
+
+  window.location.href = url;
+});
+  // Reset search
+  document.getElementById("resetSearch").addEventListener("click", () => {
+    window.location.href = "/admin/sales";
+  });
+
+  // Show/hide custom date range
+  $("#period").change(function () {
+    if ($(this).val() === "custom") {
+      $("#customDateRange, #endDateGroup").show();
+    } else {
+      $("#customDateRange, #endDateGroup").hide();
+    }
+  });
+
+  // Advanced filter form submission
+  $("#advancedFilterForm").submit(function (e) {
+    e.preventDefault();
+    const categoryId = $("#categoryId").val();
+    const region = $("#region").val();
+    const period = $("#period").val();
+    const startDate = $("#startDate").val();
+    const endDate = $("#endDate").val();
+    const search = new URLSearchParams(window.location.search).get("search") || "";
+
+    let url = `/admin/sales?period=${encodeURIComponent(period)}&search=${encodeURIComponent(search)}`;
+    if (period === "custom" && startDate && endDate) {
+      url += `&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+    }
+    if (categoryId) url += `&categoryId=${encodeURIComponent(categoryId)}`;
+    if (region && region.trim()) url += `&region=${encodeURIComponent(region)}`; // Only add region if non-empty
+
+    window.location.href = url;
+  });
+
+  // Download PDF
+  $("#downloadPDF").click(function () {
+    const period = $("#period").val();
+    const startDate = $("#startDate").val();
+    const endDate = $("#endDate").val();
+    const categoryId = new URLSearchParams(window.location.search).get("categoryId") || "";
+    const region = new URLSearchParams(window.location.search).get("region") || "";
+
+    let url = `/admin/sales/download?format=pdf&period=${encodeURIComponent(period)}`;
+    if (period === "custom" && startDate && endDate) {
+      url += `&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+    }
+    if (categoryId) url += `&categoryId=${encodeURIComponent(categoryId)}`;
+    if (region && region.trim()) url += `&region=${encodeURIComponent(region)}`; // Only add region if non-empty
+
+    window.location.href = url;
+  });
+
+  // Download Excel
+  $("#downloadExcel").click(function () {
+    const period = $("#period").val();
+    const startDate = $("#startDate").val();
+    const endDate = $("#endDate").val();
+    const categoryId = new URLSearchParams(window.location.search).get("categoryId") || "";
+    const region = new URLSearchParams(window.location.search).get("region") || "";
+
+    let url = `/admin/sales/download?format=excel&period=${encodeURIComponent(period)}`;
+    if (period === "custom" && startDate && endDate) {
+      url += `&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+    }
+    if (categoryId) url += `&categoryId=${encodeURIComponent(categoryId)}`;
+    if (region && region.trim()) url += `&region=${encodeURIComponent(region)}`; // Only add region if non-empty
+
+    window.location.href = url;
+  });
+
+
+
+
+  // Show success/error messages
+  <% if (messages.success) { %>
+    Swal.fire({
+      icon: 'success',
+      title: 'Success',
+      text: "<%= messages.success[0] %>",
+      timer: 3000,
+      showConfirmButton: false
+    });
+  <% } %>
+  <% if (messages.error) { %>
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: "<%= messages.error[0] %>",
+      confirmButtonText: 'OK'
+    });
+  <% } %>
+</script>
+
+<%- include("../../views/partials/admin/footer.ejs") %>

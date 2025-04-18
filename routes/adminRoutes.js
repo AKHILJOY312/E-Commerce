@@ -8,7 +8,8 @@ const productController = require('../controllers/admin/productController');
 const upload = require('../middleware/uploadMiddleware'); 
 const CouponController= require("../controllers/admin/CouponController");
 const adminOrderController= require("../controllers/admin/adminOrderController");
-
+const OfferController = require("../controllers/admin/OfferController");
+const SalesController = require("../controllers/admin/salesController");
 
 
 router.get('/404page',adminController.pageNotFound);
@@ -63,5 +64,41 @@ router.get('/orders/:id',adminAuth, adminOrderController.getOrderDetails);
 router.post('/updateOrderStatus',adminAuth, adminOrderController.updateOrderStatus);
 router.post('/cancelOrder',adminAuth, adminOrderController.cancelOrder);
 
+// Offer Managment
+router.get('/offers', OfferController.getAdminOffersPage);
+
+// Create a new offer
+router.post('/offers', OfferController.createOffer);
+
+// Update an existing offer
+router.post('/updateOffer', OfferController.updateOffer);
+
+// Activate an offer
+router.get('/activateOffer', OfferController.activateOffer);
+
+// Deactivate an offer
+router.get('/deactivateOffer', OfferController.deactivateOffer);
+
+// Soft delete an offer
+router.delete('/deleteOffer', OfferController.deleteOffer);
+
+// Get active offers (for other pages)
+router.get('/activeOffers', OfferController.getActiveOffers);
+
+// // Calculate cart total
+// router.post('/cart/calculate', OfferController.calculateCartTotal);
+
+//sale mangement
+// router.get('/sales-report', adminAuth, salesReportController.renderSalesReportPage);
+// router.get('/api/sales-report', adminAuth, salesReportController.getSalesReport);
+// router.get('/sales-report/export/excel', adminAuth, salesReportController.exportSalesReportExcel);
+// router.get('/sales-report/export/pdf', adminAuth, salesReportController.exportSalesReportPDF);
+
+// router.get('/report', salesController.getSalesReport);
+// router.get('/download', salesController.downloadSalesReport);
+
+router.get('/sales', SalesController.getSalesReport);
+router.get('/sales/report', SalesController.getSalesReportApi);
+router.get('/sales/download', SalesController.downloadSalesReport);
 
 module.exports =router;

@@ -15,6 +15,7 @@ const path = require("path");
 const app = express();
 const walletRoutes = require('./routes/wallet');
 const paymentRoutes = require('./routes/payment');
+const scheduleOfferJobs = require('./jobs/offerJobs');
 
 
 connectDB();
@@ -81,5 +82,7 @@ app.use("/admin", adminRoutes);
 app.use('/wallet', walletRoutes);
 app.use('/payment', paymentRoutes);
 
+
+scheduleOfferJobs();
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(` Server running on port ${PORT}`));
