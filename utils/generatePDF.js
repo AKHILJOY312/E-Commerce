@@ -27,8 +27,8 @@ const generatePDF = async (reportData, { period, startDate, endDate }) => {
     reportData.forEach((row) => {
       doc.text(row.date || period, 50, y, { width: 100 });
       doc.text(row.salesCount.toString(), 150, y, { width: 100 });
-      doc.text(`INR${row.totalRevenue.toFixed(2)}`, 250, y, { width: 100 });
-      doc.text(`INR${row.totalDiscounts.toFixed(2)}`, 350, y, { width: 100 });
+      doc.text(`INR ${row.totalRevenue.toFixed(2)}`, 250, y, { width: 100 });
+      doc.text(`INR ${row.totalDiscounts.toFixed(2)}`, 350, y, { width: 100 });
       y += 20;
     });
 

@@ -4,36 +4,59 @@ const bcrypt = require("bcryptjs");
 
 const Order = require("../../models/Order");
 const Address= require("../../models/Addresses");
+const Coupon = require("../../models/Coupon");
+const mongoose = require('mongoose');
+const CouponUsage = require("../../models/CouponUsage");
 
 
 exports.loadProfile = async (req, res) => {
   try {
     const userEmail = req.session.email;
-
     if (!userEmail) {
       console.error("No user found in session");
       return res.redirect('/login');
     }
-
     const userData = await User.findOne({ email: userEmail });
-
     if (!userData) {
       console.error("User not found in database");
       return res.redirect('/login');
     }
-
-    // Fetch recent orders for the logged-in user
+    
     const recentOrders = await Order.find({ user_id: userData._id })
-      .sort({ created_at: -1 })
+      .sort({ created_at: 1 })
       .limit(5)
       .lean();
-
     const orderCount = await Order.countDocuments({ user_id: userData._id });
-
-    // Fetch addresses for the logged-in user
+    
     const addresses = await Address.find({ user_id: userData._id }).lean();
-
-
+    
+    
+    const currentDate = new Date();
+    const activeCoupons = await Coupon.find({
+      status: true,
+      is_deleted: false,
+      start_date: { $lte: currentDate },
+      end_date: { $gte: currentDate }
+    }).lean();
+    
+    
+    const usedCoupons = await CouponUsage.find({ 
+      user_id: userData._id 
+    }).distinct('coupon_id');
+    
+    
+    const availableCoupons = activeCoupons.filter(coupon => {
+      
+      const hasUsed = usedCoupons.some(usedId => 
+        usedId.toString() === coupon._id.toString()
+      );
+      
+      
+      const reachedLimit = coupon.used_count >= coupon.usage_limit;
+      
+      
+      return !hasUsed && !reachedLimit;
+    });
 
     res.render("userProfile/profile", {
       currentActivePage: '',
@@ -48,7 +71,8 @@ exports.loadProfile = async (req, res) => {
       },
       recentOrders,
       orderCount,
-      addresses // Pass addresses to the template
+      addresses,
+      availableCoupons // Pass available coupons to the template
     });
   } catch (error) {
     console.error("Error loading Profile page", error);

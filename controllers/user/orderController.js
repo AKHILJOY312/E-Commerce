@@ -9,6 +9,7 @@ const mongoose = require('mongoose');
 const PDFDocument = require('pdfkit');
 const crypto = require("crypto");
 const Transaction=require('../../models/WalletTransaction');
+const Coupon = require('../../models/Coupon');
 
 
 exports.getCheckoutPage = async (req, res) => {
@@ -117,6 +118,7 @@ exports.placeOrder = async (req, res) => {
 
       let discount = 0;
       let couponCode = null;
+      let couponId = null;
   console.log("place order",req.body)
       if (!payment_method) {
         req.flash('error', 'Please select a payment method');
@@ -140,6 +142,7 @@ exports.placeOrder = async (req, res) => {
         if (cart.coupon && cart.coupon.code && cart.coupon.discount) {
           discount = parseFloat(cart.coupon.discount) || 0;
           couponCode = cart.coupon.code;
+          couponId =await Coupon.findOne({code:couponCode}).select('_id');
         }
   
         const subtotal = cart.products.reduce((sum, item) => 
@@ -211,6 +214,7 @@ exports.placeOrder = async (req, res) => {
       if (cart.coupon && cart.coupon.code && cart.coupon.discount) {
         discount = parseFloat(cart.coupon.discount) || 0;
         couponCode = cart.coupon.code;
+        couponId =await Coupon.findOne({code:couponCode}).select('_id');
       }
   
       const subtotal = availableProducts.reduce((sum, item) => 
@@ -227,6 +231,7 @@ exports.placeOrder = async (req, res) => {
         delivery_charge: deliveryCharge,
         delivery_date: deliveryDate,
         amount: subtotal,
+        coupon_id:couponId,
         total_amount: total.toString(),
         status: 'confirmed',
         address_id: addressId,

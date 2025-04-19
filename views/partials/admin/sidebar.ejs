@@ -119,7 +119,7 @@
     aria-expanded="true"
     aria-controls="collapseOrders"
   >
-    <i class="fa fa-archive" aria-hidden="true"></i>
+    <i class="fa fa-truck" aria-hidden="true"></i>
     <span>Orders</span>
   </a>
   <div
@@ -141,7 +141,7 @@
  <!-- Heading -->
  <div class="sidebar-heading">Addons</div>
 
- <!-- Nav Item - Pages Collapse Menu -->
+ <!-- Nav Item - coupons -->
  <li class="nav-item">
    <a
      class="nav-link collapsed"
@@ -168,7 +168,7 @@
      </div>
    </div>
  </li>
-
+<!-- Nav Item - Offers -->
  <li class="nav-item">
   <a
     class="nav-link collapsed"
@@ -178,7 +178,7 @@
     aria-expanded="true"
     aria-controls="collapseOffers"
   >
-  <i class="fas fa-fw fa-chart-area"></i></i>
+  <i class="fas fa-fw fa-percent"></i>
     <span>Offers</span>
   </a>
   <div
@@ -196,15 +196,33 @@
   </div>
 </li>
 
- <!-- Nav Item - Charts -->
- 
- <!-- Nav Item - Tables -->
- <li class="nav-item">
-   <a class="nav-link" href="tables.html">
-     <i class="fas fa-fw fa-table"></i>
-     <span>Tables</span></a
-   >
- </li>
+<!-- Nav Item - Sales -->
+<li class="nav-item">
+  <a
+    class="nav-link collapsed"
+    href="#"
+    data-toggle="collapse"
+    data-target="#collapseSales"
+    aria-expanded="true"
+    aria-controls="collapseSales"
+  >
+  <i class="fas fa-fw fa-chart-area"></i></i>
+    <span>sales</span>
+  </a>
+  <div
+    id="collapseSales"
+    class="collapse"
+    aria-labelledby="headingSales"
+    data-parent="#accordionSidebar"
+  >
+    <div class="bg-white py-2 collapse-inner rounded">
+      <h6 class="collapse-header">Action:</h6>
+      <a class="collapse-item" href="/admin/sales">view</a>
+     
+      
+    </div>
+  </div>
+</li>
 
  <!-- Divider -->
  <hr class="sidebar-divider d-none d-md-block" />
