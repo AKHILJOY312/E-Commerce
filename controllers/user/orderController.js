@@ -126,7 +126,7 @@ exports.placeOrder = async (req, res) => {
         return res.redirect('/checkout');
       }
   
-      const user = await User.findById(userId);
+      const user = await User.findById(userId).populate('referredBy');
   
       if (payment_method === 'wallet') {
         const cart = await Cart.findOne({ user_id: userId })
@@ -235,6 +235,7 @@ exports.placeOrder = async (req, res) => {
         total_amount: total.toString(),
         status: 'confirmed',
         address_id: addressId,
+        pay_method:payment_method,
       });
   
       await order.save();
@@ -267,8 +268,35 @@ exports.placeOrder = async (req, res) => {
       await order.save();
   
       await Cart.findOneAndDelete({ user_id: userId });
+
+     // Update this part to properly track referral rewards
+if (user.referredBy) {
+  // Find the referrer
+  const referrer = await User.findById(user.referredBy);
+  if (referrer) {
+    // Add ₹100 to referrer's wallet
+    referrer.wallet += 100;
+    
+    // Add a record of this reward to referrer's referralRewards array
+    referrer.referralRewards.push({
+      amount: 100,
+      status: 'credited',
+      createdAt: Date.now()
+    });
+    await referrer.save();
   
-      
+    // Reward the new user (referee)
+    user.wallet += 50;
+    
+    // Add a record of this reward to user's referralRewards array
+    user.referralRewards.push({
+      amount: 50,
+      status: 'credited',
+      createdAt: Date.now()
+    });
+    await user.save();
+  }
+}
       res.render('payment/payment-success',{currentActivePage:"",order,payment_method,couponCode,discount});
     } catch (error) {
       console.error('Error placing order:', error);
@@ -412,99 +440,137 @@ exports.updateOrder = async (req, res) => {
 
 
 exports.cancelOrder = async (req, res) => {
-    const orderId = req.params.orderId;
-    const userId = req.session.user_id;
-    const { cancellation_reason } = req.body; // Added to accept form input
-
+  const orderId = req.params.orderId;
+  const userId = req.session.user_id;
+  const { cancellation_reason } = req.body;
+  let orderNumber=null;
   try {
-    const order = await Order.findOne({ _id: orderId, user_id: userId })
-      .populate({
-        path: 'order_items',
-        select: 'variant_id quantity status',
-      })
-      .select('status order_items');
+      const order = await Order.findOne({ _id: orderId, user_id: userId })
+          .populate({
+              path: 'order_items',
+              select: 'variant_id quantity status',
+          })
+          .select('status order_items total_amount pay_method');
 
-    if (!order) {
-      req.flash('error', 'Order not found or access denied.');
-      return res.redirect('/orders/recent');
-    }
+      if (!order) {
+          req.flash('error', 'Order not found or access denied.');
+          return res.redirect('/orders/recent');
+      }
+      orderNumber = order.order_number;
+      if (order.status !== 'confirmed' && order.status !== 'intransit') {
+          req.flash('error', `Order cannot be cancelled (Status: ${order.status})`);
+          return res.redirect('/orders/recent');
+      }
 
-    if (order.status !== 'confirmed' && order.status !== 'intransit') {
-      req.flash('error', `Order cannot be cancelled (Status: ${order.status})`);
-      return res.redirect('/orders/recent');
-    }
+      // Update order status to cancelled
+      const updatedOrder = await Order.findByIdAndUpdate(
+          orderId,
+          {
+              status: 'cancelled',
+              cancelled_at: new Date(),
+              cancellation_reason: cancellation_reason || 'Cancelled by user',
+          },
+          { new: true }
+      );
 
-    const updatedOrder = await Order.findByIdAndUpdate(
-      orderId,
-      {
-        status: 'cancelled',
-        cancelled_at: new Date(),
-        cancellation_reason: cancellation_reason || 'Cancelled by user', // Use form input or default
-      },
-      { new: true }
-    );
+      if (!updatedOrder) {
+          throw new Error('Failed to update order status.');
+      }
 
-        if (!updatedOrder) {
-            throw new Error('Failed to update order status.'); 
-        }
-        
+      // Update order items and restock variants
+      await Promise.all(
+          order.order_items.map(async (item) => {
+              if (item.status !== 'cancelled') {
+                  await OrderItem.updateOne(
+                      { _id: item._id },
+                      { status: 'cancelled' }
+                  );
+              }
 
-        
-        await Promise.all(order.order_items.map(async (item) => {
-            
-            if (item.status !== 'cancelled') { 
-                await OrderItem.updateOne({ _id: item._id }, { status: 'cancelled' } /*, { session }*/);
-            }
+              if (item.variant_id && item.quantity > 0) {
+                  const updatedVariant = await Variant.updateOne(
+                      { _id: item.variant_id },
+                      { $inc: { quantity: item.quantity } }
+                  );
 
-            
-            if (item.variant_id && item.quantity > 0) {
-                
-                const updatedVariant = await Variant.updateOne(
-                    { _id: item.variant_id }, 
-                    { $inc: { quantity: item.quantity } } 
-                    /*, { session } */ // Add session if using transactions
-                );
-                
-                if (updatedVariant.matchedCount === 0) {
-                     console.warn(`Variant ${item.variant_id} not found during restock for order item ${item._id}. Stock may be inaccurate.`);
-                     
-                } else if (updatedVariant.modifiedCount === 0) {
-                     console.warn(`Variant ${item.variant_id} stock was not modified during restock (matchedCount=1, modifiedCount=0).`);
-                } else {
-                    console.log(`Variant ${item.variant_id} stock updated.`);
-                }
-            } else {
-                 console.warn(`OrderItem ${item._id} missing variant_id or quantity <= 0, skipping stock update.`);
-            }
-        }));
+                  if (updatedVariant.matchedCount === 0) {
+                      console.warn(
+                          `Variant ${item.variant_id} not found during restock for order item ${item._id}. Stock may be inaccurate.`
+                      );
+                  } else if (updatedVariant.modifiedCount === 0) {
+                      console.warn(
+                          `Variant ${item.variant_id} stock was not modified during restock (matchedCount=1, modifiedCount=0).`
+                      );
+                  } else {
+                      console.log(`Variant ${item.variant_id} stock updated.`);
+                  }
+              } else {
+                  console.warn(
+                      `OrderItem ${item._id} missing variant_id or quantity <= 0, skipping stock update.`
+                  );
+              }
+          })
+      );
 
-       
-        req.flash('success', 'Order cancelled successfully and stock updated.');
-        res.redirect('/orders/recent');
+      // Handle wallet refund for 'wallet' or 'razorpay' payment methods
+      if (['wallet', 'razorpay'].includes(order.pay_method)) {
+          const refundAmount = parseFloat(order.total_amount); // Convert Decimal128 to number
 
-    } catch (error) {
-        console.error('Error cancelling order:', error); 
+          // Update user's wallet balance
+          const user = await User.findByIdAndUpdate(
+              userId,
+              { $inc: { wallet: refundAmount } },
+              { new: true }
+          );
 
-        
-        try {
-            const checkOrder = await Order.findById(orderId);
-            if (checkOrder && checkOrder.status === 'cancelled') {
-            
-                await Order.updateOne({ _id: orderId }, {
-                     status: 'confirmed', 
-                     cancelled_at: null,
-                     cancellation_reason: `Rollback due to error: ${error.message}`.substring(0, 200) // Limit reason length
-                 });
-            }
-        } catch (rollbackError) {
-            console.error(`Rollback attempt for order ${orderId} failed:`, rollbackError);
-        }
+          if (!user) {
+              throw new Error('User not found for wallet update.');
+          }
 
-        req.flash('error', `Failed to cancel order: ${error.message || 'Please try again.'}`);
-        res.redirect('/orders/recent');
-    } /* finally { // Optional: End Session
-        // session.endSession();
-    } */
+          // Create a wallet transaction record
+          const walletTransaction = new Transaction({
+              user_id: userId,
+              order_id: orderId,
+              transaction_type: 'refund',
+              amount: refundAmount,
+              balance: user.wallet, // Updated wallet balance
+              description: `Refund for cancelled order ${orderNumber}`,
+              status: 'completed',
+          });
+
+          await walletTransaction.save();
+
+          // Update order's refunded_amount
+          await Order.findByIdAndUpdate(orderId, {
+              $set: { refunded_amount: refundAmount },
+          });
+      }
+
+      req.flash('success', 'Order cancelled successfully, stock updated, and refund processed if applicable.');
+      res.redirect('/orders/recent');
+  } catch (error) {
+      console.error('Error cancelling order:', error);
+
+      // Attempt rollback of order status if necessary
+      try {
+          const checkOrder = await Order.findById(orderId);
+          if (checkOrder && checkOrder.status === 'cancelled') {
+              await Order.updateOne(
+                  { _id: orderId },
+                  {
+                      status: 'confirmed',
+                      cancelled_at: null,
+                      cancellation_reason: `Rollback due to error: ${error.message}`.substring(0, 200),
+                  }
+              );
+          }
+      } catch (rollbackError) {
+          console.error(`Rollback attempt for order ${orderId} failed:`, rollbackError);
+      }
+
+      req.flash('error', `Failed to cancel order: ${error.message || 'Please try again.'}`);
+      res.redirect('/orders/recent');
+  }
 };
 
 

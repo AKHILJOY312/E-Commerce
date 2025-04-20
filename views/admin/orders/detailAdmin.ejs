@@ -167,8 +167,8 @@
                   <i class="fas fa-check"></i> Allow Return
                </button>
                <button
-                  class="btn btn-warning btn-sm" <%# Use warning/secondary for reject? %>
-                  onclick="handleReturn('<%= order._id %>', 'delivered')" <%# Or maybe back to 'delivered' if rejected? Define rejection status %>
+                  class="btn btn-warning btn-sm" 
+                  onclick="handleReturn('<%= order._id %>', 'no_return')" <%# Or maybe back to 'delivered' if rejected? Define rejection status %>
                >
                   <i class="fas fa-ban"></i> Reject Return <%# Added a reject option %>
                </button>
@@ -276,6 +276,7 @@
   function handleReturn(orderId, newStatus) {
     // Logic to confirm and call the backend to update the status
     // to 'return_allowed' or handle the rejection ('delivered' or another status)
+    console.log("working")
     const actionText = newStatus === 'return_allowed' ? 'allow' : 'reject';
     Swal.fire({
         title: `Confirm Return ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}`,

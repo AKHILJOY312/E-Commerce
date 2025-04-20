@@ -141,8 +141,50 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   }
-</style>
 
+  
+</style>
+<style>
+  .referral-code-container {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .share-btn {
+    transition: all 0.3s ease;
+  }
+  
+  .share-btn:hover {
+    transform: translateY(-2px);
+  }
+  
+  #referralCode {
+    background-color: rgba(255, 255, 255, 0.9);
+    border: none;
+    font-weight: bold;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+  }
+  
+  #referralCode:focus {
+    background-color: white;
+    box-shadow: none;
+  }
+  
+  .how-it-works {
+    border-left: 4px solid #FFB22C;
+  }
+  
+  /* Animation for copy effect */
+  @keyframes highlightSuccess {
+    0% { background-color: white; }
+    50% { background-color: rgba(40, 167, 69, 0.2); }
+    100% { background-color: white; }
+  }
+  
+  .border-success {
+    animation: highlightSuccess 1s ease;
+  }
+</style>
 <!-- Breadcrumb Section Begin -->
 <section class="breadcrumb-option bg-light py-3 mb-4">
   <div class="container">
@@ -765,40 +807,159 @@
   </div>
 </div>
 
-        <!-- Referrals Section -->
-        <div
-          class="card shadow mb-4 profile-section"
-          id="Referrals"
-          style="display: none"
-        >
-          <div class="card-body">
-            <h5 class="mb-4">Your Referrals</h5>
-            <div
-              class="border p-3 mb-3 rounded d-flex justify-content-between align-items-center"
-            >
-              <div>
-                <h6>Order #12345</h6>
-                <p class="text-muted mb-0">Placed: April 1, 2025</p>
-              </div>
-              <div class="text-end">
-                <span class="badge bg-success mb-1">Delivered</span>
-                <p class="mb-0 fw-bold">$89.99</p>
-              </div>
+<!-- Referrals Section -->
+<div class="card shadow mb-4 profile-section" id="Referrals" style="display: none">
+  <div class="card-body">
+    <h5 class="mb-4">Your Referral Program</h5>
+    
+    <!-- Referral Stats -->
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="card bg-light border-0 h-100">
+          <div class="card-body text-center">
+            <i class="fas fa-users fa-2x mb-3 text-primary"></i>
+            <h6>Total Referrals</h6>
+            <h3 class="mb-0"><%= user.referrals ? user.referrals.length : 0 %></h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card bg-light border-0 h-100">
+          <div class="card-body text-center">
+            <i class="fas fa-wallet fa-2x mb-3 text-success"></i>
+            <h6>Earned Rewards</h6>
+            <h3 class="mb-0">₹<%= user.referralRewards ? user.referralRewards.reduce((total, reward) => reward.status === 'credited' ? total + reward.amount : total, 0).toFixed(2) : '0.00' %></h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card bg-light border-0 h-100">
+          <div class="card-body text-center">
+            <i class="fas fa-clock fa-2x mb-3 text-warning"></i>
+            <h6>Pending Rewards</h6>
+            <h3 class="mb-0">₹<%= user.referralRewards ? user.referralRewards.reduce((total, reward) => reward.status === 'pending' ? total + reward.amount : total, 0).toFixed(2) : '0.00' %></h3>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Referral Code Section -->
+    <div class="referral-code-container p-4 rounded mb-4" style="background: linear-gradient(135deg, #854836 0%, #FFB22C 100%);">
+      <div class="row align-items-center">
+        <div class="col-md-6 mb-3 mb-md-0">
+          <h4 class="text-white mb-1">Share your referral code</h4>
+          <p class="text-white-50 mb-0">Invite friends and earn rewards when they make a purchase!</p>
+        </div>
+        <div class="col-md-6">
+          <div class="input-group">
+            <input type="text" class="form-control form-control-lg" id="referralCode" value="<%= user.referralCode || 'CODE NOT GENERATED' %>" readonly>
+            <button class="btn btn-light" type="button" id="copyReferralBtn" data-bs-toggle="tooltip" data-bs-placement="top" title="Copy to clipboard">
+              <i class="fas fa-copy"></i>
+            </button>
+          </div>
+          <small class="text-white-50 mt-2 d-block" id="copyMessage" style="display: none;">Copied to clipboard!</small>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Share Options -->
+    <div class="share-options mb-4">
+      <h6 class="mb-3">Share via</h6>
+      <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-outline-primary share-btn" data-platform="whatsapp">
+          <i class="fab fa-whatsapp me-2"></i>WhatsApp
+        </button>
+        <button class="btn btn-outline-info share-btn" data-platform="telegram">
+          <i class="fab fa-telegram-plane me-2"></i>Telegram
+        </button>
+        <button class="btn btn-outline-primary share-btn" data-platform="facebook">
+          <i class="fab fa-facebook-f me-2"></i>Facebook
+        </button>
+        <button class="btn btn-outline-info share-btn" data-platform="twitter">
+          <i class="fab fa-twitter me-2"></i>Twitter
+        </button>
+        <button class="btn btn-outline-danger share-btn" data-platform="email">
+          <i class="fas fa-envelope me-2"></i>Email
+        </button>
+      </div>
+    </div>
+    
+    <!-- How it Works -->
+    <div class="how-it-works p-3 rounded bg-light mb-4">
+      <h6 class="mb-3"><i class="fas fa-info-circle me-2"></i>How it Works</h6>
+      <div class="row">
+        <div class="col-md-4 mb-3 mb-md-0">
+          <div class="d-flex">
+            <div class="me-3">
+              <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">1</div>
             </div>
-            <div
-              class="border p-3 rounded d-flex justify-content-between align-items-center"
-            >
-              <div>
-                <h6>Order #12346</h6>
-                <p class="text-muted mb-0">Placed: April 3, 2025</p>
-              </div>
-              <div class="text-end">
-                <span class="badge bg-warning text-dark mb-1">Shipped</span>
-                <p class="mb-0 fw-bold">$149.50</p>
-              </div>
+            <div>
+              <h6 class="mb-1">Share</h6>
+              <p class="small text-muted mb-0">Share your unique code with friends</p>
             </div>
           </div>
         </div>
+        <div class="col-md-4 mb-3 mb-md-0">
+          <div class="d-flex">
+            <div class="me-3">
+              <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">2</div>
+            </div>
+            <div>
+              <h6 class="mb-1">Friend Shops</h6>
+              <p class="small text-muted mb-0">They sign up & make a purchase</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="d-flex">
+            <div class="me-3">
+              <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">3</div>
+            </div>
+            <div>
+              <h6 class="mb-1">Earn Rewards</h6>
+              <p class="small text-muted mb-0">Both you & your friend get rewards</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Referred Friends -->
+    <div class="referred-friends">
+      <h6 class="mb-3">Your Referred Friends</h6>
+      <% if (user.referrals && user.referrals.length > 0) { %>
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover">
+            <thead class="table-light">
+              <tr>
+                <th>Name</th>
+                <th>Joined On</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% user.referrals.forEach(referral => { %>
+                <tr>
+                  <td><%= referral.name %></td>
+                  <td><%= new Date(referral.created_at).toLocaleDateString() %></td>
+                  <td><span class="badge bg-success">Active</span></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="text-center p-4 bg-light rounded">
+          <div class="mb-3">
+            <i class="fas fa-user-friends fa-3x text-muted"></i>
+          </div>
+          <h6>No referrals yet</h6>
+          <p class="text-muted mb-0">Share your code to start earning rewards!</p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
 
         <!-- Settings Section -->
         <div
@@ -840,7 +1001,66 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- Navigation JS -->
-
+<script>
+  // Copy referral code to clipboard
+  document.getElementById('copyReferralBtn').addEventListener('click', function() {
+    const referralCode = document.getElementById('referralCode');
+    referralCode.select();
+    document.execCommand('copy');
+    
+    // Show copied message
+    const copyMessage = document.getElementById('copyMessage');
+    copyMessage.style.display = 'block';
+    
+    // Create a highlight effect on the input
+    referralCode.classList.add('border-success');
+    
+    // Hide message and remove highlight after 2 seconds
+    setTimeout(() => {
+      copyMessage.style.display = 'none';
+      referralCode.classList.remove('border-success');
+    }, 2000);
+  });
+  
+  // Share buttons functionality
+  document.querySelectorAll('.share-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const platform = this.getAttribute('data-platform');
+      const referralCode = document.getElementById('referralCode').value;
+      const shareMessage = encodeURIComponent(`Check out Solo Fashion! Use my referral code ${referralCode} to get a special discount on your first purchase. Shop now at soloFashion.com/register?ref=${referralCode}`);
+      
+      let shareUrl = '';
+      
+      switch(platform) {
+        case 'whatsapp':
+          shareUrl = `https://wa.me/?text=${shareMessage}`;
+          break;
+        case 'telegram':
+          shareUrl = `https://t.me/share/url?url=https://soloFashion.com&text=${shareMessage}`;
+          break;
+        case 'facebook':
+          shareUrl = `https://www.facebook.com/sharer/sharer.php?u=https://soloFashion.com/register?ref=${referralCode}`;
+          break;
+        case 'twitter':
+          shareUrl = `https://twitter.com/intent/tweet?text=${shareMessage}`;
+          break;
+        case 'email':
+          location.href = `mailto:?subject=Join Solo Fashion with my referral code&body=${shareMessage}`;
+          return;
+      }
+      
+      window.open(shareUrl, '_blank');
+    });
+  });
+  
+  // Initialize tooltips
+  if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+  }
+</script>
 <script>
   // Add this to your existing JavaScript
   document.addEventListener('DOMContentLoaded', function() {

@@ -21,16 +21,35 @@ exports.loadProfile = async (req, res) => {
       console.error("User not found in database");
       return res.redirect('/login');
     }
+   
+    // Generate referral code if user doesn't have one
+    if (!userData.referralCode) {
+      const crypto = require('crypto');
+      const randomString = crypto.randomBytes(3).toString('hex').toUpperCase();
+      userData.referralCode = `SOLO${randomString}`;
+      await userData.save();
+    }
     
+    // Populate referrals data for display
+    await userData.populate('referrals', 'name email created_at');
+    
+    // Calculate referral statistics
+    const totalReferrals = userData.referrals ? userData.referrals.length : 0;
+    const earnedRewards = userData.referralRewards ? 
+      userData.referralRewards.reduce((total, reward) => 
+        reward.status === 'credited' ? total + reward.amount : total, 0) : 0;
+    const pendingRewards = userData.referralRewards ? 
+      userData.referralRewards.reduce((total, reward) => 
+        reward.status === 'pending' ? total + reward.amount : total, 0) : 0;
+
     const recentOrders = await Order.find({ user_id: userData._id })
       .sort({ created_at: 1 })
       .limit(5)
       .lean();
     const orderCount = await Order.countDocuments({ user_id: userData._id });
-    
+   
     const addresses = await Address.find({ user_id: userData._id }).lean();
-    
-    
+   
     const currentDate = new Date();
     const activeCoupons = await Coupon.find({
       status: true,
@@ -38,22 +57,17 @@ exports.loadProfile = async (req, res) => {
       start_date: { $lte: currentDate },
       end_date: { $gte: currentDate }
     }).lean();
-    
-    
-    const usedCoupons = await CouponUsage.find({ 
-      user_id: userData._id 
+   
+    const usedCoupons = await CouponUsage.find({
+      user_id: userData._id
     }).distinct('coupon_id');
-    
-    
+   
     const availableCoupons = activeCoupons.filter(coupon => {
-      
-      const hasUsed = usedCoupons.some(usedId => 
+      const hasUsed = usedCoupons.some(usedId =>
         usedId.toString() === coupon._id.toString()
       );
       
-      
       const reachedLimit = coupon.used_count >= coupon.usage_limit;
-      
       
       return !hasUsed && !reachedLimit;
     });
@@ -68,11 +82,18 @@ exports.loadProfile = async (req, res) => {
         created_at: userData.created_at,
         updated_at: userData.updated_at,
         isActive: userData.isActive,
+        // Add referral information to be passed to the view
+        referralCode: userData.referralCode,
+        referrals: userData.referrals || [],
+        referralRewards: userData.referralRewards || [],
+        totalReferrals: totalReferrals,
+        earnedRewards: earnedRewards,
+        pendingRewards: pendingRewards
       },
       recentOrders,
       orderCount,
       addresses,
-      availableCoupons // Pass available coupons to the template
+      availableCoupons
     });
   } catch (error) {
     console.error("Error loading Profile page", error);

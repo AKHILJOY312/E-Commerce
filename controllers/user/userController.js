@@ -7,6 +7,10 @@ require("dotenv").config();
 const Product = require("../../models/Product");
 const { generateOtp, sendVerificationEmail, securePassword } = require("../../utils/authUtils");
 const Cart = require("../../models/Cart");
+const { customAlphabet } = require('nanoid');
+const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'; // Only digits and uppercase letters
+const nanoid = customAlphabet(alphabet, 8);
+
 
 exports.loadHomePage = async (req, res) => {
   try {
@@ -149,7 +153,8 @@ exports.getSignup = async (req, res) => {
 exports.signupUser = async (req, res) => {
   try {
     console.log(`signupUser is working`);
-    const { name, email, phone, password, confirm } = req.body;
+    console.log(req.body);
+    const { name, email, phone, password, confirm, referralCode } = req.body;
 
     if (password !== confirm) {
       console.log(`Password check failed`);
@@ -173,8 +178,23 @@ exports.signupUser = async (req, res) => {
       return res.json({ error: "Failed to send email" });
     }
 
+    let referredBy = null;
+let referId = null;
+    if (referralCode) {
+      referredBy = await User.findOne({ referralCode, isActive: true });
+      
+      if (!referredBy) {
+        req.flash(
+          "error",
+          "invalid referral code"
+        );
+        return res.redirect("/signup");
+
+      }
+      referId = referredBy._id;
+    }
     req.session.userOtp = otp;
-    req.session.userData = { name, email, phone, password };
+    req.session.userData = { name, email, phone, password,referralCode,referredBy ,referId};
     req.session.email=email;
 
     res.render("auth/verify-Otp");
@@ -188,21 +208,35 @@ exports.signupUser = async (req, res) => {
 // OTP Verification Handler
 exports.verifyOtp = async (req, res) => {
   try {
+    
     const { otp } = req.body;
+    
     console.log("Received OTP:", otp);
 
     if (parseInt(otp) === parseInt(req.session.userOtp)) {
       const userData = req.session.userData;
       const passwordHash = await securePassword(userData.password);
 
+      const newReferralCode = nanoid();
+
       const newUser = new User({
         name: userData.name || "User",
         email: userData.email,
         phone: userData.phone || "",
         password: passwordHash,
+        referralCode: newReferralCode,
+        referredBy: userData.referredBy ? userData.referId : null,
       });
 
       const savedUser = await newUser.save();
+
+
+      if (userData.referredBy) {
+        const referralCode = userData.referralCode;
+        referredBy = await User.findOne({ referralCode, isActive: true });
+        referredBy.referrals.push(savedUser._id);
+        await referredBy.save();
+      }
 
       // ✅ Set session properly
       req.session.user_id = savedUser._id;

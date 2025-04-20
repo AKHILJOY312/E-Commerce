@@ -245,7 +245,7 @@
                     </div>
                 </div>
 
-                <!-- Actions -->
+                
                <!-- Actions -->
                <% if (order.status === 'confirmed') { %>
                 <div class="order-section">
@@ -258,7 +258,7 @@
                     </div>
                 </div>
 
-                <!-- Cancellation Modal -->
+                
                 <!-- Cancellation Modal -->
 <div class="modal fade" id="cancelModal<%= order._id %>" tabindex="-1" role="dialog" aria-labelledby="cancelModalLabel<%= order._id %>" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
@@ -353,8 +353,21 @@
                                     <div class="modal-body">
                                         <p>Are you sure you want to request a return for this order? This action will be reviewed by our team.</p>
                                         <div class="form-group">
-                                            <label for="returnReason">Return Reason (Optional)</label>
-                                            <textarea class="form-control" id="returnReason" name="return_reason" rows="3" placeholder="e.g., Defective item, wrong size"></textarea>
+                                            <label for="returnReason">Select Return Reason</label>
+                                            <select class="form-control" id="returnReasonSelect" name="return_reason_type" onchange="toggleOtherReason()">
+                                                <option value="">Please select a reason</option>
+                                                <option value="defective">Defective item</option>
+                                                <option value="wrong_size">Wrong size</option>
+                                                <option value="not_as_described">Item not as described</option>
+                                                <option value="changed_mind">Changed my mind</option>
+                                                <option value="damaged">Item arrived damaged</option>
+                                                <option value="wrong_item">Received wrong item</option>
+                                                <option value="other">Other</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group" id="otherReasonContainer" style="display:none;">
+                                            <label for="otherReason">Please specify your reason</label>
+                                            <textarea class="form-control" id="otherReason" name="other_return_reason" rows="3" placeholder="Please provide details about your return reason"></textarea>
                                         </div>
                                     </div>
                                     <div class="modal-footer">
@@ -390,4 +403,16 @@
         });
     </script>
     <% } %>
+    <script>
+        function toggleOtherReason() {
+            const selectElement = document.getElementById('returnReasonSelect');
+            const otherReasonContainer = document.getElementById('otherReasonContainer');
+            
+            if (selectElement.value === 'other') {
+                otherReasonContainer.style.display = 'block';
+            } else {
+                otherReasonContainer.style.display = 'none';
+            }
+        }
+        </script>
 <%- include("../../views/partials/user/footer.ejs") %>

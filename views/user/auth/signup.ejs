@@ -188,6 +188,24 @@
                 <div class="errorMessage" id="error5"></div>
               </div>
 
+
+              <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="referralToggle">
+                <label class="form-check-label" for="referralToggle">I have a referral code</label>
+              </div>
+              
+              <div class="form-floating mb-3" id="referralCodeField" style="display: none;">
+                <input
+                  type="text"
+                  name="referralCode"
+                  class="form-control rounded-3"
+                  id="floatingReferral"
+                  placeholder="Referral Code"
+                />
+                <label for="floatingReferral">Referral Code</label>
+                <div class="errorMessage" id="error6"></div>
+              </div>
+
               <button
                 class="w-100 mb-2 btn btn-lg rounded-3 btn-primary position-relative"
                 type="submit"
@@ -232,6 +250,19 @@
     </div>
     <%- include("../../partials/user/auth/authFoother.ejs") %>
     <script>
+
+      // Toggle referral code field visibility
+const referralToggle = document.getElementById('referralToggle');
+const referralCodeField = document.getElementById('referralCodeField');
+
+referralToggle.addEventListener('change', function() {
+  if (this.checked) {
+    referralCodeField.style.display = 'block';
+  } else {
+    referralCodeField.style.display = 'none';
+    document.getElementById('floatingReferral').value = ''; // Clear the input when hidden
+  }
+});
       document.addEventListener("DOMContentLoaded", function () {
         function togglePasswordVisibility(toggleBtn, inputField) {
           toggleBtn.addEventListener("click", function () {

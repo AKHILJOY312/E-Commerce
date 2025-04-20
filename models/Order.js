@@ -57,9 +57,10 @@ const OrderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["confirmed", "intransit", "delivered", "cancelled","return_requested","return_allowed"],
+      enum: ["confirmed", "intransit", "delivered", "cancelled","return_requested","return_allowed","no_return"],
       default: "confirmed",
     },
+    pay_method: { type: String, enum: ['cod', 'razorpay', 'wallet'], required: true },
     total_amount: {
       type: mongoose.Decimal128,
       required: true,
