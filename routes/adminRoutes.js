@@ -51,11 +51,11 @@ router.delete('/products/:productId/variants/:variantId/remove-image',adminAuth,
 
 
 
-//coupen mangenmet
-router.get('/coupon', CouponController.getCoupons);
-router.post('/coupon/add', CouponController.addCoupon);
-router.post('/coupon/edit', CouponController.editCoupon);
-router.delete('/coupon/delete', CouponController.deleteCoupon);
+//coupon management 
+router.get('/coupon',adminAuth, CouponController.getCoupons);
+router.post('/coupon/add',adminAuth, CouponController.addCoupon);
+router.post('/coupon/edit',adminAuth, CouponController.editCoupon);
+router.delete('/coupon/delete',adminAuth, CouponController.deleteCoupon);
 
 
 //Order management 
@@ -64,41 +64,19 @@ router.get('/orders/:id',adminAuth, adminOrderController.getOrderDetails);
 router.post('/updateOrderStatus',adminAuth, adminOrderController.updateOrderStatus);
 router.post('/cancelOrder',adminAuth, adminOrderController.cancelOrder);
 
-// Offer Managment
-router.get('/offers', OfferController.getAdminOffersPage);
+// Offer Management
+router.get('/offers',adminAuth, OfferController.getAdminOffersPage);
+router.post('/offers',adminAuth, OfferController.createOffer);
+router.post('/updateOffer',adminAuth, OfferController.updateOffer);
+router.get('/activateOffer',adminAuth, OfferController.activateOffer);
+router.get('/deactivateOffer',adminAuth, OfferController.deactivateOffer);
+router.delete('/deleteOffer',adminAuth, OfferController.deleteOffer);
+router.get('/activeOffers',adminAuth, OfferController.getActiveOffers);
 
-// Create a new offer
-router.post('/offers', OfferController.createOffer);
 
-// Update an existing offer
-router.post('/updateOffer', OfferController.updateOffer);
-
-// Activate an offer
-router.get('/activateOffer', OfferController.activateOffer);
-
-// Deactivate an offer
-router.get('/deactivateOffer', OfferController.deactivateOffer);
-
-// Soft delete an offer
-router.delete('/deleteOffer', OfferController.deleteOffer);
-
-// Get active offers (for other pages)
-router.get('/activeOffers', OfferController.getActiveOffers);
-
-// // Calculate cart total
-// router.post('/cart/calculate', OfferController.calculateCartTotal);
-
-//sale mangement
-// router.get('/sales-report', adminAuth, salesReportController.renderSalesReportPage);
-// router.get('/api/sales-report', adminAuth, salesReportController.getSalesReport);
-// router.get('/sales-report/export/excel', adminAuth, salesReportController.exportSalesReportExcel);
-// router.get('/sales-report/export/pdf', adminAuth, salesReportController.exportSalesReportPDF);
-
-// router.get('/report', salesController.getSalesReport);
-// router.get('/download', salesController.downloadSalesReport);
-
-router.get('/sales', SalesController.getSalesReport);
-router.get('/sales/report', SalesController.getSalesReportApi);
-router.get('/sales/download', SalesController.downloadSalesReport);
+//sale management
+router.get('/sales',adminAuth, SalesController.getSalesReport);
+router.get('/sales/report',adminAuth, SalesController.getSalesReportApi);
+router.get('/sales/download',adminAuth, SalesController.downloadSalesReport);
 
 module.exports =router;

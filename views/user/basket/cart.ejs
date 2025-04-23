@@ -117,6 +117,9 @@
   .coupon-notification.show {
     opacity: 1;
   }
+  a{
+    text-decoration: none;  
+  }
 </style>
 <!-- Breadcrumb Section Begin -->
 <section class="breadcrumb-option">
@@ -200,25 +203,7 @@
         </div>
       </div>
       <div class="col-lg-4">
-        <% if (cart && cart.items && cart.items.length > 0) { %>
-          <div class="cart__discount">
-            <h6>Discount codes</h6>
-            <form id="couponForm">
-              <input type="text" name="coupon" placeholder="Coupon code">
-              <input type="hidden" name="cartId" value="<%= cartId %>">
-              <button type="submit">Apply</button>
-            </form>
-            <% if (cart && cart.coupon_applied) { %>
-              <div class="applied-coupon mt-3">
-                <div class="coupon-info">
-                  <span class="coupon-code"><%= cart.coupon_applied.code %></span>
-                  <span class="coupon-discount">₹<%= cart.coupon_applied.discount && !isNaN(cart.coupon_applied.discount) ? cart.coupon_applied.discount.toFixed(2) : '0.00' %> off</span>
-                </div>
-                <button type="button" id="removeCoupon" class="remove-coupon-btn">Remove</button>
-              </div>
-            <% } %>
-          </div>
-        <% } %>
+  
         
         <div class="cart__total">
           <h6>Cart total</h6>
@@ -442,48 +427,6 @@ $.ajax({
 });
     });
 
-//     // Apply coupon
-//     $('#couponForm').on('submit', function(e) {
-//   e.preventDefault();
-
-//   const coupon = $('input[name="coupon"]').val();
-//   const cartId = $('input[name="cartId"]').val();
-
-//   $.ajax({
-//     type: 'POST',
-//     url: '/cart/apply-coupon',
-//     contentType: 'application/json',
-//     data: JSON.stringify({ coupon, cartId }),
-//     success: function(response) {
-//       if (response.success) {
-//         Swal.fire({
-//           icon: 'success',
-//           title: 'Coupon Applied',
-//           text: `Discount: ₹${response.cart.coupon_applied.discount.toFixed(2)}`,
-//           confirmButtonColor: '#FFB22C'
-//         }).then(() => {
-//           location.reload(); // Reload to update cart summary
-//         });
-//       } else {
-//         Swal.fire({
-//           icon: 'error',
-//           title: 'Invalid Coupon',
-//           text: response.message,
-//           confirmButtonColor: '#FFB22C'
-//         });
-//       }
-//     },
-//     error: function() {
-//       Swal.fire({
-//         icon: 'error',
-//         title: 'Error',
-//         text: 'Something went wrong while applying the coupon.',
-//         confirmButtonColor: '#FFB22C'
-//       });
-//     }
-//   });
-// });
-
 
     function updateCartItem($row) {
       const qty = parseInt($row.find('input').val());
@@ -499,93 +442,7 @@ $.ajax({
 
 
   document.addEventListener('DOMContentLoaded', function() {
-  // Coupon form submission
-  const couponForm = document.getElementById('couponForm');
-  if (couponForm) {
-    couponForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      const couponCode = this.querySelector('input[name="coupon"]').value.trim();
-      const cartId = this.querySelector('input[name="cartId"]').value;
-      
-      if (!couponCode) {
-        showNotification('Please enter a coupon code', 'error');
-        return;
-      }
-      
-      // Check if cartId is valid
-      if (!cartId || cartId.trim() === '') {
-        showNotification('Your cart is empty. Add some products first.', 'error');
-        return;
-      }
-      
-      applyCoupon(couponCode, cartId);
-    });
-  }
-  
-  // Remove coupon button
-  const removeCouponBtn = document.getElementById('removeCoupon');
-  if (removeCouponBtn) {
-    removeCouponBtn.addEventListener('click', function() {
-      const cartId = document.querySelector('input[name="cartId"]').value;
-      removeCoupon(cartId);
-    });
-  }
-  
-  // Apply coupon function
-  function applyCoupon(couponCode, cartId) {
-    fetch('/cart/apply-coupon', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ coupon: couponCode, cartId: cartId })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        showNotification('Coupon applied successfully!', 'success');
-        // Reload the page to show updated cart totals
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      } else {
-        showNotification(data.message, 'error');
-      }
-    })
-    .catch(error => {
-      console.error('Error applying coupon:', error);
-      showNotification('Failed to apply coupon. Please try again.', 'error');
-    });
-  }
-  
-  // Remove coupon function
-  function removeCoupon(cartId) {
-    fetch('/cart/remove-coupon', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ cartId: cartId })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        showNotification('Coupon removed successfully!', 'success');
-        // Reload the page to show updated cart totals
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      } else {
-        showNotification(data.message, 'error');
-      }
-    })
-    .catch(error => {
-      console.error('Error removing coupon:', error);
-      showNotification('Failed to remove coupon. Please try again.', 'error');
-    });
-  }
-  
+
   // Notification function
   function showNotification(message, type) {
     // Check if notification already exists, remove it if it does

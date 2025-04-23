@@ -46,6 +46,86 @@
         color: #6c757d;
         margin-top: 5px;
     }
+    <style>
+    body {
+        background-color: #F7F7F7;
+        color: #000000;
+    }
+    .checkout__title {
+        color: #854836;
+    }
+    .site-btn {
+        background-color: #FFB22C;
+        color: #000000;
+        border: none;
+    }
+    .site-btn:hover {
+        background-color: #854836;
+        color: #F7F7F7;
+    }
+    .checkout__order {
+        background-color: #FFFFFF;
+        border: 1px solid #FFB22C;
+    }
+    .error-message {
+        background-color: #dc3545;
+        color: #FFFFFF;
+        padding: 10px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+    .address-select {
+        width: 100%;
+        padding: 8px;
+        margin-top: 10px;
+        border: 1px solid #FFB22C;
+        border-radius: 4px;
+    }
+    .wallet-balance {
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        margin-bottom: 15px;
+    }
+    .payment-info {
+        font-size: 14px;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    
+    /* Coupon section styles */
+    #coupon-code {
+        width: 100%;
+        height: 46px;
+        border: 1px solid #ebebeb;
+        padding: 0 15px;
+        border-radius: 4px;
+        margin-bottom: 0;
+    }
+    #coupon-code:focus {
+        border-color: #FFB22C;
+        outline: none;
+    }
+    #coupon-code:disabled {
+        background-color: #f8f9fa;
+    }
+    #coupon-message {
+        font-size: 14px;
+        padding: 5px 0;
+    }
+    .checkout__order__discount {
+        color: #854836;
+        font-weight: 600;
+    }
+    /* For the coupon application success message */
+    .success-message {
+        background-color: #28a745;
+        color: #FFFFFF;
+        padding: 10px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+</style>
 </style>
 
 <!-- Breadcrumb Section Begin -->
@@ -71,6 +151,7 @@
 <section class="checkout spad">
     <div class="container">
         <div class="checkout__form">
+            <div id="payment-status"></div>
             <% if (messages.error) { %>
                 <div class="error-message"><%= messages.error %></div>
             <% } %>
@@ -103,6 +184,30 @@
                         <% } else { %>
                             <p>No addresses found. <a href="/user/profile#Address">Add an address</a>.</p>
                         <% } %>
+
+ <!-- Coupon Code Section -->
+ <h6 class="checkout__title mt-4">Apply Coupon</h6>
+ <div class="row">
+     <div class="col-lg-8">
+         <div class="checkout__input">
+             <input type="text" id="coupon-code" name="coupon_code" placeholder="Enter coupon code"
+                 <% if (cart.couponApplied) { %>
+                     value="<%= cart.couponApplied.code %>" disabled
+                 <% } %>
+             >
+         </div>
+     </div>
+     <div class="col-lg-4">
+         <% if (cart.couponApplied) { %>
+             <button type="button" class="site-btn" id="remove-coupon-btn" onclick="removeCoupon()">REMOVE COUPON</button>
+         <% } else { %>
+             <button type="button" class="site-btn" id="apply-coupon-btn" onclick="applyCoupon()">APPLY COUPON</button>
+         <% } %>
+     </div>
+ </div>
+ <div id="coupon-message" class="mt-2" style="display: none;"></div>
+
+
 
                         <h6 class="checkout__title mt-4">Order Items</h6>
                         <div class="checkout__order__products mb-3">
@@ -335,9 +440,9 @@
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
             user_id: '<%= user._id %>',
-            amount: amount 
+            amount: amount
         })
     })
     .then(response => response.json())
@@ -355,15 +460,23 @@
                 description: 'Purchase Payment',
                 order_id: razorpayOrderId,
                 handler: function (response) {
-                    console.log("Razorpay response:", response);
+                    console.log("Razorpay success response:", response);
                     
                     // Store Razorpay payment details in hidden fields
                     document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id;
-                    document.getElementById('razorpay_order_id').value = razorpayOrderId; // Use the stored order ID
+                    document.getElementById('razorpay_order_id').value = razorpayOrderId;
                     document.getElementById('razorpay_signature').value = response.razorpay_signature;
                     
                     // Submit the form to complete the order
                     document.getElementById('checkout-form').submit();
+                },
+                // NEW: Payment failure handler
+                "modal": {
+                    "ondismiss": function() {
+                        console.log("Payment modal closed without completing payment");
+                        document.getElementById('payment-status').innerHTML = 
+                            '<div class="alert alert-warning">Payment cancelled. Please try again.</div>';
+                    }
                 },
                 prefill: {
                     name: '<%= user.name %>',
@@ -376,6 +489,46 @@
             };
             
             const rzp = new Razorpay(options);
+            
+            // NEW: Add event listeners for payment failures
+            rzp.on('payment.failed', function (response) {
+                console.error('Payment failed:', response.error);
+                
+                // Log payment failure details
+                const failureDetails = {
+                    order_id: razorpayOrderId,
+                    payment_id: response.error.metadata.payment_id,
+                    error_code: response.error.code,
+                    error_description: response.error.description,
+                    error_source: response.error.source,
+                    error_step: response.error.step,
+                    error_reason: response.error.reason
+                };
+                
+                // Display user-friendly error message
+                document.getElementById('payment-status').innerHTML = 
+                    `<div class="alert alert-danger">
+                        Payment failed: ${response.error.description}. 
+                        Please try again or use a different payment method.
+                    </div>`;
+                
+                // Send failure details to server for logging
+                fetch('/payment/log-failure', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(failureDetails)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Failure logged:', data);
+                })
+                .catch(error => {
+                    console.error('Error logging failure:', error);
+                });
+            });
+            
             rzp.open();
         } else {
             alert('Failed to create payment order. Please try again.');
@@ -403,6 +556,106 @@
                     ${selectedAddress.country} - ${selectedAddress.zip_code}</p>
             `;
         }
+    }
+
+        // Coupon related functions
+        function applyCoupon() {
+        const couponCode = document.getElementById('coupon-code').value.trim();
+        const messageDiv = document.getElementById('coupon-message');
+        
+        if (!couponCode) {
+            showCouponMessage('Please enter a coupon code.', 'error');
+            return;
+        }
+        
+        // Send request to apply coupon
+        fetch('/cart/apply-coupon', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                coupon_code: couponCode
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showCouponMessage(data.message || 'Coupon applied successfully!', 'success');
+                
+                // Disable input and change button to "Remove Coupon"
+                document.getElementById('coupon-code').disabled = true;
+                
+                const applyBtn = document.getElementById('apply-coupon-btn');
+                applyBtn.textContent = 'REMOVE COUPON';
+                applyBtn.id = 'remove-coupon-btn';
+                applyBtn.onclick = removeCoupon;
+                
+                // Reload page to update totals
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showCouponMessage(data.message || 'Invalid coupon code.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showCouponMessage('Something went wrong. Please try again.', 'error');
+        });
+    }
+
+    function removeCoupon() {
+        // Send request to remove coupon
+        fetch('/cart/remove-coupon', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showCouponMessage(data.message || 'Coupon removed successfully!', 'success');
+                
+                // Enable input and change button back to "Apply Coupon"
+                document.getElementById('coupon-code').disabled = false;
+                document.getElementById('coupon-code').value = '';
+                
+                const removeBtn = document.getElementById('remove-coupon-btn');
+                removeBtn.textContent = 'APPLY COUPON';
+                removeBtn.id = 'apply-coupon-btn';
+                removeBtn.onclick = applyCoupon;
+                
+                // Reload page to update totals
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showCouponMessage(data.message || 'Could not remove coupon.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showCouponMessage('Something went wrong. Please try again.', 'error');
+        });
+    }
+
+    function showCouponMessage(message, type) {
+        const messageDiv = document.getElementById('coupon-message');
+        messageDiv.textContent = message;
+        messageDiv.style.display = 'block';
+        
+        if (type === 'success') {
+            messageDiv.style.color = '#28a745';
+        } else {
+            messageDiv.style.color = '#dc3545';
+        }
+        
+        // Hide message after 5 seconds
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 5000);
     }
 </script>
 

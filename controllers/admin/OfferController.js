@@ -17,6 +17,7 @@ class OfferController {
       }
 
       const offers = await Offer.find(query)
+      .sort({ created_at: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean();
@@ -63,71 +64,174 @@ class OfferController {
   static async createOffer(req, res) {
     try {
       console.log('Request body:', JSON.stringify(req.body, null, 2));
-      let { appliesTo, targetIds, discountValue, code, startDate, endDate } = req.body;
-
-      // Parse targetIds to ensure it's an array
+      let { name, code, discountType, discountValue, appliesTo, targetIds, startDate, endDate } = req.body;
+  
+      // Validate using a validation function to avoid duplication
+      const validationErrors = [];
+  
+      // Basic field validations
+      if (!name || name.trim() === '') {
+        validationErrors.push('Offer name is required');
+      } else {
+        name = name.trim();
+        
+        // Check if name already exists
+        const existingOfferWithName = await Offer.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') }, isDeleted: false });
+        if (existingOfferWithName) {
+          validationErrors.push('An offer with this name already exists');
+        }
+      }
+  
+      if (!appliesTo) {
+        validationErrors.push('Offer type (appliesTo) is required');
+      } else if (!['product', 'category'].includes(appliesTo)) {
+        validationErrors.push('Invalid offer type. Must be "product" or "category"');
+      }
+  
+      if (!discountType || !['percentage', 'fixed'].includes(discountType)) {
+        validationErrors.push('Valid discount type (percentage or fixed) is required');
+      }
+  
+      // Process and validate targetIds
       if (typeof targetIds === 'string') {
         targetIds = [targetIds];
       } else if (!Array.isArray(targetIds)) {
-        throw new Error('targetIds must be an array');
+        validationErrors.push('targetIds must be an array');
+        targetIds = [];
       }
+  
+      // Trim and filter empty values
+      targetIds = targetIds.map(id => id?.trim()).filter(id => id);
+      
       if (targetIds.length === 0) {
-        throw new Error('At least one target ID is required');
+        validationErrors.push('At least one target ID is required');
+      } else {
+        // Check for duplicate IDs
+        const uniqueIds = new Set(targetIds);
+        if (uniqueIds.size !== targetIds.length) {
+          validationErrors.push('Duplicate target IDs are not allowed');
+        }
+  
+        // Validate ObjectIds
+        const validIds = targetIds.every(id => mongoose.isValidObjectId(id));
+        if (!validIds) {
+          console.log('Invalid ObjectIds in targetIds:', targetIds);
+          validationErrors.push('One or more targetIds are invalid');
+        }
       }
-
-      // Validate ObjectIds
-      const validIds = targetIds.every(id => mongoose.isValidObjectId(id));
-      if (!validIds) {
-        console.log('Invalid ObjectIds in targetIds:', targetIds);
-        throw new Error('One or more targetIds are invalid');
+  
+      // Validate and clean code (if provided)
+      if (code) {
+        code = code.trim().toUpperCase();
+        
+        if (code.length < 3) {
+          validationErrors.push('Offer code must be at least 3 characters long');
+        } else if (!/^[A-Z0-9_-]+$/.test(code)) {
+          validationErrors.push('Offer code can only contain letters, numbers, underscores, and hyphens');
+        } else {
+          // Check if code already exists
+          const existingOffer = await Offer.findOne({ code: code, isDeleted: false });
+          if (existingOffer) {
+            validationErrors.push('An offer with this code already exists');
+          }
+        }
       }
-
-      // Convert discountValue to number
+  
+      // Convert and validate discountValue
       discountValue = parseFloat(discountValue);
       if (isNaN(discountValue) || discountValue <= 0) {
-        throw new Error('Discount value must be a positive number');
+        validationErrors.push('Discount value must be a positive number');
+      } else if (discountType === 'percentage' && discountValue > 100) {
+        validationErrors.push('Percentage discount cannot exceed 100%');
       }
-
-      // Convert dates to Date objects
-      const startDateObj = new Date(startDate);
-      const endDateObj = new Date(endDate);
-      if (isNaN(startDateObj) || isNaN(endDateObj)) {
-        throw new Error('Invalid start or end date');
+  
+      // Convert and validate dates
+      let startDateObj, endDateObj;
+      
+      if (!startDate || !endDate) {
+        validationErrors.push('Start and end dates are required');
+      } else {
+        startDateObj = new Date(startDate);
+        endDateObj = new Date(endDate);
+        
+        if (isNaN(startDateObj) || isNaN(endDateObj)) {
+          validationErrors.push('Invalid start or end date format');
+        } else {
+          // Current date without time component for fair comparison
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          // Set time component of date objects to zero for fair comparison
+          const startDateCompare = new Date(startDateObj);
+          startDateCompare.setHours(0, 0, 0, 0);
+          
+          const endDateCompare = new Date(endDateObj);
+          endDateCompare.setHours(0, 0, 0, 0);
+          
+          if (startDateCompare < today) {
+            validationErrors.push(`Start date ${startDate} cannot be in the past (current date: ${today.toISOString().split('T')[0]})`);
+          }
+          
+          if (endDateCompare <= startDateCompare) {
+            validationErrors.push('End date must be after start date');
+          }
+        }
       }
-      console.log('Parsed startDate:', startDateObj, 'endDate:', endDateObj);
-
-      // Validate targetIds
+  
+      // If there are validation errors, throw error with the first one
+      if (validationErrors.length > 0) {
+        throw new Error(validationErrors[0]);
+      }
+  
+      // Database validation (only if basic validations pass)
       if (appliesTo === 'product') {
         console.log('Querying products with IDs:', targetIds);
         const products = await Product.find({ _id: { $in: targetIds }, isDeleted: false, status: 'listed' });
         console.log('Found products:', products.map(p => p._id.toString()));
+        
         if (products.length !== targetIds.length) {
-          console.log('Mismatch: Expected', targetIds.length, 'products, found', products.length);
-          throw new Error('Invalid or unavailable product IDs');
+          // Find missing product IDs for better error message
+          const foundIds = new Set(products.map(p => p._id.toString()));
+          const missingIds = targetIds.filter(id => !foundIds.has(id));
+          
+          throw new Error(`Invalid or unavailable product IDs: ${missingIds.join(', ')}`);
         }
       } else if (appliesTo === 'category') {
         console.log('Querying categories with IDs:', targetIds);
         const categories = await Category.find({ _id: { $in: targetIds }, isDeleted: false, status: 'listed' });
         console.log('Found categories:', categories.map(c => c._id.toString()));
+        
         if (categories.length !== targetIds.length) {
-          throw new Error('Invalid or unavailable category IDs');
+          // Find missing category IDs for better error message
+          const foundIds = new Set(categories.map(c => c._id.toString()));
+          const missingIds = targetIds.filter(id => !foundIds.has(id));
+          
+          throw new Error(`Invalid or unavailable category IDs: ${missingIds.join(', ')}`);
         }
       }
-
-      // Create offer with parsed data
+  
+      // Create offer with parsed and validated data
       const offer = new Offer({
-        ...req.body,
-        targetIds,
+        name,
+        code: code || undefined,
+        discountType,
         discountValue,
+        appliesTo,
+        targetIds,
         startDate: startDateObj,
         endDate: endDateObj,
-        code: code || undefined,
+        // Include any other fields from req.body that aren't explicitly validated
+        ...Object.fromEntries(
+          Object.entries(req.body)
+            .filter(([key]) => !['name', 'code', 'discountType', 'discountValue', 'appliesTo', 'targetIds', 'startDate', 'endDate'].includes(key))
+        )
       });
+      
       await offer.save();
-
+  
       // Update sale prices
       await OfferService.updateSalePrices();
-
+  
       req.session.successMessage = 'Offer created successfully';
       res.redirect('/admin/offers');
     } catch (error) {
@@ -139,66 +243,200 @@ class OfferController {
 
   static async updateOffer(req, res) {
     try {
-      let { id, appliesTo, targetIds, discountValue, code, startDate, endDate } = req.body;
-
-      // Parse targetIds to ensure it's an array
+      let { id, name, appliesTo, targetIds, discountType, discountValue, code, startDate, endDate } = req.body;
+  
+      // Validate using a validation function to avoid duplication
+      const validationErrors = [];
+  
+      // Check if offer exists
+      const existingOffer = await Offer.findById(id);
+      if (!existingOffer) {
+        throw new Error('Offer not found');
+      }
+  
+      // Basic field validations
+      if (!name || name.trim() === '') {
+        validationErrors.push('Offer name is required');
+      } else {
+        name = name.trim();
+        
+        // Check if name already exists (excluding this offer)
+        const duplicateName = await Offer.findOne({ 
+          _id: { $ne: id }, 
+          name: { $regex: new RegExp(`^${name}$`, 'i') }, 
+          isDeleted: false 
+        });
+        
+        if (duplicateName) {
+          validationErrors.push('An offer with this name already exists');
+        }
+      }
+  
+      if (!appliesTo) {
+        validationErrors.push('Offer type (appliesTo) is required');
+      } else if (!['product', 'category'].includes(appliesTo)) {
+        validationErrors.push('Invalid offer type. Must be "product" or "category"');
+      }
+  
+      if (!discountType || !['percentage', 'fixed'].includes(discountType)) {
+        validationErrors.push('Valid discount type (percentage or fixed) is required');
+      }
+  
+      // Process and validate targetIds
       if (typeof targetIds === 'string') {
         targetIds = [targetIds];
       } else if (!Array.isArray(targetIds)) {
-        throw new Error('targetIds must be an array');
+        validationErrors.push('targetIds must be an array');
+        targetIds = [];
       }
+  
+      // Trim and filter empty values
+      targetIds = targetIds.map(id => id?.trim()).filter(id => id);
+      
       if (targetIds.length === 0) {
-        throw new Error('At least one target ID is required');
+        validationErrors.push('At least one target ID is required');
+      } else {
+        // Check for duplicate IDs
+        const uniqueIds = new Set(targetIds);
+        if (uniqueIds.size !== targetIds.length) {
+          validationErrors.push('Duplicate target IDs are not allowed');
+        }
+  
+        // Validate ObjectIds
+        const validIds = targetIds.every(id => mongoose.isValidObjectId(id));
+        if (!validIds) {
+          validationErrors.push('One or more targetIds are invalid');
+        }
       }
-
-      // Validate ObjectIds
-      const validIds = targetIds.every(id => mongoose.isValidObjectId(id));
-      if (!validIds) {
-        throw new Error('One or more targetIds are invalid');
+  
+      // Validate and clean code (if provided)
+      if (code) {
+        code = code.trim().toUpperCase();
+        
+        if (code.length < 3) {
+          validationErrors.push('Offer code must be at least 3 characters long');
+        } else if (!/^[A-Z0-9_-]+$/.test(code)) {
+          validationErrors.push('Offer code can only contain letters, numbers, underscores, and hyphens');
+        } else if (code !== existingOffer.code) {
+          // Check if code already exists (only if changed)
+          const duplicateCode = await Offer.findOne({ 
+            _id: { $ne: id }, 
+            code: code, 
+            isDeleted: false 
+          });
+          
+          if (duplicateCode) {
+            validationErrors.push('An offer with this code already exists');
+          }
+        }
       }
-
-      // Convert discountValue to number
+  
+      // Convert and validate discountValue
       discountValue = parseFloat(discountValue);
       if (isNaN(discountValue) || discountValue <= 0) {
-        throw new Error('Discount value must be a positive number');
+        validationErrors.push('Discount value must be a positive number');
+      } else if (discountType === 'percentage' && discountValue > 100) {
+        validationErrors.push('Percentage discount cannot exceed 100%');
       }
-
-      // Convert dates to Date objects
-      const startDateObj = new Date(startDate);
-      const endDateObj = new Date(endDate);
-      if (isNaN(startDateObj) || isNaN(endDateObj)) {
-        throw new Error('Invalid start or end date');
+  
+      // Convert and validate dates
+      let startDateObj, endDateObj;
+      
+      if (!startDate || !endDate) {
+        validationErrors.push('Start and end dates are required');
+      } else {
+        startDateObj = new Date(startDate);
+        endDateObj = new Date(endDate);
+        
+        if (isNaN(startDateObj) || isNaN(endDateObj)) {
+          validationErrors.push('Invalid start or end date format');
+        } else {
+          // Current date without time component for fair comparison
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          // Set time component of date objects to zero for fair comparison
+          const startDateCompare = new Date(startDateObj);
+          startDateCompare.setHours(0, 0, 0, 0);
+          
+          const endDateCompare = new Date(endDateObj);
+          endDateCompare.setHours(0, 0, 0, 0);
+          
+          // For updates, allow the start date to be in the past if it's not changed from original
+          const originalStartDate = new Date(existingOffer.startDate);
+          originalStartDate.setHours(0, 0, 0, 0);
+          
+          // Only validate start date if it's different from the original
+          if (startDateCompare.getTime() !== originalStartDate.getTime() && startDateCompare < today) {
+            validationErrors.push(`Start date ${startDate} cannot be in the past (current date: ${today.toISOString().split('T')[0]})`);
+          }
+          
+          if (endDateCompare <= startDateCompare) {
+            validationErrors.push('End date must be after start date');
+          }
+        }
       }
-
-      // Validate targetIds
+  
+      // If there are validation errors, throw error with the first one
+      if (validationErrors.length > 0) {
+        throw new Error(validationErrors[0]);
+      }
+  
+      // Database validation (only if basic validations pass)
       if (appliesTo === 'product') {
         const products = await Product.find({ _id: { $in: targetIds }, isDeleted: false, status: 'listed' });
-        if (products.length !== targetIds.length) throw new Error('Invalid or unavailable product IDs');
+        
+        if (products.length !== targetIds.length) {
+          // Find missing product IDs for better error message
+          const foundIds = new Set(products.map(p => p._id.toString()));
+          const missingIds = targetIds.filter(id => !foundIds.has(id));
+          
+          throw new Error(`Invalid or unavailable product IDs: ${missingIds.join(', ')}`);
+        }
       } else if (appliesTo === 'category') {
         const categories = await Category.find({ _id: { $in: targetIds }, isDeleted: false, status: 'listed' });
-        if (categories.length !== targetIds.length) throw new Error('Invalid or unavailable category IDs');
+        
+        if (categories.length !== targetIds.length) {
+          // Find missing category IDs for better error message
+          const foundIds = new Set(categories.map(c => c._id.toString()));
+          const missingIds = targetIds.filter(id => !foundIds.has(id));
+          
+          throw new Error(`Invalid or unavailable category IDs: ${missingIds.join(', ')}`);
+        }
       }
-
-      const offer = await Offer.findByIdAndUpdate(
+  
+      // Update offer with parsed and validated data
+      const updatedOffer = await Offer.findByIdAndUpdate(
         id,
         {
-          ...req.body,
+          name,
+          appliesTo,
           targetIds,
+          discountType,
           discountValue,
           startDate: startDateObj,
           endDate: endDateObj,
           code: code || undefined,
+          // Include any other fields from req.body that aren't explicitly validated
+          ...Object.fromEntries(
+            Object.entries(req.body)
+              .filter(([key]) => !['id', 'name', 'appliesTo', 'targetIds', 'discountType', 'discountValue', 'startDate', 'endDate', 'code'].includes(key))
+          )
         },
         { new: true }
       );
-      if (!offer) throw new Error('Offer not found');
-
+  
+      if (!updatedOffer) {
+        throw new Error('Failed to update offer');
+      }
+  
       // Update sale prices
       await OfferService.updateSalePrices();
-
+  
       req.session.successMessage = 'Offer updated successfully';
       res.redirect('/admin/offers');
     } catch (error) {
+      console.error('Error updating offer:', error);
       req.session.errorMessage = error.message;
       res.redirect('/admin/offers');
     }
@@ -242,7 +480,7 @@ class OfferController {
         const updates = variants.map(variant => ({
           updateOne: {
             filter: { _id: variant._id },
-            update: { $set: { sale_price: variant.price, discountType: null, activeDiscountValue: 0 } },
+            update: { $set: { sale_price: variant.price, discountType: null, activeDiscountValue: 0,offer_id: null } },
           },
         }));
         if (updates.length > 0) {
@@ -265,7 +503,7 @@ class OfferController {
         const updates = variants.map(variant => ({
           updateOne: {
             filter: { _id: variant._id },
-            update: { $set: { sale_price: variant.price, discountType: null, activeDiscountValue: 0 } },
+            update: { $set: { sale_price: variant.price, discountType: null, activeDiscountValue: 0,offer_id: null } },
           },
         }));
         if (updates.length > 0) {

@@ -6,6 +6,6 @@ const { userAuth }=require('../middleware/auth');
 router.post('/create-order', paymentController.createOrder);
 router.post('/verify-payment', paymentController.verifyPayment);
 // router.get('/success', paymentController.paymentSuccess);
-// router.get('/failure', paymentController.paymentFailure);
+ router.get('/log-failure', paymentController.paymentFailure);
 
 module.exports = router;

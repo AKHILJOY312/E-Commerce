@@ -77,6 +77,8 @@ app.use((err, req, res, next) => {
     error: process.env.NODE_ENV === "development" ? err : {},
   });
 });
+
+
 app.use("/", usersRoutes);
 app.use("/admin", adminRoutes);
 app.use('/wallet', walletRoutes);

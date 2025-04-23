@@ -22,6 +22,10 @@ const variantSchema = new mongoose.Schema({
   status: { type: String, enum: ["listed", "unlisted"], default: "unlisted" },
   discountType: {type: String,enum: ["percentage", "fixed"], default: null },
   activeDiscountValue: {type: Number,min: 0,default: 0,},
+  offer_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Offer",
+  },
   isDeleted: { type: Boolean, default: false },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },

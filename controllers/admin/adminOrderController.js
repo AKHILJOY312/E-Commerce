@@ -140,7 +140,7 @@ const adminOrderController = {
   // Update order status
   async  updateOrderStatus(req, res) {
     try {
-      console.log("workedingad")
+    
         const { id, status } = req.body;
         const order = await Order.findById(id)
             .populate({

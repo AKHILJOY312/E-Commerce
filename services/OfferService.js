@@ -49,7 +49,7 @@ class OfferService {
             return {
               updateOne: {
                 filter: { _id: variant._id },
-                update: { $set: { sale_price: salePrice,discountType: offer.discountType, activeDiscountValue: offer.discountValue } },
+                update: { $set: { sale_price: salePrice,discountType: offer.discountType, activeDiscountValue: offer.discountValue ,offer_id: offer._id } },
               },
             };
           });
@@ -93,7 +93,7 @@ class OfferService {
             return {
               updateOne: {
                 filter: { _id: variant._id },
-                update: { $set: { sale_price: salePrice,discountType: offer.discountType, activeDiscountValue: offer.discountValue  } },
+                update: { $set: { sale_price: salePrice,discountType: offer.discountType, activeDiscountValue: offer.discountValue,offer_id: offer._id } },
               },
             };
           });

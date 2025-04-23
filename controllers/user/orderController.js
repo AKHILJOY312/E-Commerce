@@ -10,12 +10,13 @@ const PDFDocument = require('pdfkit');
 const crypto = require("crypto");
 const Transaction=require('../../models/WalletTransaction');
 const Coupon = require('../../models/Coupon');
+const CouponUsage= require('../../models/CouponUsage');
 
 
 exports.getCheckoutPage = async (req, res) => {
   try {
     const userId = req.session.user_id;
-    
+   
     const cart = await Cart.findOne({ user_id: userId })
       .populate({
         path: 'products.product_id',
@@ -25,50 +26,72 @@ exports.getCheckoutPage = async (req, res) => {
         path: 'products.variant_id',
         model: 'Variant'
       });
-    
-    // Fetch all addresses for the user, not just the default one
+   
+    // Fetch all addresses for the user
     const addresses = await Address.find({ user_id: userId }).lean();
-    const defaultAddress = addresses.find(addr => addr.is_default) || addresses[0] || null; // Fallback to first address if no default
+    const defaultAddress = addresses.find(addr => addr.is_default) || addresses[0] || null;
     const user = await User.findById(userId);
-    
-    // Check if cart is empty and redirect to shop with SweetAlert
+   
+    // Check if cart is empty and redirect to shop with message
     if (!cart || !cart.products || cart.products.length === 0) {
       req.flash('error', 'Your cart is empty. Please add items to your cart before checking out.');
       return res.redirect('/shop');
     }
-    
+   
     const availableProducts = cart.products.filter(item =>
       item.variant_id && item.variant_id.quantity > 0 &&
       item.quantity <= item.variant_id.quantity
     );
-    
+   
     // Check if there are no available products after filtering
     if (availableProducts.length === 0) {
       return res.redirect('/cart');
     }
-    
+   
     // Calculate subtotal
     let subtotal = availableProducts.reduce((sum, item) =>
       sum + (item.variant_id.sale_price * item.quantity), 0);
-    
-    // Check for applied coupon and calculate discount
+   
+    // Check for coupon in session instead of cart
     let discount = 0;
     let couponApplied = null;
-    
-    if (cart.coupon && cart.coupon.code && cart.coupon.discount) {
-      couponApplied = {
-        code: cart.coupon.code,
-        discount: parseFloat(cart.coupon.discount) || 0
-      };
-      discount = couponApplied.discount;
+   
+    // If there's an active coupon in session
+    if (req.session.appliedCoupon) {
+      // Fetch the coupon directly from the coupon database
+      const coupon = await Coupon.findById(req.session.appliedCoupon.couponId);
+      
+      if (coupon && coupon.status && !coupon.is_deleted && 
+          new Date() >= coupon.start_date && new Date() <= coupon.end_date) {
+        
+        // Check if minimum order value is met
+        if (subtotal >= coupon.min_order_value) {
+          couponApplied = {
+            code: coupon.code,
+            type: coupon.discount_type
+          };
+          
+          // Calculate discount based on type
+          if (coupon.discount_type === 'percentage') {
+            discount = (subtotal * coupon.discount_value / 100);
+            // Optional: Cap percentage discount if needed
+            // discount = Math.min(discount, someMaxValue);
+          } else { // fixed discount
+            discount = coupon.discount_value;
+          }
+          
+          // Ensure discount doesn't exceed subtotal
+          discount = Math.min(discount, subtotal);
+        }
+      }
     }
-    
+   
     // Calculate shipping cost
     const shippingCost = subtotal > 1000 ? 0 : 50;
-    
+   
     // Calculate total including discount
     const total = subtotal - discount + shippingCost;
-    
+   
     res.render('order/checkout', {
       cart: {
         products: availableProducts,
@@ -78,8 +101,8 @@ exports.getCheckoutPage = async (req, res) => {
         shippingCost,
         total
       },
-      addresses, // Pass all addresses
-      address: defaultAddress, // Initially selected address
+      addresses,
+      address: defaultAddress,
       user,
       currentActivePage: "shop"
     });
@@ -111,203 +134,263 @@ const verifyRazorpaySignature = (order_id, payment_id, signature) => {
 
 
 exports.placeOrder = async (req, res) => {
-    try {
-      const userId = req.session.user_id;
-      const { payment_method, addressId } = req.body;
+  try {
+    const userId = req.session.user_id;
+    const { payment_method, addressId } = req.body;
 
+    let discount = 0;
+    let couponCode = null;
+    let couponId = null;
+    let couponDetails = null;
+    
+    console.log("place order", req.body);
 
-      let discount = 0;
-      let couponCode = null;
-      let couponId = null;
-  console.log("place order",req.body)
-      if (!payment_method) {
-        req.flash('error', 'Please select a payment method');
-        console.log('Payment method not selected:', req.body);
-        return res.redirect('/checkout');
-      }
-  
-      const user = await User.findById(userId).populate('referredBy');
-  
-      if (payment_method === 'wallet') {
-        const cart = await Cart.findOne({ user_id: userId })
-          .populate('products.product_id')
-          .populate('products.variant_id');
-  
-        if (!cart || !cart.products.length) {
-          req.flash('error', 'Cart is empty');
-          return res.redirect('/checkout');
-        }
-        
-        
-        if (cart.coupon && cart.coupon.code && cart.coupon.discount) {
-          discount = parseFloat(cart.coupon.discount) || 0;
-          couponCode = cart.coupon.code;
-          couponId =await Coupon.findOne({code:couponCode}).select('_id');
-        }
-  
-        const subtotal = cart.products.reduce((sum, item) => 
-          sum + (item.variant_id.sale_price * item.quantity), 0);
-        const deliveryCharge = subtotal > 1000 ? 0 : 50;
-        const total = subtotal- discount + deliveryCharge;
-  
-        if (user.wallet < total) {
-          req.flash('error', 'Insufficient wallet balance');
-          return res.redirect('/checkout');
-        }
-  
-        user.wallet -= total;
-        const userSave = await user.save();
-        if(userSave){
-           const txn = await Transaction.create({
-                user_id:userId,
-                amount:total,
-                balance: user.wallet,
-                transaction_type: 'purchase',
-                description: 'Purchase from wallet', 
-                status: 'completed',
-              });
-        }
-  
-      }
-  
-      if (payment_method === 'razorpay') {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-        const isValid = verifyRazorpaySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
-  
-        if (!isValid) {
-          req.flash('error', 'verification failed');
-          return res.redirect('/checkout');
-        }
-      }
-  
-      if (!addressId || !mongoose.Types.ObjectId.isValid(addressId)) {
-        req.flash('error', 'Please select a valid address');
-        return res.redirect('/checkout');
-      }
-  
+    if (!payment_method) {
+      req.flash('error', 'Please select a payment method');
+      console.log('Payment method not selected:', req.body);
+      return res.redirect('/checkout');
+    }
+
+    const user = await User.findById(userId).populate('referredBy');
+
+    if (payment_method === 'wallet') {
       const cart = await Cart.findOne({ user_id: userId })
         .populate('products.product_id')
         .populate('products.variant_id');
-  
+
       if (!cart || !cart.products.length) {
         req.flash('error', 'Cart is empty');
         return res.redirect('/checkout');
       }
-  
-      const selectedAddress = await Address.findOne({ _id: addressId, user_id: userId });
-      if (!selectedAddress) {
-        req.flash('error', 'Selected address not found');
-        return res.redirect('/checkout');
-      }
-  
-      const availableProducts = cart.products.filter(item => 
-        item.variant_id && item.variant_id.quantity >= item.quantity
-      );
-  
-      if (availableProducts.length === 0) {
-        req.flash('error', 'No items in cart are available in sufficient quantity');
-        return res.redirect('/checkout');
+      
+      // Check for coupon in session instead of cart
+      if (req.session.appliedCoupon) {
+        const coupon = await Coupon.findById(req.session.appliedCoupon.couponId);
+        if (coupon) {
+          couponCode = coupon.code;
+          couponId = coupon._id;
+          couponDetails = req.session.appliedCoupon;
+          
+          // Calculate discount based on subtotal and coupon type
+          const subtotal = cart.products.reduce((sum, item) => 
+            sum + (item.variant_id.sale_price * item.quantity), 0);
+            
+          if (coupon.discount_type === 'percentage') {
+            discount = (subtotal * coupon.discount_value / 100);
+          } else {
+            discount = coupon.discount_value;
+          }
+          
+          // Ensure discount doesn't exceed subtotal
+          discount = Math.min(discount, subtotal);
+        }
       }
 
-      
-      
-      if (cart.coupon && cart.coupon.code && cart.coupon.discount) {
-        discount = parseFloat(cart.coupon.discount) || 0;
-        couponCode = cart.coupon.code;
-        couponId =await Coupon.findOne({code:couponCode}).select('_id');
-      }
-  
-      const subtotal = availableProducts.reduce((sum, item) => 
+      const subtotal = cart.products.reduce((sum, item) => 
         sum + (item.variant_id.sale_price * item.quantity), 0);
       const deliveryCharge = subtotal > 1000 ? 0 : 50;
-      const total = subtotal-discount + deliveryCharge;
-  
-      const deliveryDate = new Date();
-      deliveryDate.setDate(deliveryDate.getDate() + 7);
-  
-      const order = new Order({
-        user_id: userId,
-        payment_id: new mongoose.Types.ObjectId(),
-        delivery_charge: deliveryCharge,
-        delivery_date: deliveryDate,
-        amount: subtotal,
-        coupon_id:couponId,
-        total_amount: total.toString(),
-        status: 'confirmed',
-        address_id: addressId,
-        pay_method:payment_method,
-      });
-  
-      await order.save();
-  
-      const orderItems = await Promise.all(availableProducts.map(async item => {
-        const variant = await Variant.findOneAndUpdate(
-          { _id: item.variant_id._id, quantity: { $gte: item.quantity } },
-          { $inc: { quantity: -item.quantity } },
-          { new: true }
-        );
-  
-        if (!variant) {
-          throw new Error(`Insufficient stock for variant ${item.variant_id._id}`);
-        }
-  
-        const orderItem = new OrderItem({
-          product_id: item.product_id._id,
-          variant_id: item.variant_id._id,
-          order_id: order._id,
-          quantity: item.quantity,
-          price: item.variant_id.sale_price,
-          total_price: item.variant_id.sale_price * item.quantity,
-        });
-        await orderItem.save();
-  
-        return orderItem._id;
-      }));
-  
-      order.order_items = orderItems;
-      await order.save();
-  
-      await Cart.findOneAndDelete({ user_id: userId });
+      const total = subtotal - discount + deliveryCharge;
 
-     // Update this part to properly track referral rewards
-if (user.referredBy) {
-  // Find the referrer
-  const referrer = await User.findById(user.referredBy);
-  if (referrer) {
-    // Add ₹100 to referrer's wallet
-    referrer.wallet += 100;
-    
-    // Add a record of this reward to referrer's referralRewards array
-    referrer.referralRewards.push({
-      amount: 100,
-      status: 'credited',
-      createdAt: Date.now()
-    });
-    await referrer.save();
-  
-    // Reward the new user (referee)
-    user.wallet += 50;
-    
-    // Add a record of this reward to user's referralRewards array
-    user.referralRewards.push({
-      amount: 50,
-      status: 'credited',
-      createdAt: Date.now()
-    });
-    await user.save();
-  }
-}
-      res.render('payment/payment-success',{currentActivePage:"",order,payment_method,couponCode,discount});
-    } catch (error) {
-      console.error('Error placing order:', error);
-      if (order && order._id) {
-        await Order.deleteOne({ _id: order._id });
-        await OrderItem.deleteMany({ order_id: order._id });
+      if (user.wallet < total) {
+        req.flash('error', 'Insufficient wallet balance');
+        return res.redirect('/checkout');
       }
-      req.flash('error', 'Failed to place order. Please try again.');
-      res.redirect('/cart');
+
+      user.wallet -= total;
+      const userSave = await user.save();
+      if(userSave){
+         const txn = await Transaction.create({
+              user_id: userId,
+              amount: total,
+              balance: user.wallet,
+              transaction_type: 'purchase',
+              description: 'Purchase from wallet', 
+              status: 'completed',
+            });
+      }
     }
-  };
+
+    if (payment_method === 'razorpay') {
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+      const isValid = verifyRazorpaySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
+
+      if (!isValid) {
+        req.flash('error', 'verification failed');
+        return res.redirect('/checkout');
+      }
+    }
+
+    if (!addressId || !mongoose.Types.ObjectId.isValid(addressId)) {
+      req.flash('error', 'Please select a valid address');
+      return res.redirect('/checkout');
+    }
+
+    const cart = await Cart.findOne({ user_id: userId })
+      .populate('products.product_id')
+      .populate('products.variant_id');
+
+    if (!cart || !cart.products.length) {
+      req.flash('error', 'Cart is empty');
+      return res.redirect('/checkout');
+    }
+
+    const selectedAddress = await Address.findOne({ _id: addressId, user_id: userId });
+    if (!selectedAddress) {
+      req.flash('error', 'Selected address not found');
+      return res.redirect('/checkout');
+    }
+
+    const availableProducts = cart.products.filter(item => 
+      item.variant_id && item.variant_id.quantity >= item.quantity
+    );
+
+    if (availableProducts.length === 0) {
+      req.flash('error', 'No items in cart are available in sufficient quantity');
+      return res.redirect('/checkout');
+    }
+
+    // Check for coupon in session if not already set (for non-wallet payments)
+    if (!couponId && req.session.appliedCoupon) {
+      const coupon = await Coupon.findById(req.session.appliedCoupon.couponId);
+      if (coupon) {
+        couponCode = coupon.code;
+        couponId = coupon._id;
+        couponDetails = req.session.appliedCoupon;
+        
+        // Calculate discount based on subtotal and coupon type
+        const subtotal = availableProducts.reduce((sum, item) => 
+          sum + (item.variant_id.sale_price * item.quantity), 0);
+          
+        if (coupon.discount_type === 'percentage') {
+          discount = (subtotal * coupon.discount_value / 100);
+        } else {
+          discount = coupon.discount_value;
+        }
+        
+        // Ensure discount doesn't exceed subtotal
+        discount = Math.min(discount, subtotal);
+      }
+    }
+
+    const subtotal = availableProducts.reduce((sum, item) => 
+      sum + (item.variant_id.sale_price * item.quantity), 0);
+    const deliveryCharge = subtotal > 1000 ? 0 : 50;
+    const total = subtotal - discount + deliveryCharge;
+
+    const deliveryDate = new Date();
+    deliveryDate.setDate(deliveryDate.getDate() + 7);
+
+    const order = new Order({
+      user_id: userId,
+      payment_id: new mongoose.Types.ObjectId(),
+      delivery_charge: deliveryCharge,
+      delivery_date: deliveryDate,
+      amount: subtotal,
+      coupon_id: couponId,
+      total_amount: total.toString(),
+      status: 'confirmed',
+      address_id: addressId,
+      pay_method: payment_method,
+    });
+
+    await order.save();
+
+    const orderItems = await Promise.all(availableProducts.map(async item => {
+      const variant = await Variant.findOneAndUpdate(
+        { _id: item.variant_id._id, quantity: { $gte: item.quantity } },
+        { $inc: { quantity: -item.quantity } },
+        { new: true }
+      );
+
+      if (!variant) {
+        throw new Error(`Insufficient stock for variant ${item.variant_id._id}`);
+      }
+
+      const orderItem = new OrderItem({
+        product_id: item.product_id._id,
+        variant_id: item.variant_id._id,
+        order_id: order._id,
+        quantity: item.quantity,
+        price: item.variant_id.sale_price,
+        total_price: item.variant_id.sale_price * item.quantity,
+      });
+      await orderItem.save();
+
+      return orderItem._id;
+    }));
+
+    order.order_items = orderItems;
+    await order.save();
+
+    // If a coupon was used, record the usage in CouponUsage and update the coupon's used count
+    if (couponId) {
+      // Record coupon usage
+      await CouponUsage.create({
+        user_id: userId,
+        coupon_id: couponId,
+        used_at: new Date()
+      });
+      
+      // Increment coupon used count
+      await Coupon.findByIdAndUpdate(
+        couponId,
+        { $inc: { used_count: 1 } }
+      );
+      
+      // Clear coupon from session
+      delete req.session.appliedCoupon;
+    }
+    
+    // Delete the cart
+    await Cart.findOneAndDelete({ user_id: userId });
+
+    // Update this part to properly track referral rewards
+    if (user.referredBy && !user.hasReceivedReferralReward) {
+      // Find the referrer
+      const referrer = await User.findById(user.referredBy);
+      if (referrer) {
+        // Add ₹100 to referrer's wallet
+        referrer.wallet += 100;
+        
+        // Add a record of this reward to referrer's referralRewards array
+        referrer.referralRewards.push({
+          amount: 100,
+          status: 'credited',
+          createdAt: Date.now()
+        });
+        await referrer.save();
+      
+        // Reward the new user (referee)
+        user.wallet += 50;
+        
+        // Add a record of this reward to user's referralRewards array
+        user.referralRewards.push({
+          amount: 50,
+          status: 'credited',
+          createdAt: Date.now()
+        });
+        user.hasReceivedReferralReward = true; // Mark as rewarded
+        await user.save();
+      }
+    }
+    
+    res.render('payment/payment-success', {
+      currentActivePage: "",
+      order,
+      payment_method,
+      couponCode,
+      discount
+    });
+  } catch (error) {
+    console.error('Error placing order:', error);
+    if (order && order._id) {
+      await Order.deleteOne({ _id: order._id });
+      await OrderItem.deleteMany({ order_id: order._id });
+    }
+    req.flash('error', 'Failed to place order. Please try again.');
+    res.redirect('/cart');
+  }
+};
 
 exports.getRecentOrders = async (req, res) => {
     try {

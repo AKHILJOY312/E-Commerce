@@ -81,3 +81,14 @@ exports.verifyPayment = async (req, res) => {
     res.redirect('/wallet');
   }
 };
+exports.paymentFailure = async (req,res)=>{
+  try{
+    const failureDetails = req.body;
+  // Log to database or file
+  console.error('Payment failure:', failureDetails);
+  // Optionally notify admins
+  res.json({ success: true });
+  }catch(error){
+console.error('error fetaching the payment faliure detalis',error);
+  }
+}

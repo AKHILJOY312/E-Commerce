@@ -177,19 +177,31 @@
 
     // Add to cart from wishlist
     $('.add-to-cart-btn').on('click', function() {
-      const variantId = $(this).data('variant-id');
+      const $row = $(this).closest('tr');
+      const variantId = $row.data('variant-id');
 
       $.ajax({
         type: 'POST',
         url: '/cart/add',
         data: { variantId: variantId, quantity: 1 },
         success: function(response) {
+          // Assuming the response contains a success flag and a message
+          
+
           if (response.success) {
+           
             Swal.fire({
               icon: 'success',
               title: 'Added to Cart',
               text: 'The item has been added to your cart!',
               confirmButtonColor: '#FFB22C'
+            }).then((result)=>{
+              if (result.isConfirmed) {
+                $row.remove();
+                if ($('tbody tr').length === 0) {
+                  $('tbody').html('<tr><td colspan="4" class="text-center">Your wishlist is empty.</td></tr>');
+                }
+              }
             });
           } else {
             Swal.fire({

@@ -56,7 +56,8 @@ exports.addCoupon = async (req, res) => {
       end_date
     } = req.body;
 
-    const existing = await Coupon.findOne({ code: code.toUpperCase(), is_deleted: false });
+    const checkCode=code.toUpperCase().trim();
+    const existing = await Coupon.findOne({ code: checkCode, is_deleted: false });
 
     if (existing) {
         req.flash('error',"Already the same name exists");
