@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const WalletTransactionSchema = new mongoose.Schema({
   user_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'users',
+    ref: 'User',
     required: true
   },
   order_id: {

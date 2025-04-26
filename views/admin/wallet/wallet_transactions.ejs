@@ -1,0 +1,294 @@
+<%- include("../../views/partials/admin/header.ejs") %>
+
+<!-- Begin Page Content -->
+<div class="container-fluid">
+  <!-- Page Heading and Search -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Wallet Transactions</h1>
+    <form id="searchForm" class="form-inline navbar-search" action="/admin/wallet-transactions" method="GET">
+      <div class="input-group" style="box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); position: relative;">
+        <input
+          type="text"
+          name="search"
+          id="searchInput"
+          class="form-control bg-light border-0 small"
+          placeholder="Search by User or Transaction ID..."
+          value="<%= searchQuery || '' %>"
+          aria-label="Search"
+          aria-describedby="basic-addon2"
+          autocomplete="off"
+        />
+        <div class="input-group-append">
+          <button class="btn btn-primary" type="submit" id="searchButton">
+            <i class="fas fa-search fa-sm"></i>
+          </button>
+          <button class="btn btn-secondary" type="button" id="resetSearch">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <!-- Suggestions Dropdown -->
+        <div id="suggestions" class="dropdown-menu" style="width: 100%; max-height: 200px; overflow-y: auto; display: none;"></div>
+      </div>
+    </form>
+  </div>
+
+  <p class="mb-4">
+    View and manage wallet transactions below. Monitor total wallet balance and user engagement with wallet features.
+  </p>
+
+  <!-- Wallet Statistics -->
+  <div class="row mb-4">
+    <div class="col-xl-4 col-md-6 mb-4">
+      <div class="card border-left-primary shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                Total Wallet Balance
+              </div>
+              <div class="h5 mb-0 font-weight-bold text-gray-800">
+                ₹<%= totalWalletBalance.toFixed(2) %>
+              </div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-wallet fa-2x text-gray-300"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-4 col-md-6 mb-4">
+      <div class="card border-left-success shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-guts align-items-center">
+            <div class="col mr-2">
+              <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                Users Using Wallet
+              </div>
+              <div class="h5 mb-0 font-weight-bold text-gray-800">
+                <%= usersWithWallet %>
+              </div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-users fa-2x text-gray-300"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-4 col-md-6 mb-4">
+      <div class="card border-left-warning shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col mr-2">
+              <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                Users Not Using Wallet
+              </div>
+              <div class="h5 mb-0 font-weight-bold text-gray-800">
+                <%= usersWithoutWallet %>
+              </div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-user-slash fa-2x text-gray-300"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DataTables Example -->
+  <div class="card shadow mb-4">
+    <div class="card-header py-3">
+      <h6 class="m-0 font-weight-bold text-primary">Wallet Transactions Table</h6>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <% if (!transactions || transactions.length === 0) { %>
+        <div class="alert alert-warning text-center" role="alert">
+          No transactions found<%= searchQuery ? ` matching "${searchQuery}"` : '' %>.
+        </div>
+        <% } else { %>
+        <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+          <thead>
+            <tr>
+              <th>Transaction ID</th>
+              <th>Transaction Date</th>
+              <th>User</th>
+              <th>Transaction Type</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% transactions.forEach(transaction => { %>
+            <tr class="transaction-row" data-id="<%= transaction._id %>">
+              <td><%= transaction._id %></td>
+              <td><%= new Date(transaction.created_at).toLocaleString() %></td>
+              <td><%= transaction.user_id ? transaction.user_id.name : 'N/A' %></td>
+              <td>
+                <% if(transaction.transaction_type === "refund") {%>
+                <span class="badge badge-danger">
+                  <%= transaction.transaction_type.charAt(0).toUpperCase() + transaction.transaction_type.slice(1) %>
+                </span>
+                <% } else if (transaction.transaction_type === "purchase") {%>
+                <span class="badge badge-primary">
+                  <%= transaction.transaction_type.charAt(0).toUpperCase() + transaction.transaction_type.slice(1) %>
+                </span>
+                <% } else if (transaction.transaction_type === "deposit") {%>
+                <span class="badge badge-success">
+                  <%= transaction.transaction_type.charAt(0).toUpperCase() + transaction.transaction_type.slice(1) %>
+                </span>
+                <% } else {%>
+                <span class="badge badge-success">
+                  <%= transaction.transaction_type.charAt(0).toUpperCase() + transaction.transaction_type.slice(1) %>
+                </span>
+                <% } %>
+              </td>
+              <td>₹<%= transaction.amount.toFixed(2) %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <% if (totalPages && totalPages > 1) { %>
+  <div class="row">
+    <div class="col-lg-12">
+      <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+          <% if (currentPage > 1) { %>
+          <li class="page-item">
+            <a class="page-link" href="?page=<%= currentPage - 1 %>&search=<%= encodeURIComponent(searchQuery) %>">Previous</a>
+          </li>
+          <% } %>
+          <% for (let i = 1; i <= totalPages; i++) { %>
+          <li class="page-item <%= i === currentPage ? 'active' : '' %>">
+            <a class="page-link" href="?page=<%= i %>&search=<%= encodeURIComponent(searchQuery) %>"><%= i %></a>
+          </li>
+          <% } %>
+          <% if (currentPage < totalPages) { %>
+          <li class="page-item">
+            <a class="page-link" href="?page=<%= currentPage + 1 %>&search=<%= encodeURIComponent(searchQuery) %>">Next</a>
+          </li>
+          <% } %>
+        </ul>
+      </nav>
+    </div>
+  </div>
+  <% } %>
+</div>
+<!-- /.container-fluid -->
+
+<!-- Styles -->
+<style>
+  .transaction-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  .transaction-row:hover {
+    background-color: #f8f9fa;
+  }
+</style>
+
+<!-- Scripts -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.getElementById("searchInput");
+    const suggestions = document.getElementById("suggestions");
+    const searchForm = document.getElementById("searchForm");
+    let timeout = null;
+
+    // Reset Search
+    const resetButton = document.getElementById("resetSearch");
+    if (resetButton) {
+      resetButton.addEventListener("click", function () {
+        window.location.href = "/admin/wallet-transactions";
+      });
+    }
+
+    // Autocomplete
+    searchInput.addEventListener("input", function () {
+      const query = this.value.trim();
+      clearTimeout(timeout);
+
+      if (query.length < 2) {
+        suggestions.style.display = "none";
+        return;
+      }
+
+      timeout = setTimeout(() => {
+        fetch(`/admin/wallet-transactions/suggestions?q=${encodeURIComponent(query)}`)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then(data => {
+            console.log("Suggestions received:", data);
+            suggestions.innerHTML = "";
+            if (!Array.isArray(data) || data.length === 0) {
+              suggestions.style.display = "none";
+              return;
+            }
+
+            data.forEach(item => {
+              if (typeof item.text !== "string") {
+                console.error("Invalid suggestion item:", item);
+                return;
+              }
+              const div = document.createElement("div");
+              div.className = "dropdown-item";
+              div.textContent = item.text;
+              div.addEventListener("click", () => {
+                console.log("Suggestion clicked:", item.text);
+                searchInput.value = item.text;
+                suggestions.style.display = "none";
+                try {
+                  searchForm.submit();
+                } catch (error) {
+                  console.error("Error submitting form:", error);
+                  window.location.href = `/admin/wallet-transactions?search=${encodeURIComponent(item.text)}`;
+                }
+              });
+              suggestions.appendChild(div);
+            });
+
+            suggestions.style.display = "block";
+          })
+          .catch(error => {
+            console.error("Error fetching suggestions:", error);
+            suggestions.style.display = "none";
+          });
+      }, 300);
+    });
+
+    // Hide suggestions when clicking outside
+    document.addEventListener("click", function (e) {
+      if (!searchInput.contains(e.target) && !suggestions.contains(e.target)) {
+        suggestions.style.display = "none";
+      }
+    });
+
+    // Show suggestions when input is focused
+    searchInput.addEventListener("focus", function () {
+      if (this.value.trim().length >= 2 && suggestions.children.length > 0) {
+        suggestions.style.display = "block";
+      }
+    });
+
+    // Row click to navigate to details page
+    document.querySelectorAll(".transaction-row").forEach(row => {
+      row.addEventListener("click", function () {
+        const transactionId = this.getAttribute("data-id");
+        window.location.href = `/admin/wallet-transactions/${transactionId}`;
+      });
+    });
+  });
+</script>
+
+<%- include("../../views/partials/admin/footer.ejs") %>

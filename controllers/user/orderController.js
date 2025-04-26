@@ -137,6 +137,7 @@ exports.placeOrder = async (req, res) => {
   try {
     const userId = req.session.user_id;
     const { payment_method, addressId } = req.body;
+    let createdWalletTransactionId = null;
 
     let discount = 0;
     let couponCode = null;
@@ -207,6 +208,7 @@ exports.placeOrder = async (req, res) => {
               description: 'Purchase from wallet', 
               status: 'completed',
             });
+            createdWalletTransactionId = txn._id;
       }
     }
 
@@ -294,7 +296,12 @@ exports.placeOrder = async (req, res) => {
     });
 
     await order.save();
-
+    if (createdWalletTransactionId) {
+      
+        await Transaction.findByIdAndUpdate(createdWalletTransactionId, {
+          order_id: order._id 
+        });
+      }
     const orderItems = await Promise.all(availableProducts.map(async item => {
       const variant = await Variant.findOneAndUpdate(
         { _id: item.variant_id._id, quantity: { $gte: item.quantity } },
@@ -509,6 +516,7 @@ exports.updateOrder = async (req, res) => {
 
         // Here you could update other order details if needed
         // For now, we're just updating the address association
+        order.address_id= address_id;
         order.updated_at = new Date();
         await order.save();
 

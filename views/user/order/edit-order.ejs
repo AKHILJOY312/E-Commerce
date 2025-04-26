@@ -92,15 +92,9 @@
                                              alt="<%= item.product_id.name %>" 
                                              class="order-item-img">
                                         <div class="flex-grow-1">
-                                            <%= item.product_id.name %> -
-                                            <input type="number" 
-                                                   name="quantities[<%= item._id %>]" 
-                                                   value="<%= item.quantity %>" 
-                                                   min="1" 
-                                                   max="<%= item.product_id.variants[0].quantity %>"
-                                                   class="form-control quantity-input"
-                                                   onchange="updateTotal(this, <%= item.price %>)">
-                                            x ₹<%= item.price.toFixed(2) %>
+                                            <%= item.product_id.name %> 
+                                            
+                                              ₹ <%= item.price.toFixed(2) %>
                                             <span class="item-total float-right">
                                                 ₹<%= item.total_price.toFixed(2) %>
                                             </span>

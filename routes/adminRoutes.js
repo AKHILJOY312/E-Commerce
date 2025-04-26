@@ -10,6 +10,7 @@ const CouponController= require("../controllers/admin/CouponController");
 const adminOrderController= require("../controllers/admin/adminOrderController");
 const OfferController = require("../controllers/admin/OfferController");
 const SalesController = require("../controllers/admin/salesController");
+const walletController= require("../controllers/admin/walletController");
 
 
 router.get('/404page',adminController.pageNotFound);
@@ -78,5 +79,10 @@ router.get('/activeOffers',adminAuth, OfferController.getActiveOffers);
 router.get('/sales',adminAuth, SalesController.getSalesReport);
 router.get('/sales/report',adminAuth, SalesController.getSalesReportApi);
 router.get('/sales/download',adminAuth, SalesController.downloadSalesReport);
+
+//wallet usage details
+router.get('/wallet-transactions',walletController.getWalletTransactions);
+router.get('/wallet-transactions/suggestions', walletController.getSearchSuggestions);
+router.get('/wallet-transactions/:id', walletController.getTransactionDetails);
 
 module.exports =router;

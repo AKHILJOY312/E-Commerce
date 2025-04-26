@@ -126,9 +126,20 @@ const adminOrderController = {
         req.flash("error", "Order not found");
         return res.redirect("/admin/orders");
       }
+
+      // Fetch wallet transaction ID if pay_method is 'wallet'
+    let walletTransactionId = null;
+    if (order.pay_method === 'wallet') {
+      const walletTransaction = await mongoose.model('wallet_transactions')
+        .findOne({ order_id: order._id })
+        .select('_id')
+        .lean();
+      walletTransactionId = walletTransaction ? walletTransaction._id : null;
+    }
   
       res.render("orders/detailAdmin", {
         order,
+        walletTransactionId,
       });
     } catch (error) {
       console.error("Error fetching order details:", error);

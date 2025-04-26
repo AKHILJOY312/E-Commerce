@@ -120,6 +120,13 @@
   a{
     text-decoration: none;  
   }
+  .old-price {
+  text-decoration: line-through;
+  color: #888;
+  margin-right: 8px;
+  font-size: 14px;
+  font-weight: normal;
+}
 </style>
 <!-- Breadcrumb Section Begin -->
 <section class="breadcrumb-option">
@@ -165,7 +172,15 @@
                       </div>
                       <div class="product__cart__item__text">
                         <h6><%= item.product.name %> - <%= item.variant.color %> <%= item.variant.size %></h6>
-                        <h5>₹<%= item.variant.sale_price.toFixed(2) %></h5>
+                       
+                        <h5>₹<%= item.variant.sale_price.toFixed(2) %>
+                          <% if (item.variant.sale_price !== item.variant.price ) { %>
+                            <span class="old-price">₹<%= item.variant.price.toFixed(2) %></span>
+                            
+                          <% }%>
+                        </h5>
+                        
+                         
                       </div>
                     </td>
                     <td class="quantity__item">
@@ -195,11 +210,7 @@
               <a href="/shop">Continue Shopping</a>
             </div>
           </div>
-          <div class="col-lg-6 col-md-6 col-sm-6">
-            <div class="continue__btn update__btn">
-              <a href="#" id="updateCart"><i class="fa fa-spinner"></i> Update cart</a>
-            </div>
-          </div>
+         
         </div>
       </div>
       <div class="col-lg-4">
@@ -208,13 +219,13 @@
         <div class="cart__total">
           <h6>Cart total</h6>
           <ul>
-            <li>Subtotal <span>₹<%= cart && cart.subtotal ? cart.subtotal.toFixed(2) : '0.00' %></span></li>
+            <li>Subtotal <span class="cart-subtotal">₹<%= cart && cart.subtotal ? cart.subtotal.toFixed(2) : '0.00' %></span></li>
             <% if (cart && cart.coupon_applied && cart.coupon_applied.discount) { %>
-              <li>Discount (<%= cart.coupon_applied.code %>)
-                <span>- ₹<%= !isNaN(cart.coupon_applied.discount) ? cart.coupon_applied.discount.toFixed(2) : '0.00' %></span>
+              <li class="discount-row">Discount (<%= cart.coupon_applied.code %>)
+                <span class="cart-discount">- ₹<%= !isNaN(cart.coupon_applied.discount) ? cart.coupon_applied.discount.toFixed(2) : '0.00' %></span>
               </li>
             <% } %>
-            <li>Total <span>₹<%= cart && cart.total ? cart.total.toFixed(2) : '0.00' %></span></li>
+            <li>Total <span class="cart-total">₹<%= cart && cart.total ? cart.total.toFixed(2) : '0.00' %></span></li>
           </ul>
           <% if (cart && cart.total && cart.total >= 1000) { %>
             <div class="alert alert-success mt-3" role="alert">
@@ -337,22 +348,95 @@
 
 <script>
   $(document).ready(function() {
-    // Quantity increment/decrement
+    // Show loading indicator
+    function showLoading() {
+      const loadingToast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false
+      });
+      
+      loadingToast.fire({
+        icon: 'info',
+        title: 'Updating cart...',
+        timer: 1000
+      });
+    }
+    
     $('.pro-qty-3 .qtybtn').on('click', function() {
-      const $input = $(this).siblings('input');
-      let qty = parseInt($input.val());
-      const max = parseInt($input.data('max'));
+  const $input = $(this).siblings('input');
+  const $row = $(this).closest('tr');
+  let qty = parseInt($input.val());
+  const inventoryMax = parseInt($input.data('max'));
+  // Set maximum to 5 or inventory max, whichever is smaller
+  const max = Math.min(5, inventoryMax);
 
-      if ($(this).hasClass('inc')) {
-        if (qty < max) $input.val(qty + 1);
-      } else if ($(this).hasClass('dec')) {
-        if (qty > 1) $input.val(qty - 1);
-      }
+  if ($(this).hasClass('inc')) {
+    if (qty < max) {
+      qty += 1;
+      $input.val(qty);
+      updateCartItemOnServer($row, qty);
+    } else {
+      // Optional: Show a message that max quantity reached
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true
+      });
+      
+      Toast.fire({
+        icon: 'warning',
+        title: 'Maximum quantity reached'
+      });
+    }
+  } else if ($(this).hasClass('dec')) {
+    if (qty > 1) {
+      qty -= 1;
+      $input.val(qty);
+      updateCartItemOnServer($row, qty);
+    }
+  }
 
-      updateCartItem($input.closest('tr'));
+  updateCartItemDisplay($row);
+});
+
+// Also modify the direct input handler to respect the same limit
+$('.pro-qty-3 input').on('change', function() {
+  const $input = $(this);
+  const $row = $(this).closest('tr');
+  let qty = parseInt($input.val());
+  const inventoryMax = parseInt($input.data('max'));
+  // Set maximum to 5 or inventory max, whichever is smaller
+  const max = Math.min(5, inventoryMax);
+  
+  // Validate input
+  if (isNaN(qty) || qty < 1) {
+    qty = 1;
+  } else if (qty > max) {
+    qty = max;
+    // Optional: Show a message that max quantity reached
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
     });
+    
+    Toast.fire({
+      icon: 'warning',
+      title: 'Maximum quantity limited to ' + max
+    });
+  }
+  
+  $input.val(qty);
+  updateCartItemOnServer($row, qty);
+  updateCartItemDisplay($row);
+});
 
-    // Remove item
+    // Remove item with auto-update
     $('.cart__close').on('click', function() {
       const $row = $(this).closest('tr');
       const variantId = $row.data('variant-id');
@@ -366,6 +450,8 @@
         cancelButtonColor: '#854836'
       }).then((result) => {
         if (result.isConfirmed) {
+          showLoading();
+          
           $.ajax({
             type: 'DELETE',
             url: '/cart',
@@ -377,16 +463,180 @@
                 if ($('tbody tr').length === 0) {
                   $('tbody').html('<tr><td colspan="4" class="text-center">Your cart is empty.</td></tr>');
                 }
+                
+                // Success notification
+                const Toast = Swal.mixin({
+                  toast: true,
+                  position: 'top-end',
+                  showConfirmButton: false,
+                  timer: 3000,
+                  timerProgressBar: true
+                });
+                
+                Toast.fire({
+                  icon: 'success',
+                  title: 'Item removed from cart'
+                });
               }
+            },
+            error: function(xhr, status, error) {
+              console.error('Error removing item:', error);
+              Swal.fire({
+                icon: 'error',
+                title: 'Remove Failed',
+                text: 'An error occurred while removing the item.',
+                confirmButtonColor: '#FFB22C'
+              });
             }
           });
         }
       });
     });
 
-    // Update cart
+    // Keep update cart button for manual updates if needed
     $('#updateCart').on('click', function(e) {
       e.preventDefault();
+      updateAllCartItems();
+    });
+
+    // Update cart item display (visual update only)
+    function updateCartItemDisplay($row) {
+      const qty = parseInt($row.find('input').val());
+      const price = parseFloat($row.find('.product__cart__item__text h5').text().replace('₹', ''));
+      $row.find('.cart__price').text('₹' + (price * qty).toFixed(2));
+      
+      // Calculate and update running subtotal
+      calculateCartTotal();
+    }
+    
+    // Calculate cart total from displayed items (client-side)
+    function calculateCartTotal() {
+      let subtotal = 0;
+      
+      // Sum up all item prices
+      $('tbody tr').each(function() {
+        const itemTotal = parseFloat($(this).find('.cart__price').text().replace('₹', '')) || 0;
+        subtotal += itemTotal;
+      });
+      
+      // Update subtotal display
+      $('.cart-subtotal').text('₹' + subtotal.toFixed(2));
+      
+      // Get discount if any
+      let discount = 0;
+      if ($('.discount-row').length > 0) {
+        discount = parseFloat($('.cart-discount').text().replace('- ₹', '')) || 0;
+      }
+      
+      // Calculate total
+      const total = subtotal - discount;
+      $('.cart-total').text('₹' + total.toFixed(2));
+      
+      // Update free delivery notification
+      if (total >= 1000) {
+        if ($('.alert-success').length === 0) {
+          $('.cart__total ul').after('<div class="alert alert-success mt-3" role="alert">You are eligible for <strong>Free Delivery</strong>!</div>');
+        }
+      } else {
+        $('.alert-success').remove();
+      }
+    }
+
+    // Update cart summary with server data
+    function updateCartSummary(cart) {
+      // Update subtotal
+      $('.cart-subtotal').text('₹' + cart.subtotal.toFixed(2));
+      
+      // Handle discount/coupon if applied
+      if (cart.coupon_applied && cart.coupon_applied.discount) {
+        if ($('.discount-row').length === 0) {
+          // Add discount row if it doesn't exist
+          $('.cart__total ul li:first').after(
+            `<li class="discount-row">Discount (${cart.coupon_applied.code}) 
+              <span class="cart-discount">- ₹${cart.coupon_applied.discount.toFixed(2)}</span>
+            </li>`
+          );
+        } else {
+          // Update existing discount row
+          $('.discount-row').html(
+            `Discount (${cart.coupon_applied.code}) 
+            <span class="cart-discount">- ₹${cart.coupon_applied.discount.toFixed(2)}</span>`
+          );
+        }
+      } else {
+        // Remove discount row if no coupon
+        $('.discount-row').remove();
+      }
+      
+      // Update total
+      $('.cart-total').text('₹' + cart.total.toFixed(2));
+      
+      // Update free delivery notification
+      if (cart.total >= 1000) {
+        if ($('.alert-success').length === 0) {
+          $('.cart__total ul').after('<div class="alert alert-success mt-3" role="alert">You are eligible for <strong>Free Delivery</strong>!</div>');
+        }
+      } else {
+        $('.alert-success').remove();
+      }
+      
+      // Update checkout button
+      if (cart.items && cart.items.length > 0) {
+        if ($('.cart__total a.primary-btn').attr('href') !== '/checkout') {
+          $('.cart__total a.primary-btn').attr('href', '/checkout').text('Proceed to checkout');
+        }
+      } else {
+        if ($('.cart__total a.primary-btn').attr('href') !== '/shop') {
+          $('.cart__total a.primary-btn').attr('href', '/shop').text('Continue shopping');
+        }
+      }
+    }
+
+    // Send update to server for a single item
+    function updateCartItemOnServer($row, qty) {
+      const variantId = $row.data('variant-id');
+      showLoading();
+      
+      $.ajax({
+        type: 'PUT',
+        url: '/cart/update',
+        data: JSON.stringify({ 
+          items: [{ variantId, quantity: qty }] 
+        }),
+        contentType: 'application/json',
+        success: function(response) {
+          if (response.success) {
+            updateCartSummary(response.cart);
+            
+            // Success notification
+            const Toast = Swal.mixin({
+              toast: true,
+              position: 'top-end',
+              showConfirmButton: false,
+              timer: 2000,
+              timerProgressBar: true
+            });
+            
+            Toast.fire({
+              icon: 'success',
+              title: 'Cart updated'
+            });
+          }
+        },
+        error: function(xhr, status, error) {
+          console.error('Cart update failed:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Update Failed',
+            text: 'An error occurred while updating your cart.',
+            confirmButtonColor: '#FFB22C'
+          });
+        }
+      });
+    }
+
+    // Update all cart items at once (used by update cart button)
+    function updateAllCartItems() {
       const items = [];
       $('tbody tr').each(function() {
         const variantId = $(this).data('variant-id');
@@ -394,86 +644,72 @@
         items.push({ variantId, quantity });
       });
 
+      showLoading();
       
-$.ajax({
-  type: 'PUT',
-  url: '/cart/update',
-  data: JSON.stringify({ items: items }),  // Convert to JSON string
-  contentType: 'application/json',
-  success: function(response) {
-    console.log('Cart update response:', response);
-    if (response.success) {
-      Swal.fire({
-        icon: 'success',
-        title: 'Cart Updated',
-        text: 'Your cart has been updated successfully!',
-        confirmButtonColor: '#FFB22C'
-      }).then(() => {
-      // ✅ Redirect to /cart
-      window.location.href = '/cart';
-    });
-      updateCartSummary(response.cart);
+      $.ajax({
+        type: 'PUT',
+        url: '/cart/update',
+        data: JSON.stringify({ items: items }),
+        contentType: 'application/json',
+        success: function(response) {
+          if (response.success) {
+            updateCartSummary(response.cart);
+            
+            Swal.fire({
+              icon: 'success',
+              title: 'Cart Updated',
+              text: 'Your cart has been updated successfully!',
+              confirmButtonColor: '#FFB22C'
+            });
+          }
+        },
+        error: function(xhr, status, error) {
+          console.error('Cart update failed:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Update Failed',
+            text: 'An error occurred while updating your cart.',
+            confirmButtonColor: '#FFB22C'
+          });
+        }
+      });
     }
-  },
-  error: function(xhr, status, error) {
-    console.error('Cart update failed:', error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Update Failed',
-      text: 'An error occurred while updating your cart.',
-      confirmButtonColor: '#FFB22C'
-    });
-  }
-});
-    });
-
-
-    function updateCartItem($row) {
-      const qty = parseInt($row.find('input').val());
-      const price = parseFloat($row.find('.product__cart__item__text h5').text().replace('₹', ''));
-      $row.find('.cart__price').text('₹' + (price * qty).toFixed(2));
-    }
-
-    function updateCartSummary(cart) {
-      $('.cart__total ul li:eq(0) span').text('₹' + cart.subtotal.toFixed(2));
-      $('.cart__total ul li:eq(1) span').text('₹' + cart.total.toFixed(2));
-    }
+    
+    // Initialize cart totals on page load
+    calculateCartTotal();
   });
 
-
   document.addEventListener('DOMContentLoaded', function() {
-
-  // Notification function
-  function showNotification(message, type) {
-    // Check if notification already exists, remove it if it does
-    const existingNotification = document.querySelector('.coupon-notification');
-    if (existingNotification) {
-      existingNotification.remove();
-    }
-    
-    // Create new notification
-    const notification = document.createElement('div');
-    notification.className = `coupon-notification ${type}`;
-    notification.textContent = message;
-    
-    // Add to body
-    document.body.appendChild(notification);
-    
-    // Show notification
-    setTimeout(() => {
-      notification.classList.add('show');
-    }, 10);
-    
-    // Hide and remove after 3 seconds
-    setTimeout(() => {
-      notification.classList.remove('show');
+    // Notification function
+    function showNotification(message, type) {
+      // Check if notification already exists, remove it if it does
+      const existingNotification = document.querySelector('.coupon-notification');
+      if (existingNotification) {
+        existingNotification.remove();
+      }
+      
+      // Create new notification
+      const notification = document.createElement('div');
+      notification.className = `coupon-notification ${type}`;
+      notification.textContent = message;
+      
+      // Add to body
+      document.body.appendChild(notification);
+      
+      // Show notification
       setTimeout(() => {
-        notification.remove();
-      }, 300);
-    }, 3000);
-  }
-});
-
+        notification.classList.add('show');
+      }, 10);
+      
+      // Hide and remove after 3 seconds
+      setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+          notification.remove();
+        }, 300);
+      }, 3000);
+    }
+  });
 </script>
 
 <%- include("../../views/partials/user/footer.ejs") %>

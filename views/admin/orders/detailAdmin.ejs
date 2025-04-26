@@ -5,9 +5,16 @@
   <!-- Page Heading -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h3 mb-0 text-gray-800">Order Details: <%= order.order_number %></h1>
-    <a href="/admin/orders" class="btn btn-secondary">
-      <i class="fas fa-arrow-left"></i> Back to Orders
-    </a>
+    <div class="d-flex align-items-center">
+      <a href="/admin/orders" class="btn btn-secondary mr-2">
+        <i class="fas fa-arrow-left"></i> Back to Orders
+      </a>
+      <% if (order.pay_method === "wallet" && walletTransactionId) { %>
+      <a href="/admin/wallet-transactions/<%= walletTransactionId %>" class="btn btn-primary">
+        Transaction <i class="fas fa-arrow-right"></i>
+      </a>
+      <% } %>
+    </div>
   </div>
 
   <p class="mb-4">
@@ -23,7 +30,7 @@
       <div class="row">
         <div class="col-md-6">
           <p><strong>Order Number:</strong> <%= order.order_number %></p>
-          <p><strong>User ID:</strong> <%= order.user_id %></p> <p><strong>Subtotal Amount:</strong> <%= order.amount %></p> <p><strong>Delivery Charge:</strong> <%= order.delivery_charge %></p>
+          <p><strong>User ID:</strong> <%= order.user_id._id %></p> <p><strong>Subtotal Amount:</strong> <%= order.amount %></p> <p><strong>Delivery Charge:</strong> <%= order.delivery_charge %></p>
           <p><strong>Total Amount:</strong> <%= parseFloat(order.total_amount.toString()).toFixed(2) %></p> <p><strong>Payment ID:</strong> <%= order.payment_id %></p> </div>
         <div class="col-md-6">
           <p>
@@ -235,6 +242,7 @@
 
 <!-- JavaScript for Cancel Order -->
 <script>
+
   function cancelOrder(orderId) {
     Swal.fire({
       title: "Are you sure?",
@@ -276,7 +284,7 @@
   function handleReturn(orderId, newStatus) {
     // Logic to confirm and call the backend to update the status
     // to 'return_allowed' or handle the rejection ('delivered' or another status)
-    console.log("working")
+  
     const actionText = newStatus === 'return_allowed' ? 'allow' : 'reject';
     Swal.fire({
         title: `Confirm Return ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}`,

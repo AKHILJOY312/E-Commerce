@@ -461,21 +461,14 @@ exports.getCart = async (req, res) => {
       return sum + (isNaN(itemTotal) ? 0 : itemTotal);
     }, 0);
     
-    // Get discount if coupon is applied
-    let discount = 0;
-    let couponApplied = null;
-    
-    if (cart.coupon && typeof cart.coupon === 'object' && cart.coupon.code) {
-      couponApplied = {
-        code: cart.coupon.code,
-        discount: parseFloat(cart.coupon.discount) || 0
-      };
-      discount = couponApplied.discount;
+    // add delivey charge if the proce less than 1000
+    let delivery=0;
+    if(subtotal<1000){
+      delivery=50;
     }
     
     // Calculate total (subtotal - discount)
-    const total = subtotal - discount;
-    
+    const total = subtotal + delivery ;
     // Fetch related products
     let relatedProducts = [];
     if (validItems.length > 0) {
@@ -500,10 +493,11 @@ exports.getCart = async (req, res) => {
     const cartData = {
       items: validItems,
       subtotal: isNaN(subtotal) ? 0 : subtotal,
+      deliveryCharge:delivery,
       total: isNaN(total) ? 0 : total,
-      coupon_applied: couponApplied
+      
     };
-    
+    console.log(cartData)
     res.render('basket/cart', {
       cart: cartData,
       currentActivePage: "shop",

@@ -6,6 +6,7 @@ const OrderSchema = new mongoose.Schema(
       type: String,
       unique: true,
       required: true,
+      index: true,
     },
     user_id: {
       type: mongoose.Schema.Types.ObjectId,
@@ -57,7 +58,7 @@ const OrderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["confirmed", "intransit", "delivered", "cancelled","return_requested","return_allowed","no_return"],
+      enum: ["confirmed", "intransit", "delivered", "cancelled", "return_requested", "return_allowed", "no_return", "payment_failed"],
       default: "confirmed",
     },
     pay_method: { type: String, enum: ['cod', 'razorpay', 'wallet'], required: true },
@@ -89,25 +90,83 @@ const OrderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Create a separate counter schema for tracking order numbers
+const CounterSchema = new mongoose.Schema({
+  _id: { type: String, required: true },
+  seq: { type: Number, default: 0 }
+});
+
+// Create the counter model if it doesn't exist already
+let Counter;
+try {
+  Counter = mongoose.model('counter');
+} catch (error) {
+  Counter = mongoose.model('counter', CounterSchema);
+}
+
+// IMPORTANT: Change from pre("save") to pre("validate") to ensure order_number is set before validation
 OrderSchema.pre("validate", async function (next) {
   if (this.isNew && !this.order_number) {
     try {
-      const lastOrder = await mongoose
-        .model("orders")
-        .findOne()
-        .sort({ createdAt: -1 });
-
-      const lastNumber =
-        lastOrder && lastOrder.order_number
-          ? parseInt(lastOrder.order_number.split("-")[1])
-          : 0;
-
-      this.order_number = `ORD-${String(lastNumber + 1).padStart(6, "0")}`;
+      // Get current date components
+      const now = new Date();
+      const year = now.getFullYear().toString().slice(2); // Last two digits of year
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const date = String(now.getDate()).padStart(2, '0');
+      const datePrefix = `${year}${month}${date}`;
+      
+      // Increment the counter atomically
+      const counter = await Counter.findByIdAndUpdate(
+        { _id: 'orderId' },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
+      
+      // Generate order number with format: ORD-YYMMDD-SEQUENCE
+      this.order_number = `ORD-${datePrefix}-${String(counter.seq).padStart(6, '0')}`;
     } catch (error) {
       return next(error);
     }
   }
   next();
 });
+
+// Virtual getter for extracting order date from order number
+OrderSchema.virtual('orderDate').get(function() {
+  if (!this.order_number) return null;
+  
+  const datePart = this.order_number.split('-')[1];
+  if (datePart && datePart.length === 6) {
+    const year = parseInt('20' + datePart.substring(0, 2));
+    const month = parseInt(datePart.substring(2, 4)) - 1;
+    const day = parseInt(datePart.substring(4, 6));
+    return new Date(year, month, day);
+  }
+  return null;
+});
+
+// Add a method to regenerate order number if needed
+OrderSchema.methods.regenerateOrderNumber = async function() {
+  const now = new Date();
+  const year = now.getFullYear().toString().slice(2);
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const date = String(now.getDate()).padStart(2, '0');
+  const datePrefix = `${year}${month}${date}`;
+  
+  const counter = await Counter.findByIdAndUpdate(
+    { _id: 'orderId' },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+  
+  this.order_number = `ORD-${datePrefix}-${String(counter.seq).padStart(6, '0')}`;
+  return this.order_number;
+};
+
+
+
+// Add compound index for common query patterns
+OrderSchema.index({ user_id: 1, createdAt: -1 });
+OrderSchema.index({ status: 1, createdAt: -1 });
 
 module.exports = mongoose.model("orders", OrderSchema);

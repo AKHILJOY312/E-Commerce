@@ -555,15 +555,12 @@
     const lens = img.nextElementSibling; // .zoom-lens
     const result = lens.nextElementSibling; // .zoom-result
 
-    // Debugging: Log elements to ensure they’re found
-    console.log('Image:', img);
-    console.log('Lens:', lens);
-    console.log('Result:', result);
+   
 
     img.addEventListener('mouseenter', () => {
       lens.style.display = 'block';
       result.style.display = 'block';
-      console.log('Hover started, image src:', img.src); // Debug image source
+      
     });
 
     img.addEventListener('mouseleave', () => {
@@ -596,10 +593,6 @@
       result.style.backgroundSize = `${img.width * ratioX}px ${img.height * ratioY}px`; // Dynamic size
       result.style.backgroundPosition = `-${lensX * ratioX}px -${lensY * ratioY}px`;
 
-      // Debugging: Log positions and sizes
-      console.log('Lens Position:', lensX, lensY);
-      console.log('Zoom Position:', `-${lensX * ratioX}px -${lensY * ratioY}px`);
-      console.log('Background Size:', result.style.backgroundSize);
     });
   });
 </script>

@@ -409,7 +409,11 @@
         if (paymentMethod === 'wallet') {
             <% if (user && user.wallet !== undefined && cart && cart.total) { %>
                 <% if (user.wallet < cart.total) { %>
-                    alert('Insufficient wallet balance. Please choose another payment method.');
+                    Swal.fire({
+                icon: 'error',
+                title: 'Insufficient Balance',
+                text: 'Your wallet balance is not enough to complete this purchase. Please choose another payment method.',
+            });
                     return false;
                 <% } %>
             <% } %>
@@ -424,6 +428,14 @@
         
         // For COD, just submit the form
         if (paymentMethod === 'cod') {
+            <% if (1000 < cart.total) { %>
+                Swal.fire({
+            icon: 'warning',
+            title: 'COD Not Available',
+            text: 'Cash on Delivery is not available for orders less than ₹1000. Please choose a different payment method.',
+        });
+                    return false;
+                <% } %>
             return true;
         }
         

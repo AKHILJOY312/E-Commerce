@@ -12,7 +12,7 @@ const razorpay = new Razorpay({
 exports.createOrder = async (req, res) => {
     try {
         const amount = req.body.amount; // in paisa
-console.log("it is working", amount);
+
 console.log('req.body for creaing an oret',req.body);
         const options = {
             amount: amount*100,
@@ -21,7 +21,7 @@ console.log('req.body for creaing an oret',req.body);
         };
 
         const order = await razorpay.orders.create(options);
-        console.log("Order created successfully:", order);
+        
         res.status(200).json({ success: true, order });
     } catch (err) {
         res.status(500).json({ success: false, msg: err.message });
@@ -86,6 +86,7 @@ exports.paymentFailure = async (req,res)=>{
     const failureDetails = req.body;
   // Log to database or file
   console.error('Payment failure:', failureDetails);
+  
   // Optionally notify admins
   res.json({ success: true });
   }catch(error){
