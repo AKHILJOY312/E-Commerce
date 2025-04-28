@@ -57,6 +57,18 @@ exports.loadShop = async(req, res, next) => {
             status: "listed"
         });
 
+
+        let wishlistItems = [];
+        if (req.session.user_id) {
+          const wishlist = await mongoose.model('wishlists').findOne({ user_id: req.session.user_id });
+          if (wishlist) {
+            wishlistItems = wishlist.items.map(item => ({
+              product_id: item.product_id.toString(),
+              variant_id: item.variant_id.toString()
+            }));
+          }
+        }
+console.log(wishlistItems)
         // Product aggregation with proper filtering
         const products = await Product.aggregate([
             { $match: matchQuery }, 
@@ -134,7 +146,6 @@ exports.loadShop = async(req, res, next) => {
             { $skip: (page - 1) * perPage },
             { $limit: perPage }
         ]);
-
         // Count total matching products
         const totalMatchingProducts = await Product.aggregate([
             { $match: matchQuery },
@@ -199,7 +210,8 @@ exports.loadShop = async(req, res, next) => {
             minPrice,
             maxPrice,
             sort: sortOption,
-            currentActivePage:'shop'
+            currentActivePage:'shop',
+            wishlistItems
         });
     } catch (error) {
         console.error('Error fetching products:', error);
@@ -217,6 +229,16 @@ exports.productDetail = async (req, res, next) => {
        
         return res.redirect('/pageNotFound');
       }
+      let wishlistItems = [];
+        if (req.session.user_id) {
+          const wishlist = await mongoose.model('wishlists').findOne({ user_id: req.session.user_id });
+          if (wishlist) {
+            wishlistItems = wishlist.items.map(item => ({
+              product_id: item.product_id.toString(),
+              variant_id: item.variant_id.toString()
+            }));
+          }
+        }
   
       const product = await Product.findOne({ _id: productId, isDeleted: false, status: 'listed' })
         .populate({
@@ -254,7 +276,7 @@ exports.productDetail = async (req, res, next) => {
       })
         .populate('variants')
         .limit(4); // Limit to 4 related products
-
+console.log(wishlistItems)
       res.render('products/details', {
         product,
         variants: product.variants,
@@ -263,7 +285,8 @@ exports.productDetail = async (req, res, next) => {
         avgRating,
         category: product.category_id ? product.category_id.title : 'Unknown Category',
         relatedProducts, 
-        currentActivePage:'shop'
+        currentActivePage:'shop',
+        wishlistItems
       });
     } catch (error) {
       console.error('Error fetching product details:', error);

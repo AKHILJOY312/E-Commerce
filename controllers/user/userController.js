@@ -10,7 +10,7 @@ const Cart = require("../../models/Cart");
 const { customAlphabet } = require('nanoid');
 const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'; // Only digits and uppercase letters
 const nanoid = customAlphabet(alphabet, 8);
-
+const mongoose = require('mongoose');
 
 exports.loadHomePage = async (req, res) => {
   try {
@@ -24,7 +24,16 @@ exports.loadHomePage = async (req, res) => {
       const userData = await User.findOne({ _id: user_id });
       username = user;
     }
-
+let wishlistItems = [];
+        if (req.session.user_id) {
+          const wishlist = await mongoose.model('wishlists').findOne({ user_id: req.session.user_id });
+          if (wishlist) {
+            wishlistItems = wishlist.items.map(item => ({
+              product_id: item.product_id.toString(),
+              variant_id: item.variant_id.toString()
+            }));
+          }
+        }
     const newArrivals = await Product.find({
             isDeleted: false,
             status: 'listed',
@@ -39,6 +48,7 @@ exports.loadHomePage = async (req, res) => {
       newArrivals,
       currentActivePage:'home',
       cartCount,
+      wishlistItems,
       });
   } catch (error) {
     console.error("Home page not found",error);

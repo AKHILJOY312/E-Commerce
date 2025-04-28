@@ -4,6 +4,10 @@
   .table-responsive { max-height: 500px; overflow-y: auto; }
   .filter-form { display: flex; gap: 15px; flex-wrap: wrap; }
   .filter-form .form-group { min-width: 150px; }
+  .product-details { margin-top: 20px; }
+  .toggle-products { cursor: pointer; color: #007bff; }
+  .toggle-products:hover { text-decoration: underline; }
+  .debug { background-color: #f8f9fa; padding: 10px; margin-top: 20px; }
 </style>
 
 <div class="container-fluid">
@@ -26,7 +30,7 @@
     </div>
   </div>
 
-  <p class="mb-4">View and download sales reports for your e-commerce platform.</p>
+  <p class="mb-4">View and download detailed sales reports for your e-commerce platform.</p>
 
   <div class="card shadow mb-4">
     <div class="card-header py-3">
@@ -76,8 +80,10 @@
               <tr>
                 <th>Date</th>
                 <th>Sales Count</th>
+                <th>Total Orders</th>
                 <th>Total Revenue</th>
                 <th>Total Discounts</th>
+                <th>Average Order Value</th>
               </tr>
             </thead>
             <tbody>
@@ -85,33 +91,48 @@
                 <tr>
                   <td><%= row.date || period %></td>
                   <td><%= row.salesCount %></td>
+                  <td><%= row.totalOrders %></td>
                   <td>₹<%= row.totalRevenue.toFixed(2) %></td>
                   <td>₹<%= row.totalDiscounts.toFixed(2) %></td>
+                  <td>₹<%= row.averageOrderValue ? row.averageOrderValue.toFixed(2) : 'N/A' %></td>
                 </tr>
               <% }) %>
             </tbody>
           </table>
 
-          <!-- Pagination -->
-          <!-- <nav aria-label="Sales report pagination">
-            <ul class="pagination justify-content-center mt-4">
-              <% if (currentPage > 1) { %>
-                <li class="page-item">
-                  <a class="page-link" href="?page=<%= currentPage - 1 %>&period=<%= encodeURIComponent(period) %>&startDate=<%= encodeURIComponent(startDate || '') %>&endDate=<%= encodeURIComponent(endDate || '') %>&search=<%= encodeURIComponent(searchQuery || '') %>&categoryId=<%= encodeURIComponent(categoryId || '') %>&region=<%= encodeURIComponent(region || '') %>">Previous</a>
-                </li>
-              <% } %>
-              <% for(let i = 1; i <= totalPages; i++) { %>
-                <li class="page-item <%= currentPage === i ? 'active' : '' %>">
-                  <a class="page-link" href="?page=<%= i %>&period=<%= encodeURIComponent(period) %>&startDate=<%= encodeURIComponent(startDate || '') %>&endDate=<%= encodeURIComponent(endDate || '') %>&search=<%= encodeURIComponent(searchQuery || '') %>&categoryId=<%= encodeURIComponent(categoryId || '') %>&region=<%= encodeURIComponent(region || '') %>"><%= i %></a>
-                </li>
-              <% } %>
-              <% if (currentPage < totalPages) { %>
-                <li class="page-item">
-                  <a class="page-link" href="?page=<%= currentPage + 1 %>&period=<%= encodeURIComponent(period) %>&startDate=<%= encodeURIComponent(startDate || '') %>&endDate=<%= encodeURIComponent(endDate || '') %>&search=<%= encodeURIComponent(searchQuery || '') %>&categoryId=<%= encodeURIComponent(categoryId || '') %>&region=<%= encodeURIComponent(region || '') %>">Next</a>
-                </li>
-              <% } %>
-            </ul>
-          </nav> -->
+          <!-- Product Details Section -->
+          <div class="product-details">
+            <h6 class="toggle-products" data-toggle="collapse" data-target="#productTable">Show Product Details <i class="fas fa-chevron-down"></i></h6>
+            <div id="productTable" class="collapse">
+              <table class="table table-bordered mt-3">
+                <thead>
+                  <tr>
+                    <th>Product Name</th>
+                    <th>Quantity Sold</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% reportData.forEach(row => { %>
+                    <% if (row.products && row.products.length > 0) { %>
+                      <% row.products.forEach(product => { %>
+                        <tr>
+                          <td><%= product.name || 'Unknown Product' %></td>
+                          <td><%= product.quantity || 0 %></td>
+                        </tr>
+                      <% }) %>
+                    <% } else { %>
+                      <tr>
+                        <td colspan="2">No products found for this period.</td>
+                      </tr>
+                    <% } %>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+         
+          
         <% } %>
       </div>
     </div>
@@ -139,10 +160,6 @@
               <% }) %>
             </select>
           </div>
-          <!-- <div class="form-group">
-            <label for="region">Region</label>
-            <input type="text" class="form-control" id="region" name="region" value="<%= region || '' %>" placeholder="e.g., North America">
-          </div> -->
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
@@ -154,34 +171,6 @@
 </div>
 
 <script>
-
-$("#advancedFilterForm").submit(function (e) {
-  e.preventDefault();
-  const categoryId = $("#categoryId").val();
-  const region = $("#region").val();
-  const period = $("#period").val();
-  const startDate = $("#startDate").val();
-  const endDate = $("#endDate").val();
-  const search = new URLSearchParams(window.location.search).get("search") || "";
-
-  if (period === "custom" && (!startDate || !endDate)) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Start and end dates are required for custom period.',
-    });
-    return;
-  }
-
-  let url = `/admin/sales?period=${encodeURIComponent(period)}&search=${encodeURIComponent(search)}`;
-  if (period === "custom" && startDate && endDate) {
-    url += `&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
-  }
-  if (categoryId) url += `&categoryId=${encodeURIComponent(categoryId)}`;
-  if (region && region.trim()) url += `&region=${encodeURIComponent(region)}`;
-
-  window.location.href = url;
-});
   // Reset search
   document.getElementById("resetSearch").addEventListener("click", () => {
     window.location.href = "/admin/sales";
@@ -200,18 +189,25 @@ $("#advancedFilterForm").submit(function (e) {
   $("#advancedFilterForm").submit(function (e) {
     e.preventDefault();
     const categoryId = $("#categoryId").val();
-    const region = $("#region").val();
     const period = $("#period").val();
     const startDate = $("#startDate").val();
     const endDate = $("#endDate").val();
     const search = new URLSearchParams(window.location.search).get("search") || "";
+
+    if (period === "custom" && (!startDate || !endDate)) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Start and end dates are required for custom period.',
+      });
+      return;
+    }
 
     let url = `/admin/sales?period=${encodeURIComponent(period)}&search=${encodeURIComponent(search)}`;
     if (period === "custom" && startDate && endDate) {
       url += `&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
     }
     if (categoryId) url += `&categoryId=${encodeURIComponent(categoryId)}`;
-    if (region && region.trim()) url += `&region=${encodeURIComponent(region)}`; // Only add region if non-empty
 
     window.location.href = url;
   });
@@ -222,14 +218,12 @@ $("#advancedFilterForm").submit(function (e) {
     const startDate = $("#startDate").val();
     const endDate = $("#endDate").val();
     const categoryId = new URLSearchParams(window.location.search).get("categoryId") || "";
-    const region = new URLSearchParams(window.location.search).get("region") || "";
 
     let url = `/admin/sales/download?format=pdf&period=${encodeURIComponent(period)}`;
     if (period === "custom" && startDate && endDate) {
       url += `&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
     }
     if (categoryId) url += `&categoryId=${encodeURIComponent(categoryId)}`;
-    if (region && region.trim()) url += `&region=${encodeURIComponent(region)}`; // Only add region if non-empty
 
     window.location.href = url;
   });
@@ -240,20 +234,15 @@ $("#advancedFilterForm").submit(function (e) {
     const startDate = $("#startDate").val();
     const endDate = $("#endDate").val();
     const categoryId = new URLSearchParams(window.location.search).get("categoryId") || "";
-    const region = new URLSearchParams(window.location.search).get("region") || "";
 
     let url = `/admin/sales/download?format=excel&period=${encodeURIComponent(period)}`;
     if (period === "custom" && startDate && endDate) {
       url += `&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
     }
     if (categoryId) url += `&categoryId=${encodeURIComponent(categoryId)}`;
-    if (region && region.trim()) url += `&region=${encodeURIComponent(region)}`; // Only add region if non-empty
 
     window.location.href = url;
   });
-
-
-
 
   // Show success/error messages
   <% if (messages.success) { %>

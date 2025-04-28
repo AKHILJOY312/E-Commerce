@@ -99,8 +99,11 @@
 
   <!-- DataTables Example -->
   <div class="card shadow mb-4">
-    <div class="card-header py-3">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
       <h6 class="m-0 font-weight-bold text-primary">Wallet Transactions Table</h6>
+      <button class="btn btn-primary btn-sm" id="printTable">
+        <i class="fas fa-print"></i> Print Table
+      </button>
     </div>
     <div class="card-body">
       <div class="table-responsive">
@@ -290,5 +293,56 @@
     });
   });
 </script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Existing code (search, reset, autocomplete, row click handlers)...
 
+    // Print Table Functionality
+    const printButton = document.getElementById("printTable");
+    if (printButton) {
+      printButton.addEventListener("click", function () {
+        const table = document.querySelector("#dataTable");
+        if (!table) {
+          alert("No table found to print.");
+          return;
+        }
+
+        // Create a new window for printing
+        const printWindow = window.open("", "_blank");
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Print Wallet Transactions</title>
+              <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; }
+                .badge { padding: 4px 8px; border-radius: 4px; color: white; }
+                .badge-danger { background-color: #dc3545; }
+                .badge-primary { background-color: #007bff; }
+                .badge-success { background-color: #28a745; }
+                @media print {
+                  body { margin: 0; }
+                }
+              </style>
+            </head>
+            <body>
+              <h2>Wallet Transactions</h2>
+              ${table.outerHTML}
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+
+        // Wait for the content to load, then print
+        printWindow.onload = function () {
+          printWindow.focus();
+          printWindow.print();
+          printWindow.close();
+        };
+      });
+    }
+  });
+</script>
 <%- include("../../views/partials/admin/footer.ejs") %>

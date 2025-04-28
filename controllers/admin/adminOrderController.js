@@ -129,7 +129,7 @@ const adminOrderController = {
 
       // Fetch wallet transaction ID if pay_method is 'wallet'
     let walletTransactionId = null;
-    if (order.pay_method === 'wallet') {
+    if (order.pay_method === 'wallet' || order.status==="return_allowed") {
       const walletTransaction = await mongoose.model('wallet_transactions')
         .findOne({ order_id: order._id })
         .select('_id')

@@ -29,11 +29,11 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #212529;
-        color: #e9ecef;
+        background: #F7F7F7;
+        color: #000000;
       }
       .container {
-        background: #343a40;
+        background: #F7F7F7;
         padding: 30px 65px;
         border-radius: 12px;
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
@@ -45,8 +45,8 @@
       .container header {
         height: 65px;
         width: 65px;
-        background: #0d6efd;
-        color: #e9ecef;
+        background: #FFB22C;
+        color: #000000;
         font-size: 2.5rem;
         border-radius: 50%;
         display: flex;
@@ -55,7 +55,7 @@
       }
       .container h4 {
         font-size: 1.25rem;
-        color: #e9ecef;
+        color: #000000;
         font-weight: 500;
       }
       .input-field {
@@ -69,48 +69,48 @@
         outline: none;
         font-size: 1.25rem;
         text-align: center;
-        border: 2px solid #0d6efd;
-        background: #212529;
-        color: #e9ecef;
+        border: 2px solid #854836;
+        background: #F7F7F7;
+        color: #000000;
         font-weight: bold;
       }
       .input-field input:focus {
-        border-color: #198754;
+        border-color: #FFB22C;
       }
       form button {
         margin-top: 20px;
         width: 100%;
-        color: #fff;
+        color: #000000;
         font-size: 1rem;
         border: none;
         padding: 10px;
         cursor: pointer;
         border-radius: 6px;
-        background: #0d6efd;
+        background: #FFB22C;
         pointer-events: none;
         transition: 0.2s ease;
       }
       form button.active {
-        background: #198754;
+        background: #854836;
         pointer-events: auto;
       }
       #timer {
         font-size: 0.9rem;
-        color: #ffc107;
+        color: #FFB22C;
         margin-top: 10px;
       }
       #resendBtn {
         margin-top: 10px;
         padding: 8px 16px;
-        background: #6c757d;
-        color: white;
+        background: #854836;
+        color: #000000;
         border: none;
         cursor: not-allowed;
         border-radius: 6px;
         transition: background 0.3s ease;
       }
       #resendBtn.enabled {
-        background: #0dcaf0;
+        background: #FFB22C;
         cursor: pointer;
       }
     </style>
@@ -178,163 +178,164 @@
         Resend OTP
       </button>
     </div>
-<script>
-    const inputs = document.querySelectorAll(".input-field input");
-    const verifyButton = document.getElementById("verifyBtn");
-    const resendBtn = document.getElementById("resendBtn");
-    const timerDisplay = document.getElementById("timer");
-    let countdown;
-    
-    function startResendTimer() {
-      let timeLeft = 30; // Timer in seconds
-      resendBtn.disabled = true;
-      resendBtn.classList.remove("enabled");
-      resendBtn.textContent = " Wait... ";
-      timerDisplay.textContent = `Please wait ${timeLeft} seconds`;
-    
-      countdown = setInterval(() => {
-        timeLeft--;
-        timerDisplay.textContent = `Please wait ${timeLeft} seconds`;
-        if (timeLeft <= 0) {
-          clearInterval(countdown);
-          timerDisplay.textContent = "";
-          resendBtn.disabled = false;
-          resendBtn.classList.add("enabled");
-          resendBtn.textContent = "Resend OTP";
-        }
-      }, 1000);
-    }
-    
-    // OTP Input Handling
-    inputs.forEach((input, index) => {
-      input.addEventListener("input", (e) => {
-        if (e.target.value.length > 1) {
-          e.target.value = e.target.value.charAt(0);
-        }
-    
-        if (e.target.value && index < inputs.length - 1) {
-          inputs[index + 1].removeAttribute("disabled");
-          inputs[index + 1].focus();
-        } else if (index === inputs.length - 1) {
-          e.target.blur(); // Prevents unnecessary focus
-        }
-        checkAllInputs();
-      });
-    
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Backspace") {
-          if (index > 0 && !inputs[index].value) {
-            inputs[index - 1].focus();
-            inputs[index - 1].value = "";
-            inputs[index].setAttribute("disabled", true);
-          } else {
-            inputs[index].value = "";
+    <script>
+      const inputs = document.querySelectorAll(".input-field input");
+      const verifyButton = document.getElementById("verifyBtn");
+      const resendBtn = document.getElementById("resendBtn");
+      const timerDisplay = document.getElementById("timer");
+      let countdown;
+      
+      function startResendTimer() {
+        let timeLeft = 30; // Timer in seconds
+        resendBtn.disabled = true;
+        resendBtn.classList.remove("enabled");
+        resendBtn.textContent = ` Resend OTP (${timeLeft})`;
+        timerDisplay.textContent = `If you didn't received OTP `;
+      
+        countdown = setInterval(() => {
+          timeLeft--;
+          resendBtn.textContent = ` Resend OTP (${timeLeft})`;
+         
+          if (timeLeft <= 0) {
+            clearInterval(countdown);
+            timerDisplay.textContent = "";
+            resendBtn.disabled = false;
+            resendBtn.classList.add("enabled");
+            resendBtn.textContent = "Resend OTP";
           }
-        }
-      });
-    
-      // ✅ Enable Copy-Paste OTP Filling
-      input.addEventListener("paste", (e) => {
-        e.preventDefault();
-        let pasteData = (e.clipboardData || window.clipboardData).getData("text");
-        if (/^\d{6}$/.test(pasteData)) { // Ensure exactly 6 digits
-          pasteData.split("").forEach((digit, i) => {
-            inputs[i].value = digit;
-            if (i < inputs.length - 1) {
-              inputs[i + 1].removeAttribute("disabled");
-            }
-          });
-          inputs[inputs.length - 1].focus(); // Move focus to last input
+        }, 1000);
+      }
+      
+      // OTP Input Handling
+      inputs.forEach((input, index) => {
+        input.addEventListener("input", (e) => {
+          if (e.target.value.length > 1) {
+            e.target.value = e.target.value.charAt(0);
+          }
+      
+          if (e.target.value && index < inputs.length - 1) {
+            inputs[index + 1].removeAttribute("disabled");
+            inputs[index + 1].focus();
+          } else if (index === inputs.length - 1) {
+            e.target.blur(); // Prevents unnecessary focus
+          }
           checkAllInputs();
-        } else {
-          Swal.fire("Invalid OTP format. Please enter a 6-digit number.");
-        }
+        });
+      
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Backspace") {
+            if (index > 0 && !inputs[index].value) {
+              inputs[index - 1].focus();
+              inputs[index - 1].value = "";
+              inputs[index].setAttribute("disabled", true);
+            } else {
+              inputs[index].value = "";
+            }
+          }
+        });
+      
+        // ✅ Enable Copy-Paste OTP Filling
+        input.addEventListener("paste", (e) => {
+          e.preventDefault();
+          let pasteData = (e.clipboardData || window.clipboardData).getData("text");
+          if (/^\d{6}$/.test(pasteData)) { // Ensure exactly 6 digits
+            pasteData.split("").forEach((digit, i) => {
+              inputs[i].value = digit;
+              if (i < inputs.length - 1) {
+                inputs[i + 1].removeAttribute("disabled");
+              }
+            });
+            inputs[inputs.length - 1].focus(); // Move focus to last input
+            checkAllInputs();
+          } else {
+            Swal.fire("Invalid OTP format. Please enter a 6-digit number.");
+          }
+        });
       });
-    });
-    
-    function checkAllInputs() {
-      let allFilled = [...inputs].every((input) => input.value !== "");
-      verifyButton.disabled = !allFilled;
-      verifyButton.classList.toggle("active", allFilled);
-    }
-    
-    // Validate OTP before submitting
-    function validateOtpForm() {
-      let otp = [...inputs].map((input) => input.value).join("");
-      if (otp.length !== 6) {
-        Swal.fire("Please enter a full 6-digit OTP.");
+      
+      function checkAllInputs() {
+        let allFilled = [...inputs].every((input) => input.value !== "");
+        verifyButton.disabled = !allFilled;
+        verifyButton.classList.toggle("active", allFilled);
+      }
+      
+      // Validate OTP before submitting
+      function validateOtpForm() {
+        let otp = [...inputs].map((input) => input.value).join("");
+        if (otp.length !== 6) {
+          Swal.fire("Please enter a full 6-digit OTP.");
+          return false;
+        }
+      
+        $.ajax({
+          type: "POST",
+          url: "/verify-otp",
+          data: { otp: otp },
+          success: function (response) {
+            if (response.success) {
+              Swal.fire("OTP Verified Successfully!").then(() => {
+                window.location.href = response.redirectUrl;
+              });
+            } else {
+              Swal.fire("Invalid OTP. Please try again.");
+            }
+          },
+          error: function () {
+            Swal.fire("Error verifying OTP. Try again.");
+          },
+        });
+      
         return false;
       }
-    
-      $.ajax({
-        type: "POST",
-        url: "/verify-otp",
-        data: { otp: otp },
-        success: function (response) {
-          if (response.success) {
-            Swal.fire("OTP Verified Successfully!").then(() => {
-              window.location.href = response.redirectUrl;
+      
+      window.addEventListener("load", () => inputs[0].focus());
+      function resendOtp() {
+        // Reset UI elements
+        resendBtn.disabled = true;
+        resendBtn.classList.remove("enabled");
+        resendBtn.textContent = "Sending...";
+        
+        // Make AJAX request to resend OTP
+        $.ajax({
+          type: "POST",
+          url: "/resend-otp", // Your backend endpoint for resending OTP
+          success: function(response) {
+            if (response.success) {
+              Swal.fire({
+                icon: 'success',
+                title: 'New OTP Sent',
+                text: 'A new OTP has been sent to your email/phone'
+              });
+              // Restart the timer
+              startResendTimer();
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: 'Failed to Resend OTP',
+                text: response.message || 'Please try again later'
+              });
+              // Re-enable the button if failed
+              resendBtn.disabled = false;
+              resendBtn.classList.add("enabled");
+              resendBtn.textContent = "Resend OTP";
+            }
+          },
+          error: function() {
+            Swal.fire({
+              icon: 'error',
+              title: 'Server Error',
+              text: 'Failed to connect to the server. Please try again.'
             });
-          } else {
-            Swal.fire("Invalid OTP. Please try again.");
+            // Re-enable the button if failed
+            resendBtn.disabled = false;
+            resendBtn.classList.add("enabled");
+            resendBtn.textContent = "Resend OTP";
           }
-        },
-        error: function () {
-          Swal.fire("Error verifying OTP. Try again.");
-        },
-      });
-    
-      return false;
-    }
-    
-    window.addEventListener("load", () => inputs[0].focus());
-    function resendOtp() {
-  // Reset UI elements
-  resendBtn.disabled = true;
-  resendBtn.classList.remove("enabled");
-  resendBtn.textContent = "Sending...";
-  
-  // Make AJAX request to resend OTP
-  $.ajax({
-    type: "POST",
-    url: "/resend-otp", // Your backend endpoint for resending OTP
-    success: function(response) {
-      if (response.success) {
-        Swal.fire({
-          icon: 'success',
-          title: 'New OTP Sent',
-          text: 'A new OTP has been sent to your email/phone'
         });
-        // Restart the timer
-        startResendTimer();
-      } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Failed to Resend OTP',
-          text: response.message || 'Please try again later'
-        });
-        // Re-enable the button if failed
-        resendBtn.disabled = false;
-        resendBtn.classList.add("enabled");
-        resendBtn.textContent = "Resend OTP";
+        
+        return false; // Prevent default form behavior
       }
-    },
-    error: function() {
-      Swal.fire({
-        icon: 'error',
-        title: 'Server Error',
-        text: 'Failed to connect to the server. Please try again.'
-      });
-      // Re-enable the button if failed
-      resendBtn.disabled = false;
-      resendBtn.classList.add("enabled");
-      resendBtn.textContent = "Resend OTP";
-    }
-  });
-  
-  return false; // Prevent default form behavior
-}
-    startResendTimer();
-  </script>
+      startResendTimer();
+    </script>
   </body>
 </html>

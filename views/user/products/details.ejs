@@ -80,6 +80,24 @@
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
     background-color: #fff; /* Added to ensure visibility */
   }
+  .custom-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #4CAF50; /* Green success */
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  opacity: 1;
+  transition: opacity 0.5s ease-out;
+  z-index: 9999;
+}
+
+.custom-notification.fade-out {
+  opacity: 0;
+}
 </style>
 <!-- Shop Details Section Begin -->
 <section class="shop-details">
@@ -253,7 +271,7 @@
             </div>
             <div class="product__details__last__option">
               <h5><span>Guaranteed Safe Checkout</span></h5>
-              <img src="/img/shop-details/details-payment.png" alt="" />
+              <img src="/img/shop-details/details-payment1.png" alt="" />
               <ul>
                 <li><span>SKU:</span> <%= activeVariant.sku || 'N/A' %></li>
                 <li><span>Categories:</span> <%= category %></li>
@@ -365,15 +383,22 @@
             <span class="label">New</span>
             <% } %>
             <ul class="product__hover">
+         
               <li>
                 <a 
-              href="#"
-              class="add-to-wishlist"
-                data-product-id="<%= relatedProduct._id %>"
-                data-variant-id="<%= relatedVariant._id %>"
-              >
-                  <img src="/img/icon/heart.png" alt="Wishlist" /></a>
-              </li>
+                  href="#"
+                  class="wishlist-toggle"
+                  data-product-id="<%= relatedProduct._id %>"
+                  data-variant-id="<%= relatedVariant._id %>"
+                  data-in-wishlist="<%= wishlistItems && wishlistItems.some(item => item.product_id === relatedProduct._id.toString() && item.variant_id === relatedVariant._id.toString()) %>"
+                >
+                  <img 
+                    src="/img/icon/<%= wishlistItems && wishlistItems.some(item => item.product_id === product._id.toString() && item.variant_id === product.variants[0]._id.toString()) ? 'heart-filled.png' : 'heart.png' %>" 
+                    alt="Wishlist"
+                    class="wishlist-icon"
+                  >
+                </a>
+                </li>
               <li>
                 <a href="#"
                   ><img src="/img/icon/compare.png" alt="Compare" />
@@ -597,4 +622,78 @@
   });
 </script>
 <!-- Related Section End -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.wishlist-toggle').forEach(function(button) {
+      button.addEventListener('click', async function(event) {
+        event.preventDefault();
+
+        const productId = this.dataset.productId;
+        const variantId = this.dataset.variantId;
+        const inWishlist = this.dataset.inWishlist === 'true';
+        const img = this.querySelector('img');
+
+        try {
+          let response;
+          if (inWishlist) {
+            // Remove from wishlist
+            response = await fetch(`/wishlist/remove`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ productId, variantId })
+            });
+            
+          } else {
+            // Add to wishlist
+            response = await fetch(`/wishlist/add`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ productId, variantId })
+            });
+          }
+
+          if (response.ok) {
+            // Toggle image
+            if (inWishlist) {
+              img.src = '/img/icon/heart.png';  // set to empty heart
+              this.dataset.inWishlist = 'false';
+              showNotification('Removed from wishlist!');
+            } else {
+              img.src = '/img/icon/heart-filled.png'; // set to filled heart
+              this.dataset.inWishlist = 'true';
+              showNotification(' Added to the wishlist ! ');
+            }
+          } else {
+            alert('Failed to update wishlist. Try again.');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Something went wrong.');
+        }
+      });
+    });
+  });
+  function showNotification(message) {
+  // Create notification div
+  const notification = document.createElement('div');
+  notification.className = 'custom-notification';
+  notification.innerText = message;
+
+  // Add it to body
+  document.body.appendChild(notification);
+
+  // After 2 seconds, fade out and remove
+  setTimeout(() => {
+    notification.classList.add('fade-out');
+    setTimeout(() => {
+      notification.remove();
+    }, 500); // match with CSS transition
+  }, 2000);
+}
+
+</script>
 <%- include("../../views/partials/user/footer.ejs") %>

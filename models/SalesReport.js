@@ -37,7 +37,7 @@ class SalesReport {
 
     // Build query
     const query = {
-      status: { $in: ['delivered'] },
+      status: { $in: ['confirmed', 'intransit', 'delivered'] },
       ...dateFilter,
     };
 
@@ -68,90 +68,172 @@ class SalesReport {
     const skip = (page - 1) * perPage;
 
     // Aggregation
-    
-const reportData = await Order.aggregate([
-    { $match: query },
-    {
-      $lookup: {
-        from: 'coupons',
-        localField: 'coupon_id',
-        foreignField: '_id',
-        as: 'coupon',
+    const reportData = await Order.aggregate([
+      { $match: query },
+      {
+        $lookup: {
+          from: 'coupons',
+          localField: 'coupon_id',
+          foreignField: '_id',
+          as: 'coupon',
+        },
       },
-    },
-    { $unwind: { path: '$coupon', preserveNullAndEmptyArrays: true } },
-    {
-      $lookup: {
-        from: 'offers',
-        localField: 'offer_id',
-        foreignField: '_id',
-        as: 'offer',
+      { $unwind: { path: '$coupon', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'offers',
+          localField: 'offer_id',
+          foreignField: '_id',
+          as: 'offer',
+        },
       },
-    },
-    { $unwind: { path: '$offer', preserveNullAndEmptyArrays: true } },
-    {
-      $group: {
-        _id: period === 'daily' ? { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } } : null,
-        salesCount: { $sum: 1 },
-        totalRevenue: { $sum: { $toDouble: '$total_amount' } },
-        totalDiscounts: {
-          $sum: {
-            $add: [
-              { $ifNull: [{ $toDouble: '$discount_amount' }, 0] },
-              {
-                $cond: {
-                  if: { $eq: ['$coupon.discount_type', 'fixed'] },
-                  then: '$coupon.discount_value',
-                  else: {
-                    $cond: {
-                      if: { $eq: ['$coupon.discount_type', 'percentage'] },
-                      then: { $multiply: ['$amount', { $divide: ['$coupon.discount_value', 100] }] },
-                      else: 0,
+      { $unwind: { path: '$offer', preserveNullAndEmptyArrays: true } },
+      {
+        $unwind: { path: '$order_items', preserveNullAndEmptyArrays: true }
+      },
+      {
+        $lookup: {
+          from: 'order_items',
+          localField: 'order_items',
+          foreignField: '_id',
+          as: 'items',
+        },
+      },
+      { $unwind: { path: '$items', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'items.product_id',
+          foreignField: '_id',
+          as: 'product',
+        },
+      },
+      { $unwind: { path: '$product', preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: period === 'daily' ? { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } } : null,
+          salesCount: { $sum: 1 },
+          totalOrders: { $sum: 1 },
+          totalRevenue: { $sum: { $toDouble: '$total_amount' } },
+          totalDiscounts: {
+            $sum: {
+              $add: [
+                { $ifNull: [{ $toDouble: '$discount_amount' }, 0] },
+                {
+                  $cond: {
+                    if: { $eq: ['$coupon.discount_type', 'fixed'] },
+                    then: '$coupon.discount_value',
+                    else: {
+                      $cond: {
+                        if: { $eq: ['$coupon.discount_type', 'percentage'] },
+                        then: { $multiply: ['$amount', { $divide: ['$coupon.discount_value', 100] }] },
+                        else: 0,
+                      },
                     },
                   },
                 },
-              },
-              {
-                $cond: {
-                  if: { $eq: ['$offer.discountType', 'fixed'] },
-                  then: '$offer.discountValue',
-                  else: {
-                    $cond: {
-                      if: { $eq: ['$offer.discountType', 'percentage'] },
-                      then: { $multiply: ['$amount', { $divide: ['$offer.discountValue', 100] }] },
-                      else: 0,
+                {
+                  $cond: {
+                    if: { $eq: ['$offer.discountType', 'fixed'] },
+                    then: '$offer.discountValue',
+                    else: {
+                      $cond: {
+                        if: { $eq: ['$offer.discountType', 'percentage'] },
+                        then: { $multiply: ['$amount', { $divide: ['$offer.discountValue', 100] }] },
+                        else: 0,
+                      },
                     },
                   },
                 },
+              ],
+            },
+          },
+          averageOrderValue: { $avg: { $toDouble: '$total_amount' } },
+          products: {
+            $push: {
+              $cond: {
+                if: { $ne: ['$product._id', null] },
+                then: {
+                  productId: '$product._id',
+                  name: '$product.name',
+                  quantity: '$items.quantity',
+                },
+                else: null,
               },
-            ],
+            },
           },
         },
-        // Add average order value
-        averageOrderValue: {
-          $avg: { $toDouble: '$total_amount' } // Calculate average of total_amount
+      },
+      {
+        $addFields: {
+          products: {
+            $filter: {
+              input: '$products',
+              as: 'product',
+              cond: { $ne: ['$$product', null] },
+            },
+          },
         },
       },
-    },
-    {
-      $project: {
-        _id: 0,
-        date: '$_id',
-        salesCount: 1,
-        totalRevenue: 1,
-        totalDiscounts: 1,
-        averageOrderValue: 1, // Include AOV in projection
+      {
+        $addFields: {
+          products: {
+            $reduce: {
+              input: '$products',
+              initialValue: [],
+              in: {
+                $cond: {
+                  if: {
+                    $in: ['$$this.productId', '$$value.productId'],
+                  },
+                  then: {
+                    $map: {
+                      input: '$$value',
+                      as: 'item',
+                      in: {
+                        $cond: {
+                          if: { $eq: ['$$item.productId', '$$this.productId'] },
+                          then: {
+                            productId: '$$item.productId',
+                            name: '$$item.name',
+                            quantity: { $add: ['$$item.quantity', '$$this.quantity'] },
+                          },
+                          else: '$$item',
+                        },
+                      },
+                    },
+                  },
+                  else: { $concatArrays: ['$$value', ['$$this']] },
+                },
+              },
+            },
+          },
+        },
       },
-    },
-    { $sort: { date: 1 } },
-    { $skip: skip },
-    { $limit: perPage },
-  ]);
+      {
+        $project: {
+          _id: 0,
+          date: '$_id',
+          salesCount: 1,
+          totalOrders: 1,
+          totalRevenue: 1,
+          totalDiscounts: 1,
+          averageOrderValue: 1,
+          products: 1,
+        },
+      },
+      { $sort: { date: 1 } },
+      { $skip: skip },
+      { $limit: perPage },
+    ]);
+
+    // Log the reportData for debugging
+    console.log('Report Data:', JSON.stringify(reportData, null, 2));
 
     // Total count for pagination
     const totalCount = await Order.countDocuments(query);
     const totalPages = Math.ceil(totalCount / perPage);
-console.log("reportData is :", reportData);
+
     return {
       reportData,
       totalPages,
@@ -161,5 +243,4 @@ console.log("reportData is :", reportData);
     };
   }
 }
-
 module.exports = SalesReport;

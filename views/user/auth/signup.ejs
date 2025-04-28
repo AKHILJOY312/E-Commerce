@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -16,17 +16,106 @@
     />
     <link
       rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css"
+      href="https://cdnjs.cloudflare.com/ajax/libs/boxicons/2.1.4/css/boxicons.min.css"
     />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 
     <style>
+      :root {
+        --light-bg: #F7F7F7;
+        --accent: #FFB22C;
+        --secondary: #854836;
+        --dark: #4a4848;
+      }
+      
+      body {
+        background-color: var(--light-bg);
+        color: var(--dark);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+      
+      .modal-content {
+        background-color: white;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      }
+      
+      .modal-header {
+        border-bottom: 2px solid var(--accent);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem 1.5rem;
+      }
+      
+      .modal-header h1 {
+        color: var(--secondary);
+        margin: 0;
+      }
+      
+      .btn-close {
+        color: var(--dark);
+        opacity: 0.7;
+        box-shadow: none;
+        position: relative;
+        padding: 0.5rem;
+      }
+      
+      .btn-close:hover {
+        opacity: 1;
+      }
+      
+      .form-control {
+        border: 1px solid #ddd;
+        background-color: var(--light-bg);
+      }
+      
+      .form-control:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 0.25rem rgba(255, 178, 44, 0.25);
+      }
+      
+      .btn-primary {
+        background-color: var(--accent);
+        border-color: var(--accent);
+        color: var(--dark);
+        font-weight: 600;
+      }
+      
+      .btn-primary:hover {
+        background-color: #e09a1e;
+        border-color: #e09a1e;
+      }
+      
+      .btn-outline-secondary {
+        color: var(--secondary);
+        border-color: var(--secondary);
+      }
+      
+      .btn-outline-secondary:hover {
+        background-color: var(--secondary);
+        color: white;
+      }
+      
+      hr {
+        background-color: var(--secondary);
+        opacity: 0.3;
+      }
+      
+      footer {
+        background-color: var(--dark);
+        color: var(--light-bg);
+        padding: 20px 0;
+        margin-top: 40px;
+      }
+      
       .errorMessage {
-        color: red;
+        color: #d32f2f;
         font-size: 0.75rem;
         display: none;
       }
+      
       .password-toggle {
         position: absolute;
         right: 10px;
@@ -34,29 +123,25 @@
         transform: translateY(-50%);
         cursor: pointer;
         font-size: 1.2rem;
-        color: #aaa;
+        color: var(--secondary);
       }
 
       .password-toggle:hover {
-        color: #fff;
+        color: var(--accent);
       }
 
       .loader {
-        width: 24px; /* Smaller size */
-        height: 24px; /* Smaller size */
+        width: 24px;
+        height: 24px;
         border-radius: 50%;
-        /* display: inline-block; /* Will be controlled by JS */
-        border-top: 3px solid #fff; /* Adjusted border */
-        border-right: 3px solid transparent; /* Adjusted border */
+        border-top: 3px solid var(--light-bg);
+        border-right: 3px solid transparent;
         box-sizing: border-box;
         animation: rotation 1s linear infinite;
-
-        /* Positioning within the button */
-        position: absolute; /* Position relative to the button */
+        position: absolute;
         top: 50%;
         left: 50%;
-        transform: translate(-50%, -50%); /* Center the loader */
-        /* Ensure it's hidden initially via inline style or JS */
+        transform: translate(-50%, -50%);
       }
 
       .loader::after {
@@ -65,204 +150,237 @@
         position: absolute;
         left: 0;
         top: 0;
-        width: 24px; /* Match loader size */
-        height: 24px; /* Match loader size */
+        width: 24px;
+        height: 24px;
         border-radius: 50%;
-        border-bottom: 3px solid #ff3d00; /* Adjusted border */
-        border-left: 3px solid transparent; /* Adjusted border */
+        border-bottom: 3px solid var(--secondary);
+        border-left: 3px solid transparent;
       }
 
       @keyframes rotation {
         0% {
-          /* transform: rotate(0deg); */ /* Combined with translate */
           transform: translate(-50%, -50%) rotate(0deg);
         }
         100% {
-          /* transform: rotate(360deg); */ /* Combined with translate */
           transform: translate(-50%, -50%) rotate(360deg);
         }
       }
 
-      /* Styles for the button during loading */
       #submitButton .button-text {
-        /* Allow smooth transition if desired */
         transition: visibility 0s linear 0s, opacity 0.2s ease;
       }
 
       #submitButton.loading .button-text {
-        visibility: hidden; /* Hide text */
+        visibility: hidden;
         opacity: 0;
       }
 
       #submitButton.loading .loader {
-        display: inline-block; /* Show loader */
+        display: inline-block;
       }
 
-      /* Ensure button maintains height when text is hidden */
       #submitButton {
-        min-height: calc(
-          1.5em + 1rem + 2px
-        ); /* Adjust based on Bootstrap's btn-lg padding/font-size if needed */
+        min-height: calc(1.5em + 1rem + 2px);
+      }
+      
+      .header-logo {
+        padding: 7px 0;
+      }
+      
+      .form-check-input:checked {
+        background-color: var(--accent);
+        border-color: var(--accent);
+      }
+      
+      a {
+        color: var(--secondary);
+        text-decoration: none;
+      }
+      
+      a:hover {
+        color: var(--accent);
+        text-decoration: underline;
+      }
+      
+      small.text-body-secondary {
+        color: var(--secondary) !important;
+      }
+      
+      .header-container {
+        background-color: var(--dark);
+        padding: 5px 0;
       }
     </style>
-    <%- include("../../partials/user/auth/authHeader.ejs") %>
   </head>
   <body>
-    <div
-      class="modal modal-sheet position-static d-block bg-body-secondary p-4 py-md-5"
-      tabindex="-1"
-      role="dialog"
-      id="modalSignin"
-      data-bs-theme="dark"
-    >
-      <div class="modal-dialog" role="document">
-        <div class="modal-content rounded-4 shadow">
-          <div class="modal-header p-5 pb-4 border-bottom-0">
-            <h1 class="fw-bold mb-0 fs-2">Sign up for free</h1>
-            <a href="/" class="btn-close btn-close-white" role="button"></a>
-          </div>
-          <div class="modal-body p-5 pt-0">
-            <form id="signForm" method="post" action="/signup">
-              <div class="form-floating mb-3">
-                <input
-                  type="text"
-                  name="name"
-                  class="form-control rounded-3"
-                  id="floatingInput"
-                  placeholder="name@example.com"
-                />
-                <label for="floatingInput">Name</label>
-                <div class="errorMessage" id="error1"></div>
-              </div>
+    <!-- Header Section Begin -->
+    <div class="header-container">
+      <div class="container d-flex justify-content-center">
+        <div class="header-logo">
+          <a href="/">
+            <img src="img/Logo2.png" height="60rem" alt="Logo" />
+          </a>
+        </div>
+      </div>
+    </div>
+    <!-- Header Section End -->
 
-              <div class="form-floating mb-3">
-                <input
-                  type="email"
-                  name="email"
-                  class="form-control rounded-3"
-                  id="floatingInput"
-                  placeholder="name@example.com"
-                />
-                <label for="floatingInput">Email address</label>
-                <div class="errorMessage" id="error2"></div>
-              </div>
+    <div class="container py-5">
+      <div class="row justify-content-center">
+        <div class="col-md-6">
+          <div class="modal-content rounded-4 shadow">
+            <div class="modal-header p-5 pb-4">
+              <h1 class="fw-bold fs-2">Sign up for free</h1>
+              <a href="/" class="btn-close" aria-label="Close"></a>
+            </div>
+            <div class="modal-body p-5 pt-0">
+              <form id="signForm" method="post" action="/signup">
+                <div class="form-floating mb-3">
+                  <input
+                    type="text"
+                    name="name"
+                    class="form-control rounded-3"
+                    id="floatingInput"
+                    placeholder="name@example.com"
+                  />
+                  <label for="floatingInput">Name</label>
+                  <div class="errorMessage" id="error1"></div>
+                </div>
 
-              <div class="form-floating mb-3">
-                <input
-                  type="text"
-                  name="phone"
-                  class="form-control rounded-3"
-                  id="floatingInput"
-                  placeholder="name@example.com"
-                />
-                <label for="floatingInput">Mobile No:</label>
-                <div class="errorMessage" id="error3"></div>
-              </div>
+                <div class="form-floating mb-3">
+                  <input
+                    type="email"
+                    name="email"
+                    class="form-control rounded-3"
+                    id="floatingInput"
+                    placeholder="name@example.com"
+                  />
+                  <label for="floatingInput">Email address</label>
+                  <div class="errorMessage" id="error2"></div>
+                </div>
 
-              <div class="form-floating mb-3 position-relative">
-                <input
-                  type="password"
-                  name="password"
-                  class="form-control rounded-3"
-                  id="floatingPassword"
-                  placeholder="Password"
-                />
-                <label for="floatingPassword">Password</label>
-                <i class="bx bx-show password-toggle" id="togglePassword"></i>
-                <div class="errorMessage" id="error4"></div>
-              </div>
+                <div class="form-floating mb-3">
+                  <input
+                    type="text"
+                    name="phone"
+                    class="form-control rounded-3"
+                    id="floatingInput"
+                    placeholder="name@example.com"
+                  />
+                  <label for="floatingInput">Mobile No:</label>
+                  <div class="errorMessage" id="error3"></div>
+                </div>
 
-              <div class="form-floating mb-3 position-relative">
-                <input
-                  type="password"
-                  name="confirm"
-                  class="form-control rounded-3"
-                  id="floatingConfirmPassword"
-                  placeholder="Confirm Password"
-                />
-                <label for="floatingConfirmPassword">Confirm Password</label>
-                <i
-                  class="bx bx-show password-toggle"
-                  id="toggleConfirmPassword"
-                ></i>
-                <div class="errorMessage" id="error5"></div>
-              </div>
+                <div class="form-floating mb-3 position-relative">
+                  <input
+                    type="password"
+                    name="password"
+                    class="form-control rounded-3"
+                    id="floatingPassword"
+                    placeholder="Password"
+                  />
+                  <label for="floatingPassword">Password</label>
+                  <i class="bx bx-show password-toggle" id="togglePassword"></i>
+                  <div class="errorMessage" id="error4"></div>
+                </div>
 
+                <div class="form-floating mb-3 position-relative">
+                  <input
+                    type="password"
+                    name="confirm"
+                    class="form-control rounded-3"
+                    id="floatingConfirmPassword"
+                    placeholder="Confirm Password"
+                  />
+                  <label for="floatingConfirmPassword">Confirm Password</label>
+                  <i
+                    class="bx bx-show password-toggle"
+                    id="toggleConfirmPassword"
+                  ></i>
+                  <div class="errorMessage" id="error5"></div>
+                </div>
 
-              <div class="form-check form-switch mb-3">
-                <input class="form-check-input" type="checkbox" id="referralToggle">
-                <label class="form-check-label" for="referralToggle">I have a referral code</label>
-              </div>
-              
-              <div class="form-floating mb-3" id="referralCodeField" style="display: none;">
-                <input
-                  type="text"
-                  name="referralCode"
-                  class="form-control rounded-3"
-                  id="floatingReferral"
-                  placeholder="Referral Code"
-                />
-                <label for="floatingReferral">Referral Code</label>
-                <div class="errorMessage" id="error6"></div>
-              </div>
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="referralToggle">
+                  <label class="form-check-label" for="referralToggle">I have a referral code</label>
+                </div>
+                
+                <div class="form-floating mb-3" id="referralCodeField" style="display: none;">
+                  <input
+                    type="text"
+                    name="referralCode"
+                    class="form-control rounded-3"
+                    id="floatingReferral"
+                    placeholder="Referral Code"
+                  />
+                  <label for="floatingReferral">Referral Code</label>
+                  <div class="errorMessage" id="error6"></div>
+                </div>
 
-              <button
-                class="w-100 mb-2 btn btn-lg rounded-3 btn-primary position-relative"
-                type="submit"
-                id="submitButton"
-              >
-                <span class="button-text">Sign up</span>
-                <span
-                  class="loader"
-                  id="buttonLoader"
-                  style="display: none"
-                ></span>
-              </button>
-
-              <small class="text-body-secondary"
-                >if already a user <a href="/login">Click here.</a></small
-              >
-              <hr class="my-4" />
-              <h2 class="fs-5 fw-bold mb-3">Or use a third-party</h2>
-              <a href="/auth/google">
                 <button
-                  class="w-100 py-2 mb-2 btn btn-outline-secondary rounded-3"
-                  type="button"
+                  class="w-100 mb-2 btn btn-lg rounded-3 btn-primary position-relative"
+                  type="submit"
+                  id="submitButton"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    style="fill: rgb(106, 104, 104)"
-                  >
-                    <path
-                      d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.907 8.907 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z"
-                    ></path>
-                  </svg>
-                  Sign up with Google
+                  <span class="button-text">Sign up</span>
+                  <span
+                    class="loader"
+                    id="buttonLoader"
+                    style="display: none"
+                  ></span>
                 </button>
-              </a>
-            </form>
+
+                <small class="text-body-secondary"
+                  >If already a user <a href="/login">Click here.</a></small
+                >
+                <hr class="my-4" />
+                <h2 class="fs-5 fw-bold mb-3">Or use a third-party</h2>
+                <a href="/auth/google">
+                  <button
+                    class="w-100 py-2 mb-2 btn btn-outline-secondary rounded-3"
+                    type="button"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      style="fill: #854836"
+                    >
+                      <path
+                        d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.907 8.907 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z"
+                      ></path>
+                    </svg>
+                    Sign up with Google
+                  </button>
+                </a>
+              </form>
+            </div>
           </div>
         </div>
       </div>
     </div>
-    <%- include("../../partials/user/auth/authFoother.ejs") %>
+
+    <footer class="text-center py-4">
+      <div class="container">
+        <span>Copyright &copy; Your Website 2025</span>
+      </div>
+    </footer>
+
     <script>
-
       // Toggle referral code field visibility
-const referralToggle = document.getElementById('referralToggle');
-const referralCodeField = document.getElementById('referralCodeField');
+      const referralToggle = document.getElementById('referralToggle');
+      const referralCodeField = document.getElementById('referralCodeField');
 
-referralToggle.addEventListener('change', function() {
-  if (this.checked) {
-    referralCodeField.style.display = 'block';
-  } else {
-    referralCodeField.style.display = 'none';
-    document.getElementById('floatingReferral').value = ''; // Clear the input when hidden
-  }
-});
+      referralToggle.addEventListener('change', function() {
+        if (this.checked) {
+          referralCodeField.style.display = 'block';
+        } else {
+          referralCodeField.style.display = 'none';
+          document.getElementById('floatingReferral').value = ''; // Clear the input when hidden
+        }
+      });
+      
       document.addEventListener("DOMContentLoaded", function () {
         function togglePasswordVisibility(toggleBtn, inputField) {
           toggleBtn.addEventListener("click", function () {
@@ -374,9 +492,9 @@ referralToggle.addEventListener('change', function() {
             submitButton.disabled = true;
             submitButton.classList.add("loading");
             const buttonLoader = document.getElementById('buttonLoader');
-  if (buttonLoader) {
-    buttonLoader.style.display = 'inline-block'; // Override the inline style="display: none;"
-  }
+            if (buttonLoader) {
+              buttonLoader.style.display = 'inline-block'; // Override the inline style="display: none;"
+            }
           }
         });
       });

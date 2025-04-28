@@ -1,6 +1,25 @@
 
  <%- include("../../views/partials/user/header.ejs") %>
+<style>
+  .custom-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #4CAF50; /* Green success */
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  opacity: 1;
+  transition: opacity 0.5s ease-out;
+  z-index: 9999;
+}
 
+.custom-notification.fade-out {
+  opacity: 0;
+}
+</style>
     <!-- Hero Section Begin -->
     <section class="hero">
         <div class="hero__slider owl-carousel">
@@ -116,7 +135,24 @@
                             <span class="label">Few Left</span>
                           <% } %>
                       <ul class="product__hover">
-                        <li><a href="#"><img src="img/icon/heart.png" alt="Wishlist"></a></li>
+                        <li>
+                        <a 
+                        href="#"
+                        class="wishlist-toggle"
+                        data-product-id="<%= product._id %>"
+                        data-variant-id="<%= product.variants[0]._id %>"
+                        data-in-wishlist="<%= wishlistItems && wishlistItems.some(item => item.product_id === product._id.toString() && item.variant_id === product.variants[0]._id.toString()) %>"
+                      >
+                        <img 
+                          src="img/icon/<%= wishlistItems && wishlistItems.some(item => item.product_id === product._id.toString() && item.variant_id === product.variants[0]._id.toString()) ? 'heart-filled.png' : 'heart.png' %>" 
+                          alt="Wishlist"
+                          class="wishlist-icon"
+                        >
+                      </a>
+                        
+                        
+                        
+                        </li>
                         <li><a href="#"><img src="img/icon/compare.png" alt="Compare"> <span>Compare</span></a></li>
                         <li><a href="/product/<%= product._id %>"><img src="img/icon/search.png" alt="View"></a></li>
                       </ul>
@@ -228,6 +264,81 @@
     });
   });
       </script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.wishlist-toggle').forEach(function(button) {
+      button.addEventListener('click', async function(event) {
+        event.preventDefault();
+
+        const productId = this.dataset.productId;
+        const variantId = this.dataset.variantId;
+        const inWishlist = this.dataset.inWishlist === 'true';
+        const img = this.querySelector('img');
+
+        try {
+          let response;
+          if (inWishlist) {
+            // Remove from wishlist
+            response = await fetch(`/wishlist/remove`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ productId, variantId })
+            });
+            
+          } else {
+            // Add to wishlist
+            response = await fetch(`/wishlist/add`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ productId, variantId })
+            });
+          }
+
+          if (response.ok) {
+            // Toggle image
+            if (inWishlist) {
+              img.src = 'img/icon/heart.png';  // set to empty heart
+              this.dataset.inWishlist = 'false';
+              showNotification('Removed from wishlist!');
+            } else {
+              img.src = 'img/icon/heart-filled.png'; // set to filled heart
+              this.dataset.inWishlist = 'true';
+              showNotification(' Added to the wishlist ! ');
+            }
+          } else {
+            alert('Failed to update wishlist. Try again.');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Something went wrong.');
+        }
+      });
+    });
+  });
+  function showNotification(message) {
+  // Create notification div
+  const notification = document.createElement('div');
+  notification.className = 'custom-notification';
+  notification.innerText = message;
+
+  // Add it to body
+  document.body.appendChild(notification);
+
+  // After 2 seconds, fade out and remove
+  setTimeout(() => {
+    notification.classList.add('fade-out');
+    setTimeout(() => {
+      notification.remove();
+    }, 500); // match with CSS transition
+  }, 2000);
+}
+
+</script>
     <!-- Latest Blog Section End -->
     <%- include("../../views/partials/user/footer.ejs") %>
 
