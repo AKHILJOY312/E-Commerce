@@ -57,7 +57,7 @@ router.post(
 );
 router.get("/user/verify-otp", userAuth, userProfileController.getOtp);
 router.post("/user/verify-otp", userAuth, userProfileController.verifyOtp);
-// router.post("/user/resend-otp", userProfileController.resendOtp);
+router.post("/user/resend-otp", userProfileController.resendOtp);
 router.get("/user/edit-password", userAuth, userProfileController.editPassword);
 router.post(
   "/user/edit-password",
@@ -82,6 +82,7 @@ router.delete("/cart", userAuth, basketController.removeFromCart);
 router.post("/cart/apply-coupon", userAuth, basketController.applyCoupon);
 router.post('/cart/remove-coupon', userAuth, basketController.removeCoupon);
 
+
 //wish list
 router.get("/wishlist", userAuth, basketController.getWishlist);
 router.post("/wishlist/add", userAuth, basketController.addToWishlist);
@@ -89,17 +90,17 @@ router.post("/wishlist/remove", userAuth, basketController.removeFromWishlist);
 
 
 
-
+//order Management
 router.get('/checkout',userAuth, orderController.getCheckoutPage);
 router.post('/place-order',userAuth, orderController.placeOrder);
 router.get('/orders/recent',userAuth, orderController.getRecentOrders);
-
 router.get('/orders/edit/:orderId',userAuth, orderController.getEditOrder);
 router.post('/orders/edit/:orderId',userAuth, orderController.updateOrder);
 router.post('/orders/cancel/:orderId',userAuth, orderController.cancelOrder);
 router.get('/orders/details/:orderId',userAuth, orderController.getOrderDetails);
 router.get('/orders/invoice/:orderId', userAuth, orderController.downloadInvoice);
 router.post('/orders/return/:orderId', userAuth, orderController.returnOrder);
+router.post('/reviews/submit', userAuth, orderController.submitReview);
 
 
 

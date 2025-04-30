@@ -207,38 +207,38 @@ exports.updateProfile = async (req, res) => {
     }
   };
   
-  // exports.resendOtp = async (req, res) => {
-  //   try {
-  //     console.log(req.session.userData);
-  //     const { email } = req.session.userData;
-  //     if (!email) {
-  //       return res
-  //         .status(400)
-  //         .json({ success: false, message: "Email not found in session" });
-  //     }
+  exports.resendOtp = async (req, res) => {
+    try {
+      
+      const  email  = req.session.email;
+      if (!email) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Email not found in session" });
+      }
   
-  //     const otp = generateOtp();
-  //     req.session.userOtp = otp;
-  //     const emailSend = await sendVerificationEmail(email, otp);
-  //     if (emailSend) {
-  //       console.log("Resend Otp:", otp);
-  //       res
-  //         .status(200)
-  //         .json({ success: true, message: "OTP Resend successfully" });
-  //     } else {
-  //       res.status(500).json({
-  //         success: false,
-  //         message: "Failed to send OTP, please try again.",
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.error("Error resending OTP", error);
-  //     res.status(500).json({
-  //       success: false,
-  //       message: "Internal server error,Please try again",
-  //     });
-  //   }
-  // };
+      const otp = generateOtp();
+      req.session.userOtp = otp;
+      const emailSend = await sendVerificationEmail(email, otp);
+      if (emailSend) {
+        console.log("Resend Otp:", otp);
+        res
+          .status(200)
+          .json({ success: true, message: "OTP Resend successfully" });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: "Failed to send OTP, please try again.",
+        });
+      }
+    } catch (error) {
+      console.error("Error resending OTP", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error,Please try again",
+      });
+    }
+  };
 
 
   exports.editPassword = async (req, res) => {
@@ -252,7 +252,7 @@ exports.updateProfile = async (req, res) => {
 
   exports.updatePassword = async (req, res) => {
     try {
-      console.log("testing");
+      
       const email = req.session.email;
       const user = await User.findOne({ email });
       if (!user) return res.status(401).json({ success: false, message: 'User not found' });

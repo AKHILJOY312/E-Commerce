@@ -11,6 +11,7 @@ const crypto = require("crypto");
 const Transaction=require('../../models/WalletTransaction');
 const Coupon = require('../../models/Coupon');
 const CouponUsage= require('../../models/CouponUsage');
+const Review = require('../../models/Review');
 
 
 exports.getCheckoutPage = async (req, res) => {
@@ -665,73 +666,106 @@ exports.cancelOrder = async (req, res) => {
 };
 
 
+
+
 exports.getOrderDetails = async (req, res) => {
-    try {
-        const orderId = req.params.orderId;
-        const userId = req.session.user_id; // Assuming user session validation is intended
+  try {
+    const orderId = req.params.orderId;
+    const userId = req.session.user_id;
 
-        // Find the order and populate necessary fields
-        const order = await Order.findOne({ _id: orderId, user_id: userId })
-            // Populate Order Items and nested Variant/Product
-            .populate({
-                path: 'order_items',
-                populate: {
-                    path: 'variant_id',
-                    model: 'Variant',
-                    populate: {
-                        path: 'product_id',
-                        model: 'Product'
-                    }
-                }
-            })
-            // Populate User details (select specific fields for efficiency)
-            .populate('user_id', 'name email phone')
-            // Populate the delivery Address linked to the order
-            .populate('address_id')
-            .lean(); // Use .lean() for performance
-
-        if (!order) {
-            req.flash('error', 'Order not found or access denied.');
-            return res.redirect('/orders/recent'); // Or appropriate redirect
+    // Find the order and populate necessary fields
+    const order = await Order.findOne({ _id: orderId, user_id: userId })
+      .populate({
+        path: 'order_items',
+        populate: {
+          path: 'variant_id',
+          model: 'Variant',
+          populate: {
+            path: 'product_id',
+            model: 'Product'
+          }
         }
+      })
+      .populate('user_id', 'name email phone')
+      .populate('address_id')
+      .lean();
 
-        // --- Optional but Recommended: Pre-format currency/dates ---
-        if (order.total_amount) {
-             try {
-                 order.total_amount_display = parseFloat(order.total_amount.toString()).toFixed(2);
-             } catch { order.total_amount_display = 'N/A'; }
-         } else { order.total_amount_display = '0.00'; }
-
-         if (order.refunded_amount) {
-             try {
-                 order.refunded_amount_display = parseFloat(order.refunded_amount.toString()).toFixed(2);
-             } catch { order.refunded_amount_display = 'N/A'; }
-         } else { order.refunded_amount_display = '0.00'; }
-
-         if(order.order_items) {
-            order.order_items.forEach(item => {
-                if (item.price && typeof item.price !== 'string') {
-                   try { item.price_display = item.price.toFixed(2); } catch { item.price_display = 'N/A'; }
-                } else { item.price_display = item.price || '0.00'; }
-                if (item.total_price && typeof item.total_price !== 'string') {
-                    try { item.total_price_display = item.total_price.toFixed(2); } catch { item.total_price_display = 'N/A'; }
-                } else { item.total_price_display = item.total_price || '0.00'; }
-            });
-         }
-        // --- End Formatting ---
-
-        // Render the details page with the populated order data
-        res.render('order/order-details', { // Ensure this path matches your file structure
-            order, // Order now includes populated user_id and address_id
-            messages: req.flash(),      // Pass flash messages
-            currentActivePage: "shop"  // Your navigation state variable
-        });
-
-    } catch (error) {
-        console.error("Error fetching order details:", error); // Log the actual error
-        req.flash('error', 'An error occurred while loading order details.');
-        res.redirect('/orders/recent'); // Redirect on error
+    if (!order) {
+      req.flash('error', 'Order not found or access denied.');
+      return res.redirect('/orders/recent');
     }
+
+    // Check if the user has reviewed each product
+    if (order.order_items) {
+      for (let item of order.order_items) {
+        if (item.variant_id && item.variant_id.product_id) {
+          const existingReview = await Review.findOne({
+            user_id: userId,
+            product_id: item.variant_id.product_id._id
+          }).lean();
+          item.hasReviewed = !!existingReview; // true if review exists, false otherwise
+        } else {
+          item.hasReviewed = true; // Prevent review button for incomplete items
+        }
+      }
+    }
+
+    // Format currency/dates
+    if (order.total_amount) {
+      try {
+        order.total_amount_display = parseFloat(order.total_amount.toString()).toFixed(2);
+      } catch {
+        order.total_amount_display = 'N/A';
+      }
+    } else {
+      order.total_amount_display = '0.00';
+    }
+
+    if (order.refunded_amount) {
+      try {
+        order.refunded_amount_display = parseFloat(order.refunded_amount.toString()).toFixed(2);
+      } catch {
+        order.refunded_amount_display = 'N/A';
+      }
+    } else {
+      order.refunded_amount_display = '0.00';
+    }
+
+    if (order.order_items) {
+      order.order_items.forEach(item => {
+        if (item.price && typeof item.price !== 'string') {
+          try {
+            item.price_display = item.price.toFixed(2);
+          } catch {
+            item.price_display = 'N/A';
+          }
+        } else {
+          item.price_display = item.price || '0.00';
+        }
+        if (item.total_price && typeof item.total_price !== 'string') {
+          try {
+            item.total_price_display = item.total_price.toFixed(2);
+          } catch {
+            item.total_price_display = 'N/A';
+          }
+        } else {
+          item.total_price_display = item.total_price || '0.00';
+        }
+      });
+    }
+
+    // Render the details page
+    res.render('order/order-details', {
+      order,
+      messages: req.flash(),
+      currentActivePage: 'shop'
+    });
+
+  } catch (error) {
+    console.error('Error fetching order details:', error);
+    req.flash('error', 'An error occurred while loading order details.');
+    res.redirect('/orders/recent');
+  }
 };
 
 
@@ -976,5 +1010,103 @@ exports.returnOrder = async (req, res) => {
       console.error('Error requesting return:', error);
       req.flash('error', 'Failed to request return: ' + error.message);
       res.redirect(`/orders/details/${orderId}`);
+    }
+  };
+
+  exports.submitReview = async (req, res) => {
+    try {
+      const userId = req.session.user_id;
+      if (!userId) {
+        req.flash('error', 'You must be logged in to submit a review.');
+        return res.redirect(req.get('Referrer') || '/orders/recent');
+      }
+  
+      const { product_id, order_id, order_item_id, title, rating, comment } = req.body;
+  
+      // Validate input
+      if (!product_id || !order_id || !order_item_id || !title || !rating) {
+        req.flash('error', 'All required fields must be filled.');
+        return res.redirect(req.get('Referrer') || '/orders/recent');
+      }
+  
+      // Validate rating
+      const parsedRating = parseInt(rating);
+      if (isNaN(parsedRating) || parsedRating < 1 || parsedRating > 5) {
+        req.flash('error', 'Rating must be between 1 and 5.');
+        return res.redirect(req.get('Referrer') || '/orders/recent');
+      }
+  
+      // Check if the order exists and is delivered
+      const order = await Order.findOne({
+        _id: order_id,
+        user_id: userId,
+        status: 'delivered'
+      })
+        .populate({
+          path: 'order_items',
+          populate: {
+            path: 'variant_id',
+            model: 'Variant',
+            populate: {
+              path: 'product_id',
+              model: 'Product'
+            }
+          }
+        })
+        .lean();
+  
+      if (!order) {
+        req.flash('error', 'Order not found or not eligible for review.');
+        return res.redirect(req.get('Referrer') || '/orders/recent');
+      }
+  
+      // Check if the order item exists in the order
+      const orderItem = order.order_items.find(item => item._id.toString() === order_item_id);
+      if (!orderItem) {
+        req.flash('error', 'Order item not found.');
+        return res.redirect(req.get('Referrer') || '/orders/recent');
+      }
+  
+      // Check if variant_id and product_id are present
+      if (!orderItem.variant_id || !orderItem.variant_id.product_id) {
+        req.flash('error', 'Invalid product data for this order item.');
+        return res.redirect(req.get('Referrer') || '/orders/recent');
+      }
+  
+      // Verify the product_id matches
+      if (orderItem.variant_id.product_id._id.toString() !== product_id) {
+        req.flash('error', 'Product does not match the order item.');
+        return res.redirect(req.get('Referrer') || '/orders/recent');
+      }
+  
+      // Check if a review already exists for this product by the user
+      const existingReview = await Review.findOne({
+        user_id: userId,
+        product_id
+      }).lean();
+  
+      if (existingReview) {
+        req.flash('error', 'You have already reviewed this product.');
+        return res.redirect(req.get('Referrer') || '/orders/recent');
+      }
+  
+      // Create and save the new review
+      const review = new Review({
+        user_id: userId,
+        product_id,
+        title: title.trim(),
+        rating: parsedRating,
+        comment: comment ? comment.trim() : ''
+      });
+  
+      await review.save();
+  
+      req.flash('success', 'Your review has been submitted successfully.');
+      res.redirect(`/orders/details/${order_id}`);
+  
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      req.flash('error', 'An error occurred while submitting your review.');
+      res.redirect(req.get('Referrer') || '/orders/recent');
     }
   };

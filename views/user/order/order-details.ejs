@@ -174,7 +174,50 @@
         100% { box-shadow: 0 0 0 0 rgba(255, 178, 44, 0); }
     }
 </style>
-
+<style>
+  /* Review Modal Styling */
+.modal-content {
+    border-radius: 8px;
+}
+.modal-header {
+    background-color: #FFB22C;
+    color: #000;
+    border-bottom: none;
+}
+.modal-title {
+    font-weight: 600;
+}
+.modal-body {
+    padding: 1.5rem;
+}
+.form-group label {
+    font-weight: 500;
+    color: #333;
+}
+.form-control {
+    border-radius: 6px;
+    border: 1px solid #E0E0E0;
+}
+.form-control:focus {
+    border-color: #FFB22C;
+    box-shadow: 0 0 5px rgba(255, 178, 44, 0.3);
+}
+.btn-primary {
+    background-color: #FFB22C;
+    color: #000;
+    border: none;
+}
+.btn-primary:hover {
+    background-color: #e0a229;
+}
+.btn-outline-secondary {
+    border-color: #E0E0E0;
+    color: #333;
+}
+.btn-outline-secondary:hover {
+    background-color: #f5f5f5;
+}
+</style>
 <!-- Breadcrumb -->
 <section class="breadcrumb-option py-3">
   <div class="container">
@@ -360,40 +403,49 @@
     </div>
 
     <!-- Order Items Card -->
-    <div class="order-card">
-      <h5 class="mb-3">Items (<%= order.order_items ? order.order_items.length : 0 %>)</h5>
-      <% if (order.order_items && order.order_items.length > 0) { %>
-        <% order.order_items.forEach(item => { %>
-          <% if (item && item.variant_id) { %> 
-            <div class="order-item">
-              <img src="<%= (item.variant_id.product_image && item.variant_id.product_image.length > 0) ? item.variant_id.product_image[0] : '/img/default-product.jpg' %>" 
-                   alt="<%= (item.variant_id.product_id) ? item.variant_id.product_id.name : 'Product' %>" 
-                   class="order-item-img">
-              
-              <div class="order-item-details">
-                <div class="font-weight-bold"><%= (item.variant_id.product_id) ? item.variant_id.product_id.name : 'Unknown Product' %></div>
-                <div class="small text-muted mt-1">
-                  <% if(item.variant_id.color) { %><span>Color: <%= item.variant_id.color %></span><% } %>
-                  <% if(item.variant_id.size) { %><span class="ml-2">Size: <%= item.variant_id.size %></span><% } %>
-                  <% if(item.variant_id.material) { %><span class="ml-2">Material: <%= item.variant_id.material %></span><% } %>
-                  <% if(item.variant_id.sku) { %><span class="d-block mt-1">SKU: <%= item.variant_id.sku %></span><% } %>
-                </div>
-                <div class="mt-2">
-                  <span>Quantity: <%= item.quantity || 0 %> × ₹<%= item.price_display ? item.price_display : (item.price ? item.price.toFixed(2) : '0.00') %></span>
-                  <div class="order-price mt-1">₹<%= item.total_price_display ? item.total_price_display : (item.total_price ? item.total_price.toFixed(2) : '0.00') %></div>
-                </div>
-              </div>
+    <!-- Order Items Card -->
+<div class="order-card">
+  <h5 class="mb-3">Items (<%= order.order_items ? order.order_items.length : 0 %>)</h5>
+  <% if (order.order_items && order.order_items.length > 0) { %>
+    <% order.order_items.forEach(item => { %>
+      <% if (item && item.variant_id) { %> 
+        <div class="order-item">
+          <img src="<%= (item.variant_id.product_image && item.variant_id.product_image.length > 0) ? item.variant_id.product_image[0] : '/img/default-product.jpg' %>" 
+               alt="<%= (item.variant_id.product_id) ? item.variant_id.product_id.name : 'Product' %>" 
+               class="order-item-img">
+          
+          <div class="order-item-details">
+            <div class="font-weight-bold"><%= (item.variant_id.product_id) ? item.variant_id.product_id.name : 'Unknown Product' %></div>
+            <div class="small text-muted mt-1">
+              <% if(item.variant_id.color) { %><span>Color: <%= item.variant_id.color %></span><% } %>
+              <% if(item.variant_id.size) { %><span class="ml-2">Size: <%= item.variant_id.size %></span><% } %>
+              <% if(item.variant_id.material) { %><span class="ml-2">Material: <%= item.variant_id.material %></span><% } %>
+              <% if(item.variant_id.sku) { %><span class="d-block mt-1">SKU: <%= item.variant_id.sku %></span><% } %>
             </div>
-          <% } else { %>
-            <div class="order-item">
-              <div class="text-danger">Item data incomplete (Product ID: <%= item.product_id ? item.product_id._id : 'N/A' %>, OrderItem ID: <%= item._id %>)</div>
+            <div class="mt-2">
+              <span>Quantity: <%= item.quantity || 0 %> × ₹<%= item.price_display ? item.price_display : (item.price ? item.price.toFixed(2) : '0.00') %></span>
+              <div class="order-price mt-1">₹<%= item.total_price_display ? item.total_price_display : (item.total_price ? item.total_price.toFixed(2) : '0.00') %></div>
             </div>
-          <% } %>
-        <% }) %>
+            <!-- Review Button -->
+            <% if (order.status === 'delivered' && !item.hasReviewed) { %>
+              <button type="button" class="btn btn-sm btn-primary mt-2" data-toggle="modal" data-target="#reviewModal<%= item._id %>">
+                Write Review
+              </button>
+            <% } else if (order.status === 'delivered' && item.hasReviewed) { %>
+              <span class="text-muted small mt-2 d-block">You have already reviewed this product.</span>
+            <% } %>
+          </div>
+        </div>
       <% } else { %>
-        <div class="text-muted">No items found for this order.</div>
+        <div class="order-item">
+          <div class="text-danger">Item data incomplete (Product ID: <%= item.product_id ? item.product_id._id : 'N/A' %>, OrderItem ID: <%= item._id %>)</div>
+        </div>
       <% } %>
-    </div>
+    <% }) %>
+  <% } else { %>
+    <div class="text-muted">No items found for this order.</div>
+  <% } %>
+</div>
   </div>
 </section>
 
@@ -489,7 +541,58 @@
 </div>
 <% } %>
 <% } %>
-
+<!-- Review Modal for Each Item -->
+<% if (order.order_items && order.order_items.length > 0) { %>
+  <% order.order_items.forEach(item => { %>
+    <% if (item && item.variant_id && order.status === 'delivered' && !item.hasReviewed) { %>
+      <div class="modal fade" id="reviewModal<%= item._id %>" tabindex="-1" role="dialog" aria-labelledby="reviewModalLabel<%= item._id %>" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="reviewModalLabel<%= item._id %>">Review <%= item.variant_id.product_id.name %></h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+            <form action="/reviews/submit" method="POST">
+              <div class="modal-body">
+                <input type="hidden" name="product_id" value="<%= item.variant_id.product_id._id %>">
+                <input type="hidden" name="order_id" value="<%= order._id %>">
+                <input type="hidden" name="order_item_id" value="<%= item._id %>">
+                
+                <div class="form-group">
+                  <label for="reviewTitle<%= item._id %>">Review Title</label>
+                  <input type="text" class="form-control" id="reviewTitle<%= item._id %>" name="title" required placeholder="Enter a title for your review">
+                </div>
+                
+                <div class="form-group">
+                  <label for="reviewRating<%= item._id %>">Rating</label>
+                  <select class="form-control" id="reviewRating<%= item._id %>" name="rating" required>
+                    <option value="" disabled selected>Select a rating</option>
+                    <option value="5">5 Stars</option>
+                    <option value="4">4 Stars</option>
+                    <option value="3">3 Stars</option>
+                    <option value="2">2 Stars</option>
+                    <option value="1">1 Star</option>
+                  </select>
+                </div>
+                
+                <div class="form-group">
+                  <label for="reviewComment<%= item._id %>">Comment (Optional)</label>
+                  <textarea class="form-control" id="reviewComment<%= item._id %>" name="comment" rows="4" placeholder="Write your review here"></textarea>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary">Submit Review</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    <% } %>
+  <% }) %>
+<% } %>
 <script>
 function toggleOtherReason() {
   const selectElement = document.getElementById('returnReasonSelect');
@@ -520,5 +623,35 @@ function toggleOtherReason() {
   });
 <% } %>
 </script>
+<script>
+  // Review Form Submission Validation
+document.querySelectorAll('form[action="/reviews/submit"]').forEach(form => {
+  form.addEventListener('submit', function(e) {
+    const title = this.querySelector('input[name="title"]').value.trim();
+    const rating = this.querySelector('select[name="rating"]').value;
 
+    if (!title) {
+      e.preventDefault();
+      Swal.fire({
+        icon: 'error',
+        title: 'Review Title is required',
+        showConfirmButton: false,
+        timer: 1500
+      });
+      return;
+    }
+
+    if (!rating) {
+      e.preventDefault();
+      Swal.fire({
+        icon: 'error',
+        title: 'Please select a rating',
+        showConfirmButton: false,
+        timer: 1500
+      });
+      return;
+    }
+  });
+});
+</script>
 <%- include("../../views/partials/user/footer.ejs") %>

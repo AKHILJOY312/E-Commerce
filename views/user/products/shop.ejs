@@ -1,4 +1,13 @@
 <%- include("../../views/partials/user/header.ejs") %>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+
+.rating .review-count {
+  font-size: 12px;
+  color: #666;
+  margin-left: 5px;
+}
+</style>
 <style>
   /* Discount badge styling */
 .product__discount__percent {
@@ -265,9 +274,22 @@
               + Add To Cart
             </a>
             <div class="rating">
-              <% for (let i = 0; i < 5; i++) { %>
+              <% 
+                const rating = product.averageRating || 0;
+                const fullStars = Math.floor(rating);
+                const hasHalfStar = rating % 1 >= 0.5;
+                const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+              %>
+              <% for (let i = 0; i < fullStars; i++) { %>
+                <i class="fa fa-star"></i>
+              <% } %>
+              <% if (hasHalfStar) { %>
+                <i class="fa fa-star-half-o"></i>
+              <% } %>
+              <% for (let i = 0; i < emptyStars; i++) { %>
                 <i class="fa fa-star-o"></i>
               <% } %>
+              <span class="review-count">(<%= product.reviewCount || 0 %>)</span>
             </div>
 
             <!-- Display price with original price if discount is active -->
