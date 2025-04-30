@@ -247,7 +247,7 @@ try {
   async getVariant(req, res) {
     try {
       const { variantId } = req.params;
-      console.log('variantId:',variantId);
+     
       const variant = await Variant.findById(variantId).lean();
       if (!variant) {
         return res.status(404).json({ message: 'Variant not found' });
@@ -317,8 +317,7 @@ try {
   async softDeleteVariant(req, res) {
     try {
       const variantId = req.params.variantId;
-      console.log(req.params.id);
-      console.log('Attempting to soft delete variant:', variantId);
+    
       
       const variant = await Variant.findByIdAndUpdate(
         variantId,
@@ -330,11 +329,11 @@ try {
       );
       
       if (!variant) {
-        console.log('Variant not found for ID:', variantId);
+       
         return res.status(404).json({ message: 'Variant not found' });
       }
       
-      console.log('Variant soft deleted:', variantId);
+     
       res.status(200).json({ 
         message: 'Variant soft deleted successfully',
         variantId 
@@ -368,9 +367,9 @@ try {
         },
         { new: true }
       );
-console.log(productUpdate)
+
       if (!productUpdate) {
-        console.log('Variant not found for ID:', productId);
+        
       req.flash('error', 'Product not found.');
         
         return res.status(404).json({ message: 'Variant not found' });

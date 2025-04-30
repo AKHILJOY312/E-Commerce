@@ -3,14 +3,14 @@ const User = require('../models/User');
 exports.userAuth = async (req, res, next) => {
     try {
       if (!req.session.user_id) {
-        console.log("No user ID in session");
+        
         return res.redirect("/login");
       }
   
       const user = await User.findById(req.session.user_id);
   
       if (!user) {
-        console.log("User not found in database");
+        
         return res.redirect("/login");
       }
   

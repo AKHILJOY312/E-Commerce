@@ -18,7 +18,7 @@ class SalesReportController {
       } = req.query;
 
       // Log query parameters for debugging
-      console.log('Query Parameters:', { period, startDate, endDate, search, categoryId, region, page });
+     
 
       // Fetch report data from model
       const { reportData, totalPages, currentPage, startDate: reportStartDate, endDate: reportEndDate } = await SalesReport.getReport({
@@ -64,7 +64,7 @@ class SalesReportController {
       const { period, startDate, endDate, categoryId, region, search, page = 1 } = req.query;
 
       // Log query parameters for debugging
-      console.log('API Query Parameters:', { period, startDate, endDate, categoryId, region, search, page });
+     
 
       // Validate period
       const validPeriods = ['daily', 'weekly', 'yearly', 'custom'];
@@ -101,7 +101,7 @@ class SalesReportController {
       const { format, period, startDate, endDate, categoryId, region, search } = req.query;
 
       // Log query parameters for debugging
-      console.log('Download Query Parameters:', { format, period, startDate, endDate, categoryId, region, search });
+     
 
       if (!format || !['pdf', 'excel'].includes(format)) {
         return res.status(400).json({ message: 'Invalid format. Use pdf or excel.' });

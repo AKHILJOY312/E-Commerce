@@ -472,7 +472,6 @@
                 description: 'Purchase Payment',
                 order_id: razorpayOrderId,
                 handler: function (response) {
-                    console.log("Razorpay success response:", response);
                     
                     // Store Razorpay payment details in hidden fields
                     document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id;
@@ -485,7 +484,6 @@
                 // NEW: Payment failure handler
                 "modal": {
                     "ondismiss": function() {
-                        console.log("Payment modal closed without completing payment");
                         document.getElementById('payment-status').innerHTML = 
                             '<div class="alert alert-warning">Payment cancelled. Please try again.</div>';
                     }

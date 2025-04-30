@@ -457,7 +457,7 @@ exports.adminLogout = async (req, res) => {
     }
     res.redirect("/admin/login");
   } catch (error) {
-    console.log("Logout error:", error);
+    console.error("Logout error:", error);
     res.redirect("/404page"); 
   }
 };

@@ -159,7 +159,7 @@ exports.updateProfile = async (req, res) => {
 
   exports.getOtp = async (req, res) => {
     try {
-      console.log(`getOtp working`);
+     
       const email=req.session.email;
   const type=req.query.type;
       const otp = generateOtp();
@@ -172,7 +172,7 @@ exports.updateProfile = async (req, res) => {
       req.session.userOtp = otp;
       
       res.render("userProfile/otp",{type,currentActivePage:""});
-      console.log("OTP sent:", otp);
+      
     } catch (error) {
       console.error("Signup error", error);
       res.redirect("/pageNotFound");
@@ -184,7 +184,7 @@ exports.updateProfile = async (req, res) => {
     try {
       const { otp,type } = req.body;
     
-      console.log("Received OTP:", otp);
+      
   
       if (parseInt(otp) === parseInt(req.session.userOtp)) {
         
@@ -221,7 +221,7 @@ exports.updateProfile = async (req, res) => {
       req.session.userOtp = otp;
       const emailSend = await sendVerificationEmail(email, otp);
       if (emailSend) {
-        console.log("Resend Otp:", otp);
+        
         res
           .status(200)
           .json({ success: true, message: "OTP Resend successfully" });
@@ -291,7 +291,7 @@ res.redirect("/");
   exports.editEmail = async (req, res) => {
     try {
       const { newEmail } = req.body;
-      console.log("New Email from AJAX:", newEmail);
+      
   req.session.newEmail=newEmail;
       // Here you would typically:
       // 1. Validate if new email already exists

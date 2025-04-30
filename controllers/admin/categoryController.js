@@ -80,7 +80,6 @@ exports.addCategory = async (req, res) => {
     });
     
     await newCategory.save();
-    console.log("Category added successfully.")
     req.flash("success", "Category added successfully.");
     res.redirect('/admin/category');
   } catch (error) {
@@ -115,7 +114,6 @@ exports.postEditCategory = async (req, res) => {
 exports.softDeleteCategory = async (req, res) => {
   try {
     const categoryId = req.body.id; 
-    console.log('Category ID:', categoryId);
 
     const updatedCategory = await Category.findByIdAndUpdate(
       categoryId,

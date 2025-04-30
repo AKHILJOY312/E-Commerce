@@ -497,7 +497,6 @@ exports.getCart = async (req, res) => {
       total: isNaN(total) ? 0 : total,
       
     };
-    console.log(cartData)
     res.render('basket/cart', {
       cart: cartData,
       currentActivePage: "shop",

@@ -13,7 +13,6 @@ exports.createOrder = async (req, res) => {
     try {
         const amount = req.body.amount; // in paisa
 
-console.log('req.body for creaing an oret',req.body);
         const options = {
             amount: amount*100,
             currency: "INR",

@@ -40,7 +40,7 @@ exports.addMoney = async (req, res) => {
       return res.status(500).json({ error: 'Failed to create order' });
     }
 
-    console.log('Razorpay order created:', order);
+    
     res.json({ id: order.id, amount: order.amount, currency: order.currency });
   } catch (error) {
     console.error('Error creating Razorpay order:', error);
@@ -54,7 +54,7 @@ exports.addMoney = async (req, res) => {
 // Verify payment and credit wallet
 exports.verifyPayment = async (req, res) => {
   const { user_id, amount, razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
-  console.log("🔍 [verifyPayment] Incoming request body:", req.body);
+  
 
   try {
     // Step 1: Generate HMAC signature using Razorpay key

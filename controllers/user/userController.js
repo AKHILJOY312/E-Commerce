@@ -110,16 +110,16 @@ exports.login = async (req, res) => {
 
     if (!user) {
       req.flash("error", "Invalid username or password");
-      console.log("Invalid username or password");
+      
       return res.redirect("/login"); // Redirect to allow flash messages to persist
     }
     if (!user.isActive) {
       req.flash("error", "you have be blocked by admin.");
-      console.log("you have be blocked by admin.");
+     
       return res.redirect("/login"); // Redirect to allow flash messages to persist
     }
     if (!user.password) {
-      console.log("Google login required for this account");
+      
       req.flash("error", "Please log in using Google");
       return res.redirect("/login");
     }
@@ -127,7 +127,7 @@ exports.login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      console.log("Incorrect password");
+     
       req.flash("error", "Incorrect password");
       return res.redirect("/login");
     }
@@ -162,18 +162,17 @@ exports.getSignup = async (req, res) => {
 // User Signup Handler
 exports.signupUser = async (req, res) => {
   try {
-    console.log(`signupUser is working`);
-    console.log(req.body);
+  
     const { name, email, phone, password, confirm, referralCode } = req.body;
 
     if (password !== confirm) {
-      console.log(`Password check failed`);
+      
       return res.redirect("/signup", { message: "Passwords do not match" });
     }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      console.log(`User already exists`);
+     
       req.flash(
         "error",
         "You are already our customer. Click on below button to login"
@@ -208,7 +207,7 @@ let referId = null;
     req.session.email=email;
 
     res.render("auth/verify-Otp");
-    console.log("OTP sent:", otp);
+    
   } catch (error) {
     console.error("Signup error", error);
     res.redirect("/pageNotFound");
@@ -221,7 +220,7 @@ exports.verifyOtp = async (req, res) => {
     
     const { otp } = req.body;
     
-    console.log("Received OTP:", otp);
+    
 
     if (parseInt(otp) === parseInt(req.session.userOtp)) {
       const userData = req.session.userData;
@@ -268,7 +267,7 @@ exports.verifyOtp = async (req, res) => {
 
 exports.resendOtp = async (req, res) => {
   try {
-    console.log(req.session.userData);
+   
     const { email } = req.session.userData;
     if (!email) {
       return res
@@ -280,7 +279,7 @@ exports.resendOtp = async (req, res) => {
     req.session.userOtp = otp;
     const emailSend = await sendVerificationEmail(email, otp);
     if (emailSend) {
-      console.log("Resend Otp:", otp);
+      
       res
         .status(200)
         .json({ success: true, message: "OTP Resend successfully" });
@@ -350,7 +349,6 @@ exports.forgotPassword = async (req, res) => {
     const otp = generateOtp();
     req.session.forgotPasswordOtp = otp;
     req.session.forgotPasswordEmail = email;
-    console.log("your otp is:", otp);
 
     const emailSent = await sendVerificationEmail(email, otp);
     if (!emailSent) {
@@ -369,7 +367,6 @@ exports.forgotPassword = async (req, res) => {
 };
 exports.ForgotResendOtp = async (req, res) => {
   try {
-    console.log( req.session.forgotPasswordEmail);
     const  email  =  req.session.forgotPasswordEmail;
     if (!email) {
       return res
@@ -379,10 +376,8 @@ exports.ForgotResendOtp = async (req, res) => {
 
     const otp = generateOtp();
     req.session.forgotPasswordOtp = otp;
-    console.log("worjimg");
     const emailSend = await sendVerificationEmail(email, otp);
     if (emailSend) {
-      console.log("Resend Otp:", otp);
       res
         .status(200)
         .json({ success: true, message: "OTP Resend successfully" });
@@ -404,14 +399,13 @@ exports.ForgotResendOtp = async (req, res) => {
 exports.verifyForgotPasswordOtp = async (req, res) => {
   try {
     const { otp } = req.body;
-    console.log("check1:", otp);
+
     if (parseInt(otp) !== parseInt(req.session.forgotPasswordOtp)) {
       return res.status(400).json({
         success: false,
         message: "Invalid OTP. Please try again.",
       });
     }
-    console.log("check2:", otp);
     // res.render("forgetPassword/reset-password");
     res.json({ success: true, redirectUrl: "/reset-password" });
   } catch (error) {
@@ -431,7 +425,6 @@ exports.resetPassword = async (req, res) => {
     }
     const { password, confirmPassword } = req.body;
     const email = req.session.forgotPasswordEmail;
-console.log(req.body,email);
     if (password !== confirmPassword) {
       return res.render("forgetPassword/reset-password", {
         message: "Passwords do not match",

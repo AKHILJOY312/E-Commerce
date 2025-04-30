@@ -63,7 +63,7 @@ class OfferController {
 
   static async createOffer(req, res) {
     try {
-      console.log('Request body:', JSON.stringify(req.body, null, 2));
+      
       let { name, code, discountType, discountValue, appliesTo, targetIds, startDate, endDate } = req.body;
   
       // Validate using a validation function to avoid duplication
@@ -115,7 +115,7 @@ class OfferController {
         // Validate ObjectIds
         const validIds = targetIds.every(id => mongoose.isValidObjectId(id));
         if (!validIds) {
-          console.log('Invalid ObjectIds in targetIds:', targetIds);
+          
           validationErrors.push('One or more targetIds are invalid');
         }
       }
@@ -185,9 +185,9 @@ class OfferController {
   
       // Database validation (only if basic validations pass)
       if (appliesTo === 'product') {
-        console.log('Querying products with IDs:', targetIds);
+       
         const products = await Product.find({ _id: { $in: targetIds }, isDeleted: false, status: 'listed' });
-        console.log('Found products:', products.map(p => p._id.toString()));
+       
         
         if (products.length !== targetIds.length) {
           // Find missing product IDs for better error message
@@ -197,9 +197,9 @@ class OfferController {
           throw new Error(`Invalid or unavailable product IDs: ${missingIds.join(', ')}`);
         }
       } else if (appliesTo === 'category') {
-        console.log('Querying categories with IDs:', targetIds);
+        
         const categories = await Category.find({ _id: { $in: targetIds }, isDeleted: false, status: 'listed' });
-        console.log('Found categories:', categories.map(c => c._id.toString()));
+        
         
         if (categories.length !== targetIds.length) {
           // Find missing category IDs for better error message
@@ -471,7 +471,7 @@ class OfferController {
 
       // Reset sale_price to price for affected variants
       if (offer.appliesTo === 'product') {
-        console.log('Resetting sale_price for variants of products:', offer.targetIds);
+        
         const variants = await Variant.find({
           product_id: { $in: offer.targetIds },
           isDeleted: false,
@@ -484,11 +484,11 @@ class OfferController {
           },
         }));
         if (updates.length > 0) {
-          console.log(`Bulk resetting ${updates.length} variant sale prices`);
+          
           await Variant.bulkWrite(updates);
         }
       } else if (offer.appliesTo === 'category') {
-        console.log('Resetting sale_price for variants of products in categories:', offer.targetIds);
+       
         const products = await Product.find({
           category_id: { $in: offer.targetIds },
           isDeleted: false,
@@ -507,7 +507,6 @@ class OfferController {
           },
         }));
         if (updates.length > 0) {
-          console.log(`Bulk resetting ${updates.length} variant sale prices`);
           await Variant.bulkWrite(updates);
         }
       }

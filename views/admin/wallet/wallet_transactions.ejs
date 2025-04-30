@@ -232,7 +232,6 @@
             return response.json();
           })
           .then(data => {
-            console.log("Suggestions received:", data);
             suggestions.innerHTML = "";
             if (!Array.isArray(data) || data.length === 0) {
               suggestions.style.display = "none";
@@ -248,7 +247,6 @@
               div.className = "dropdown-item";
               div.textContent = item.text;
               div.addEventListener("click", () => {
-                console.log("Suggestion clicked:", item.text);
                 searchInput.value = item.text;
                 suggestions.style.display = "none";
                 try {

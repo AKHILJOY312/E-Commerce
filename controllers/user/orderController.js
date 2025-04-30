@@ -114,21 +114,16 @@ exports.getCheckoutPage = async (req, res) => {
 };
 
 const verifyRazorpaySignature = (order_id, payment_id, signature) => {
-  console.log("Verifying Razorpay signature with:");
-  console.log("Order ID:", order_id);
-  console.log("Payment ID:", payment_id);
-  console.log("Received Signature:", signature);
+  
   
   const body = order_id + "|" + payment_id;
-  console.log("Generated body string:", body);
+ 
   
   const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(body)
       .digest("hex");
   
-  console.log("Expected Signature:", expectedSignature);
-  console.log("Signatures match?", expectedSignature === signature);
   
   return expectedSignature === signature;
 };
@@ -145,11 +140,11 @@ exports.placeOrder = async (req, res) => {
     let couponId = null;
     let couponDetails = null;
     
-    console.log("place order", req.body);
+    
 
     if (!payment_method) {
       req.flash('error', 'Please select a payment method');
-      console.log('Payment method not selected:', req.body);
+      
       return res.redirect('/checkout');
     }
 
@@ -593,8 +588,6 @@ exports.cancelOrder = async (req, res) => {
                       console.warn(
                           `Variant ${item.variant_id} stock was not modified during restock (matchedCount=1, modifiedCount=0).`
                       );
-                  } else {
-                      console.log(`Variant ${item.variant_id} stock updated.`);
                   }
               } else {
                   console.warn(

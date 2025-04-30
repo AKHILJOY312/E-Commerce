@@ -208,8 +208,6 @@ const adminOrderController = {
                             console.warn(
                                 `Variant ${item.variant_id} stock was not modified during restock (matchedCount=1, modifiedCount=0).`
                             );
-                        } else {
-                            console.log(`Variant ${item.variant_id} stock updated.`);
                         }
                     } else {
                         console.warn(
@@ -220,7 +218,7 @@ const adminOrderController = {
             );
 
             // Handle wallet refund for all payment methods
-            const refundAmount = parseFloat(order.total_amount); // Convert Decimal128 to number
+            const refundAmount = parseFloat(order.total_amount); 
 
             // Update user's wallet balance
             const user = await User.findByIdAndUpdate(
@@ -239,7 +237,7 @@ const adminOrderController = {
                 order_id: id,
                 transaction_type: 'refund',
                 amount: refundAmount,
-                balance: user.wallet, // Updated wallet balance
+                balance: user.wallet, 
                 description: `Refund for return of order ${order.order_number} approved by admin`,
                 status: 'completed',
             });
@@ -347,8 +345,6 @@ const adminOrderController = {
                         console.warn(
                             `Variant ${item.variant_id} stock was not modified during restock (matchedCount=1, modifiedCount=0).`
                         );
-                    } else {
-                        console.log(`Variant ${item.variant_id} stock updated.`);
                     }
                 } else {
                     console.warn(

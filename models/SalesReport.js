@@ -228,7 +228,7 @@ class SalesReport {
     ]);
 
     // Log the reportData for debugging
-    console.log('Report Data:', JSON.stringify(reportData, null, 2));
+  
 
     // Total count for pagination
     const totalCount = await Order.countDocuments(query);
