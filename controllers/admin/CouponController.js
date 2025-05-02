@@ -56,7 +56,12 @@ exports.addCoupon = async (req, res) => {
       end_date
     } = req.body;
 
+    
     const checkCode=code.toUpperCase().trim();
+    if (checkCode===0) {
+      req.flash('error',"please enter a valide coupon code");;
+    return res.redirect("/admin/coupon");
+  }
     const existing = await Coupon.findOne({ code: checkCode, is_deleted: false });
 
     if (existing) {
