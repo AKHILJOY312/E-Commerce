@@ -1,4 +1,5 @@
 const Coupon = require('../../models/Coupon');
+const { body, validationResult } = require('express-validator');
 
 // GET: Coupon List
 exports.getCoupons = async (req, res) => {
@@ -45,75 +46,185 @@ exports.getCoupons = async (req, res) => {
   }
 };
 // POST: Add Coupon
-exports.addCoupon = async (req, res) => {
-  try {
-    const {
-      code,
-      discount_type,
-      discount_value,
-      usage_limit,
-      start_date,
-      end_date
-    } = req.body;
+// Validation middleware for addCoupon and editCoupon
+const couponValidationRules = [
+  body('code')
+    .trim()
+    .notEmpty()
+    .withMessage('Coupon code is required')
+    .isAlphanumeric()
+    .withMessage('Coupon code must be alphanumeric')
+    .isLength({ min: 3, max: 20 })
+    .withMessage('Coupon code must be between 3 and 20 characters')
+    .customSanitizer((value) => value.toUpperCase()),
+  
+  body('discount_type')
+    .notEmpty()
+    .withMessage('Discount type is required')
+    .isIn(['percentage', 'fixed'])
+    .withMessage('Discount type must be either "percentage" or "fixed"'),
+  
+  body('discount_value')
+    .notEmpty()
+    .withMessage('Discount value is required')
+    .isFloat({ min: 0.01 })
+    .withMessage('Discount value must be a positive number')
+    .custom((value, { req }) => {
+      if (req.body.discount_type === 'percentage' && value > 100) {
+        throw new Error('Percentage discount cannot exceed 100');
+      }
+      return true;
+    }),
+  
+  body('usage_limit')
+    .optional({ nullable: true })
+    .isInt({ min: 1 })
+    .withMessage('Usage limit must be a positive integer'),
+  
+  body('start_date')
+    .notEmpty()
+    .withMessage('Start date is required')
+    .isISO8601()
+    .withMessage('Start date must be a valid date')
+    .customSanitizer((value) => new Date(value)),
+  
+  body('end_date')
+    .notEmpty()
+    .withMessage('End date is required')
+    .isISO8601()
+    .withMessage('End date must be a valid date')
+    .customSanitizer((value) => new Date(value))
+    .custom((value, { req }) => {
+      if (new Date(value) <= new Date(req.body.start_date)) {
+        throw new Error('End date must be after start date');
+      }
+      return true;
+    }),
+];
 
-    
-    const checkCode=code.toUpperCase().trim();
-    if (checkCode===0) {
-      req.flash('error',"please enter a valide coupon code");;
-    return res.redirect("/admin/coupon");
-  }
-    const existing = await Coupon.findOne({ code: checkCode, is_deleted: false });
-
-    if (existing) {
-        req.flash('error',"Already the same name exists");
-      return res.redirect("/admin/coupon");
+// POST: Add Coupon
+exports.addCoupon = [
+  // Apply validation rules
+  ...couponValidationRules,
+  body('start_date').custom((value) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (new Date(value) < today) {
+      throw new Error('Start date cannot be in the past');
     }
+    return true;
+  }),
+  async (req, res) => {
+    try {
+      // Check for validation errors
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        req.flash('error', errors.array().map(err => err.msg).join(', '));
+        return res.redirect('/admin/coupon');
+      }
 
-    const newCoupon = new Coupon({
-      code: code.toUpperCase(),
-      discount_type,
-      discount_value,
-      usage_limit,
-      start_date,
-      end_date
-    });
+      const {
+        code,
+        discount_type,
+        discount_value,
+        usage_limit,
+        start_date,
+        end_date,
+      } = req.body;
 
-    await newCoupon.save();
-    res.redirect('/admin/coupon');
-  } catch (error) {
-    console.error('Error adding coupon:', error);
-    res.redirect('/admin/coupon');
-  }
-};
+      // Check for existing coupon
+      const existing = await Coupon.findOne({ code: code.toUpperCase(), is_deleted: false });
+      if (existing) {
+        req.flash('error', 'A coupon with this code already exists');
+        return res.redirect('/admin/coupon');
+      }
+
+      // Create and save new coupon
+      const newCoupon = new Coupon({
+        code: code.toUpperCase(),
+        discount_type,
+        discount_value,
+        usage_limit: usage_limit || null,
+        start_date: new Date(start_date),
+        end_date: new Date(end_date),
+      });
+
+      await newCoupon.save();
+      req.flash('success', 'Coupon added successfully');
+      res.redirect('/admin/coupon');
+    } catch (error) {
+      console.error('Error adding coupon:', error);
+      req.flash('error', 'An error occurred while adding the coupon');
+      res.redirect('/admin/coupon');
+    }
+  },
+];
 
 // POST: Edit Coupon
-exports.editCoupon = async (req, res) => {
-  try {
-    const {
-      id,
-      code,
-      discount_type,
-      discount_value,
-      usage_limit,
-      start_date,
-      end_date
-    } = req.body;
+exports.editCoupon = [
+  // Apply validation rules
+  ...couponValidationRules,
+  body('id')
+    .notEmpty()
+    .withMessage('Coupon ID is required')
+    .isMongoId()
+    .withMessage('Invalid coupon ID'),
+  async (req, res) => {
+    try {
+      // Check for validation errors
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        req.flash('error', errors.array().map(err => err.msg).join(', '));
+        return res.redirect('/admin/coupon');
+      }
 
-    await Coupon.findByIdAndUpdate(id, {
-      code: code.toUpperCase(),
-      discount_type,
-      discount_value,
-      usage_limit,
-      start_date,
-      end_date
-    });
+      const {
+        id,
+        code,
+        discount_type,
+        discount_value,
+        usage_limit,
+        start_date,
+        end_date,
+      } = req.body;
 
-    res.redirect('/admin/coupon');
-  } catch (error) {
-    console.error('Error editing coupon:', error);
-    res.redirect('/admin/coupon');
-  }
-};
+      // Check if coupon exists
+      const coupon = await Coupon.findById(id);
+      if (!coupon) {
+        req.flash('error', 'Coupon not found');
+        return res.redirect('/admin/coupon');
+      }
+
+      // Check for duplicate code (excluding current coupon)
+      const existing = await Coupon.findOne({
+        code: code.toUpperCase(),
+        is_deleted: false,
+        _id: { $ne: id },
+      });
+      if (existing) {
+        req.flash('error', 'A coupon with this code already exists');
+        return res.redirect('/admin/coupon');
+      }
+
+      // Update coupon
+      await Coupon.findByIdAndUpdate(id, {
+        code: code.toUpperCase(),
+        discount_type,
+        discount_value,
+        usage_limit: usage_limit || null,
+        start_date: new Date(start_date),
+        end_date: new Date(end_date),
+      });
+
+      req.flash('success', 'Coupon updated successfully');
+      res.redirect('/admin/coupon');
+    } catch (error) {
+      console.error('Error editing coupon:', error);
+      req.flash('error', 'An error occurred while updating the coupon');
+      res.redirect('/admin/coupon');
+    }
+  },
+];
 
 // DELETE: Soft Delete Coupon
 exports.deleteCoupon = async (req, res) => {
