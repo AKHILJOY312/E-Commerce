@@ -130,23 +130,70 @@ const productController = {
   // POST /products - Create new product (Create)
   async createProduct(req, res) {
     try {
-      const { name, brand, category_id} = req.body;
-
-      const newProduct = new Product({
-        name,
-        brand,
-        category_id,
+      const { name, brand, category_id } = req.body;
+  
+      // Validate inputs
+      if (!name || !name.trim()) {
+        req.flash("error", "Product name is required and cannot be empty.");
+        return res.redirect('/admin/products');
+      }
+  
+      if (!brand || !brand.trim()) {
+        req.flash("error", "Brand is required and cannot be empty.");
+        return res.redirect('/admin/products');
+      }
+  
+      if (!category_id || !/^[0-9a-fA-F]{24}$/.test(category_id)) {
+        req.flash("error", "Valid category ID is required.");
+        return res.redirect('/admin/products');
+      }
+  
+      const trimmedName = name.trim();
+      const trimmedBrand = brand.trim();
+  
+      // Validate name length
+      if (trimmedName.length < 3 || trimmedName.length > 100) {
+        req.flash("error", "Product name must be between 3 and 100 characters.");
+        return res.redirect('/admin/products');
+      }
+  
+      // Validate brand length
+      if (trimmedBrand.length < 2 || trimmedBrand.length > 50) {
+        req.flash("error", "Brand name must be between 2 and 50 characters.");
+        return res.redirect('/admin/products');
+      }
+  
+      // Check for existing product with same name
+      const existingProduct = await Product.findOne({
+        name: { $regex: new RegExp(`^${trimmedName}$`, 'i') }
       });
-
+      if (existingProduct) {
+        req.flash("error", "A product with this name already exists.");
+        return res.redirect('/admin/products');
+      }
+  
+      // Validate category exists
+      const category = await Category.findById(category_id);
+      if (!category) {
+        req.flash("error", "Selected category does not exist.");
+        return res.redirect('/admin/products');
+      }
+  
+      const newProduct = new Product({
+        name: trimmedName,
+        brand: trimmedBrand,
+        category_id,
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+  
       await newProduct.save();
-      req.flash("success", "Category added successfully.");
-      res.status(201).redirect('/admin/products')
+      req.flash("success", "Product added successfully.");
+      res.status(201).redirect('/admin/products');
     } catch (error) {
       console.error('Error creating product:', error);
-      res.status(400).json({ 
-        error: 'Bad Request',
-        message: 'Error creating product' 
-      });
+      req.flash("error", "Failed to create product. Please try again.");
+      res.redirect('/admin/products');
     }
   },
 
