@@ -474,3 +474,16 @@ exports.getResetPassword = async (req, res) => {
     });
   }
 };
+
+exports.aboutPage = async (req, res) => {
+  try {
+    res.render("about",{currentActivePage:'pages',});
+    
+  } catch (error) {
+    console.error("error get about Us page :", error);
+    res.status(500).json({
+      success: false,
+      message: "load about page",
+    });
+  }
+};

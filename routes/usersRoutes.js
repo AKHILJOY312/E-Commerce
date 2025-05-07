@@ -16,7 +16,7 @@ const orderController = require('../controllers/user/orderController');
 
 router.get("/pageNotFound", userController.pageNotFound);
 router.get("/", userController.loadHomePage);
-
+router.get("/about", userController.aboutPage);
 //auth management
 router.get("/login", userController.getLogin);
 router.post("/login", userController.login);
