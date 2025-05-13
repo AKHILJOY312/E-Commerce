@@ -619,7 +619,7 @@ exports.cancelOrder = async (req, res) => {
               transaction_type: 'refund',
               amount: refundAmount,
               balance: user.wallet, // Updated wallet balance
-              description: `Refund for cancelled order ${orderNumber}`,
+              description: `Refund for cancelled order ${orderId}`,
               status: 'completed',
           });
 
@@ -773,46 +773,45 @@ exports.downloadInvoice = async (req, res) => {
         }
 
         const order = await Order.findById(orderId)
-            .populate({ // Populate items -> variant -> product
+            .populate({
                 path: 'order_items',
                 populate: {
-                    path: 'variant_id', // Populate the specific variant ordered
+                    path: 'variant_id',
                     model: 'Variant',
                     populate: {
-                        path: 'product_id', // Populate product details from variant
+                        path: 'product_id',
                         model: 'Product',
-                        select: 'name brand' // Select only needed product fields
+                        select: 'name brand'
                     }
                 }
             })
-            .populate('user_id', 'name email phone') // Populate User details
-            .populate('address_id')                // Populate Address details
-            .lean(); // Use lean for performance
+            .populate('user_id', 'name email phone')
+            .populate('address_id')
+            .lean();
 
         if (!order) {
             return res.status(404).send('Order not found');
         }
 
-        // Optional: Check if critical populations worked
         if (!order.user_id) {
             console.error(`User ID ${order.user_id} could not be populated for Order ${order._id}`);
-            // Handle error appropriately, maybe generate invoice without user details or return error
         }
         if (!order.address_id) {
             console.error(`Address ID ${order.address_id} could not be populated for Order ${order._id}`);
-            // Handle error appropriately
         }
-
 
         // --- PDF Generation ---
         const doc = new PDFDocument({ size: 'A4', margin: 50 });
 
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=invoice_${order.order_number || orderId}.pdf`); // Fallback filename
+        res.setHeader('Content-Disposition', `attachment; filename=invoice_${order.order_number || orderId}.pdf`);
         doc.pipe(res);
 
+        // -- GST Rate --
+        const GST_RATE = 0.18; // 18% GST, adjust as needed
+
         // -- Header --
-        doc.fontSize(18).font('Helvetica-Bold').text('Invoice', { align: 'center' });
+        doc.fontSize(18).font('Helvetica-Bold').text('Tax Invoice', { align: 'center' });
         doc.fontSize(14).font('Helvetica').text(`Order #${order.order_number || 'N/A'}`, { align: 'center' });
         doc.moveDown(2);
 
@@ -824,9 +823,15 @@ exports.downloadInvoice = async (req, res) => {
         doc.text(`Expected Delivery: ${deliveryDate}`, { align: 'right' });
         doc.moveDown();
 
-        // -- Customer & Address Info (Using columns) --
+        // -- Seller Info --
+        doc.fontSize(10).font('Helvetica-Bold').text('Seller:', doc.page.margins.left);
+        doc.font('Helvetica').text('Solo Fashion Pvt. Ltd.', doc.page.margins.left);
+        doc.text('GSTIN: 12ABCDE1234F1Z5', doc.page.margins.left); // Replace with actual GSTIN
+        doc.moveDown();
+
+        // -- Customer & Address Info --
         const customerInfoStartY = doc.y;
-        const columnWidth = (doc.page.width - doc.page.margins.left - doc.page.margins.right - 20) / 2; // Column width with spacing
+        const columnWidth = (doc.page.width - doc.page.margins.left - doc.page.margins.right - 20) / 2;
 
         // Bill To (Left Column)
         doc.font('Helvetica-Bold').text('Bill To:', doc.page.margins.left, customerInfoStartY);
@@ -839,9 +844,9 @@ exports.downloadInvoice = async (req, res) => {
         } else {
             doc.text('Customer details unavailable.', { width: columnWidth });
         }
-        const leftColumnEndY = doc.y; // Record Y position after left column
+        const leftColumnEndY = doc.y;
 
-        // Ship To (Right Column) - Reset Y to top, move X
+        // Ship To (Right Column)
         doc.y = customerInfoStartY;
         doc.font('Helvetica-Bold').text('Ship To:', doc.page.margins.left + columnWidth + 20, customerInfoStartY);
         doc.moveDown(0.5);
@@ -849,29 +854,28 @@ exports.downloadInvoice = async (req, res) => {
         if (order.address_id) {
             const addressParts = [
                 order.address_id.apartment,
-                order.address_id.building, // Include building if it exists
+                order.address_id.building,
                 order.address_id.street,
                 `${order.address_id.city || ''}, ${order.address_id.state || ''} ${order.address_id.zip_code || ''}`.trim(),
                 order.address_id.country
             ];
-            // Filter out null/empty parts before writing
             addressParts.filter(part => part).forEach(part => {
                 doc.text(part, doc.page.margins.left + columnWidth + 20, doc.y, { width: columnWidth });
             });
         } else {
             doc.text('Delivery address unavailable.', doc.page.margins.left + columnWidth + 20, doc.y, { width: columnWidth });
         }
-        const rightColumnEndY = doc.y; // Record Y position after right column
+        const rightColumnEndY = doc.y;
 
-        // Move below the taller of the two columns
-        doc.y = Math.max(leftColumnEndY, rightColumnEndY) + 20; // Add spacing below
+        doc.y = Math.max(leftColumnEndY, rightColumnEndY) + 20;
 
         // -- Items Table --
         const tableTop = doc.y + 10;
         const itemCol = doc.page.margins.left;
-        const qtyCol = itemCol + 280; // Adjust column positions
+        const qtyCol = itemCol + 250;
         const priceCol = qtyCol + 50;
-        const totalCol = priceCol + 70;
+        const gstCol = priceCol + 70;
+        const totalCol = gstCol + 50;
         const tableEndX = doc.page.width - doc.page.margins.right;
 
         // Header Row
@@ -879,6 +883,7 @@ exports.downloadInvoice = async (req, res) => {
         doc.text('Item Description', itemCol, tableTop);
         doc.text('Qty', qtyCol, tableTop, { width: 40, align: 'right' });
         doc.text('Unit Price', priceCol, tableTop, { width: 60, align: 'right' });
+        doc.text('GST', gstCol, tableTop, { width: 40, align: 'right' });
         doc.text('Total', totalCol, tableTop, { width: 70, align: 'right' });
         doc.moveTo(itemCol, doc.y + 5).lineTo(tableEndX, doc.y + 5).lineWidth(0.5).stroke();
         doc.moveDown(0.5);
@@ -886,48 +891,53 @@ exports.downloadInvoice = async (req, res) => {
         // Item Rows
         doc.font('Helvetica');
         let itemsY = doc.y;
+        let totalGST = 0; // Track total GST
         if (order.order_items && order.order_items.length > 0) {
             order.order_items.forEach((item) => {
                 const productName = item.variant_id?.product_id?.name || 'Unknown Product';
                 const brand = item.variant_id?.product_id?.brand || '';
                 const name = `${productName}${brand ? ` (${brand})` : ''}`;
                 const qty = item.quantity || 0;
-                // Use pre-formatted price if available, else format
-                const price = item.price_display ? parseFloat(item.price_display) : (item.price || 0);
-                const total = item.total_price_display ? parseFloat(item.total_price_display) : (item.total_price || 0);
+                const price = item.price_display ? parseFloat(item.price_display) : (item.price || 0); // GST-inclusive
+                const total = item.total_price_display ? parseFloat(item.total_price_display) : (item.total_price || 0); // GST-inclusive
 
-                const initialY = itemsY; // Y pos before writing this row
-                doc.text(name, itemCol, itemsY, { width: 270 }); // Allow item name to wrap
-                const nameHeight = doc.heightOfString(name, { width: 270 });
+                // Calculate GST from price (inclusive)
+                const basePrice = price / (1 + GST_RATE); // Price excluding GST
+                const gstAmount = price - basePrice; // GST per unit
+                const totalBase = basePrice * qty;
+                totalGST += gstAmount * qty; // Accumulate GST
 
-                // Ensure quantity, price, total align vertically even if name wraps
+                const initialY = itemsY;
+                doc.text(name, itemCol, itemsY, { width: 240 });
+                const nameHeight = doc.heightOfString(name, { width: 240 });
+
                 doc.text(qty.toString(), qtyCol, initialY, { width: 40, align: 'right' });
                 doc.text(`INR ${price.toFixed(2)}`, priceCol, initialY, { width: 60, align: 'right' });
+                doc.text(`${(GST_RATE * 100).toFixed(0)}%`, gstCol, initialY, { width: 40, align: 'right' });
                 doc.text(`INR ${total.toFixed(2)}`, totalCol, initialY, { width: 70, align: 'right' });
 
-                // Calculate next Y based on wrapped name height or minimum row height
-                itemsY += Math.max(nameHeight, 15) + 5; // Add padding
-
-                // Optional: Draw light line between items
-                // doc.moveTo(itemCol, itemsY - 2).lineTo(tableEndX, itemsY - 2).lineWidth(0.2).opacity(0.5).stroke().opacity(1);
+                itemsY += Math.max(nameHeight, 15) + 5;
             });
         } else {
             doc.text('No items found in this order.', itemCol, itemsY);
             itemsY += 20;
         }
-        doc.y = itemsY; // Update document Y position
-        doc.moveTo(itemCol, doc.y).lineTo(tableEndX, doc.y).lineWidth(0.5).stroke(); // Line after last item
+        doc.y = itemsY;
+        doc.moveTo(itemCol, doc.y).lineTo(tableEndX, doc.y).lineWidth(0.5).stroke();
         doc.moveDown();
 
         // -- Totals --
-        const totalsX = tableEndX - 150; // Position for totals section
-        // Use pre-formatted total if available, else parse
+        const totalsX = tableEndX - 150;
         const totalAmount = order.total_amount_display ? parseFloat(order.total_amount_display) : (order.total_amount ? parseFloat(order.total_amount.toString()) : 0);
         const deliveryCharge = order.delivery_charge || 0;
-        const subtotal = totalAmount - deliveryCharge; // Recalculate subtotal
+        const subtotal = totalAmount - deliveryCharge - totalGST; // Base amount excluding GST and delivery
 
-        doc.text(`Subtotal:`, totalsX, doc.y, { width: 70, align: 'left' });
+        doc.text(`Subtotal (Excl. GST):`, totalsX, doc.y, { width: 70, align: 'left' });
         doc.text(`INR ${subtotal.toFixed(2)}`, totalsX + 70, doc.y, { width: 80, align: 'right' });
+        doc.moveDown(0.5);
+
+        doc.text(`GST (${(GST_RATE * 100).toFixed(0)}%):`, totalsX, doc.y, { width: 70, align: 'left' });
+        doc.text(`INR ${totalGST.toFixed(2)}`, totalsX + 70, doc.y, { width: 80, align: 'right' });
         doc.moveDown(0.5);
 
         doc.text(`Delivery Charge:`, totalsX, doc.y, { width: 70, align: 'left' });
@@ -935,9 +945,13 @@ exports.downloadInvoice = async (req, res) => {
         doc.moveDown(0.5);
 
         doc.font('Helvetica-Bold');
-        doc.text(`Total Amount:`, totalsX, doc.y, { width: 70, align: 'left' });
+        doc.text(`Total Amount (Incl. GST):`, totalsX, doc.y, { width: 70, align: 'left' });
         doc.text(`INR ${totalAmount.toFixed(2)}`, totalsX + 70, doc.y, { width: 80, align: 'right' });
         doc.font('Helvetica');
+        doc.moveDown(1);
+
+        // -- GST Note --
+        doc.fontSize(8).text('Note: All prices are inclusive of applicable GST.', totalsX, doc.y, { align: 'left' });
         doc.moveDown(2);
 
         // -- Footer --
@@ -948,13 +962,11 @@ exports.downloadInvoice = async (req, res) => {
 
     } catch (err) {
         console.error('Error generating invoice:', err);
-        // Avoid sending response if headers already sent (e.g., during streaming)
         if (!res.headersSent) {
             res.status(500).send('Server error generating invoice');
         }
     }
 };
-
 
 
 exports.returnOrder = async (req, res) => {
